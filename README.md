@@ -1,5 +1,5 @@
-# gravinvflow
-_gravinvflow_ is a machine learning tool applying normalising flows to Bayesian gravity inversion. This project has two aspects to it:
+# flowing
+_flowing_ contains a machine learning tool applying normalising flows to Bayesian gravity inversion. This project has two aspects to it:
 1. Generate a data set consisting of rectangular prism (box) underdensities. Two different representations can be chosen.
    1.1 The box can be described by 9 parameters and the forward model described in Li et al. (1998) is applied to compute the gravitational signal at the given gravimetry survey locations.
    1.2 The box can also be described as an array of density values of a grid of voxels, and the forward model can be computed for each voxel seperately, and the results are summed for all survey locations.
