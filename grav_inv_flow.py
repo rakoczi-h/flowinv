@@ -9,29 +9,30 @@ import matplotlib
 import os
 import h5py
 from sklearn.model_selection import train_test_split
-from plot_data import *
-from make_data import *
+from plot import *
+from utils import scale_data
 import torch
 import matplotlib.pyplot as plt
 import joblib
 import warnings
 from flow_functions import *
+from train import train
 
+# ------------------- OPTIONS --------------------
 noisygrid = False
 parameterised = True
+add_survey_noise = True
 
 np.random.seed(1434)
 # ---------------SETTING UP--------------------
 start_time = datetime.now()
-add_survey_noise = True
 print(f"Start of new run: {start_time}")
-with open('flow_params.json') as json_file:
+with open('params.json') as json_file:
     params = json.load(json_file)
 # Directories:
 savedir = params['save_dir']
 dataloc = params['data_loc']
 datasize = params['data_size']
-dataname = params['data_name']
 testname = params['test_name']
 os.mkdir(savedir + 'run_' + str(start_time))
 saveloc = savedir + 'run_' + str(start_time) + '/'
@@ -46,16 +47,18 @@ out_file.close()
 print("Set up script...")
 
 # ------------------MAKING DATA------------------------
-sigma = 1.0
+sigma = params['survey_noise_scale']
+
+dataname = params['data_name']
 f = h5py.File(dataloc+dataname+'.hdf5', "r")
-surveys = np.array(f['surveys'])
+surveys = np.array(f['surveys'][:datasize,:,:])
 surveys[:,:,0] = surveys[:,:,0] + np.random.normal(0, sigma, np.shape(surveys[:,:,0]))
 surveys_toscale = np.reshape(surveys, (np.shape(surveys)[0]*np.shape(surveys)[1], np.shape(surveys)[2]))
 if parameterised:
-    models = np.array(f['models_parameterised'])
+    models = np.array(f['models_parameterised'][:datasize,:])
     models = scale_data(models, mode='model_parameterised', fit=True, name=dataname, dataloc=dataloc, scaler=params['scaler_model'])
 else:
-    models = np.array(f['models'])
+    models = np.array(f['models'][:datasize,:])
     models = scale_data(models, mode='model', fit=True, name=dataname, dataloc=dataloc, scaler=params['scaler_model'])
 
 print("Loaded the dataset...")
@@ -109,7 +112,7 @@ min_val_loss = np.inf
 loss = dict(train=[], val=[])
 for i in range(epochs):
     start_epoch = datetime.now()
-    train_loss, val_loss = training(flow, optimiser, val_loader, train_loader, device)
+    train_loss, val_loss = train(flow, optimiser, val_loader, train_loader, device)
     loss['train'].append(train_loss)
     loss['val'].append(val_loss)
     scheduler.step(loss['val'][-1])

@@ -8,6 +8,7 @@ from itertools import product
 from scipy.stats import norm
 import scipy.stats
 import json
+import matplotlib.gridspec as gridspec
 import pandas as pd
 import plotly.graph_objects as go
 from collections import namedtuple
@@ -244,58 +245,137 @@ def plot_compare_voxel_projections(output_model, target_model, saveloc, n_sample
     plt.savefig(saveloc+filename+'.png', bbox_inches="tight", transparent=True)
     plt.close()
 
-def plot_compare_voxel_slices():
+def plot_compare_voxel_slices(samples, logprobs, true_model, slice_coords=[1,3,5], saveloc='', filename='sliced_voxels'):
+    """Makes a comparison plot consisting of slices of the voxelspace.
+    Each column is slices along a different direction (x, y, z).
+    Each row is a different slice, with increasing coordinates.
+    The method is made for 3 slices.
+    Parameters
+    ----------
+    samples: array
+        Array containing the samples from the flow, each a voxelised density map. [no. of samples, no. of parameters]
+    logprobs: array
+        The log probabilties corresponding to each sample. [no. of samples]
+    true_model: array
+        The true density model we're comparing to. [no. of parameters]
+    slice_coords: list
+        The coordinate of voxels along which to slice the volume.
+    saveloc: str
+         The location where the image is going to be saved.
+    filename: str
+         The name of the file under which it will be saved.
+    Output
+    ------
+    image file
+    """
+    d = round(np.power(np.shape(true_model)[0], 1/3))
+    s1, s2, s3 = slice_coords
+    plot_data = np.zeros((9, 4, d, d)) # [number of subfigures, number of subplots, dim1, dim2]
+    # Plotting the true slices
+    true_model = np.reshape(true_model, (d,d,d))
+    plot_data[0, 0, :, :] = true_model[s1, :, :]
+    plot_data[3, 0, :, :] = true_model[s2, :, :]
+    plot_data[6, 0, :, :] = true_model[s3, :, :]
 
-def plot_compare_survey_noisygrid(test_samples, target_survey, saveloc, n_samples=8, survey_coords=[], voxel_coords=[], widths=[], mode='model', filename='comp_target_pred_survey.png', loc=''):
-    """
-    :params mode: "model" or "models_parameterised"
-    """
-    with open(saveloc+'params.json') as json_file:
-        params = json.load(json_file)
-    len_in_1d = params['n_per_side']
-    dataname = params['dataname']
-    dataloc = params['dataloc']
-    rho = -1600
-    test_samples = inv_scale_data(test_samples, mode=mode, name=dataname, dataloc=dataloc) # inverse scale before forward modelling
-    target_survey = inv_scale_data(target_survey, mode='survey', name=dataname, dataloc=dataloc)
-    target_survey = np.reshape(target_survey, (64,3))
-    width_ratios = np.array([2.2,1,1,1])
-    height_ratios = np.array([1,1])
-    norm = plt.cm.colors.Normalize(vmin=np.min(target_survey[:,0]), vmax=np.max(target_survey[:,0]))
-    cmap = 'PuBuGn'
-    fig, ax = plt.subplot_mosaic("ABCD;AEFG", width_ratios=width_ratios, height_ratios=height_ratios,
-                                 gridspec_kw = {'wspace' : 0.1, 'hspace' : -0.6})
-    recon_survey_diff = 0
-    idx = 0
-    for label, axi in ax.items():
-        if idx == 0:
-            plot_data = target_survey[:,0]
-            title = f"Target"
-        elif idx > n_samples:
-            break
-        else:
-            if mode == 'model':
-                plot_data = forw_analytical_fast(test_samples[idx-1,:], voxel_coords, survey_coords, widths)
-            if mode == 'models_parameterised':
-                plot_data = forw_analytical_parameterised_box(survey_coords, tuple(test_samples[idx-1,:]), rho=rho)
+    plot_data[1, 0, :, :] = true_model[:, s1, :]
+    plot_data[4, 0, :, :] = true_model[:, s2, :]
+    plot_data[7, 0, :, :] = true_model[:, s3, :]
+
+    plot_data[2, 0, :, :] = true_model[:, :, s1]
+    plot_data[5, 0, :, :] = true_model[:, :, s2]
+    plot_data[8, 0, :, :] = true_model[:, :, s3]
+
+    # Mean
+    mean_model = np.mean(samples, axis=0)
+    mean_model = np.reshape(mean_model, (d,d,d))
+    plot_data[0, 1, :, :] = mean_model[s1, :, :]
+    plot_data[3, 1, :, :] = mean_model[s2, :, :]
+    plot_data[6, 1, :, :] = mean_model[s3, :, :]
+
+    plot_data[1, 1, :, :] = mean_model[:, s1, :]
+    plot_data[4, 1, :, :] = mean_model[:, s2, :]
+    plot_data[7, 1, :, :] = mean_model[:, s3, :]
+
+    plot_data[2, 1, :, :] = mean_model[:, :, s1]
+    plot_data[5, 1, :, :] = mean_model[:, :, s2]
+    plot_data[8, 1, :, :] = mean_model[:, :, s3]
+
+    # Mode
+    mode_model = samples[np.argmax(logprobs), :]
+    mode_model = np.reshape(mode_model, (d,d,d))
+    plot_data[0, 2, :, :] = mode_model[s1, :, :]
+    plot_data[3, 2, :, :] = mode_model[s2, :, :]
+    plot_data[6, 2, :, :] = mode_model[s3, :, :]
+
+    plot_data[1, 2, :, :] = mode_model[:, s1, :]
+    plot_data[4, 2, :, :] = mode_model[:, s2, :]
+    plot_data[7, 2, :, :] = mode_model[:, s3, :]
+
+    plot_data[2, 2, :, :] = mode_model[:, :, s1]
+    plot_data[5, 2, :, :] = mode_model[:, :, s2]
+    plot_data[8, 2, :, :] = mode_model[:, :, s3]
+
+    # Std
+    std_model = -np.std(samples, axis=0)
+    std_model = np.reshape(std_model, (d,d,d))
+    plot_data[0, 3, :, :] = std_model[s1, :, :]
+    plot_data[3, 3, :, :] = std_model[s2, :, :]
+    plot_data[6, 3, :, :] = std_model[s3, :, :]
+
+    plot_data[1, 3, :, :] = std_model[:, s1, :]
+    plot_data[4, 3, :, :] = std_model[:, s2, :]
+    plot_data[7, 3, :, :] = std_model[:, s3, :]
+
+    plot_data[2, 3, :, :] = std_model[:, :, s1]
+    plot_data[5, 3, :, :] = std_model[:, :, s2]
+    plot_data[8, 3, :, :] = std_model[:, :, s3]
+
+    norm = plt.cm.colors.Normalize(-1600.0, 0.0)
+    cmap = 'plasma'
+
+    fig = plt.figure(figsize=(16, 14))
+    outer = gridspec.GridSpec(3, 3, wspace=0.2, hspace=-0.79)
+    ylabels = ['y', 'x', 'x',
+               'y', 'x', 'x',
+               'y', 'x', 'x']
+    xlabels = ['z', 'z', 'y',
+               'z', 'z', 'y',
+               'z', 'z', 'y']
+    for i in range(9):
+        inner = gridspec.GridSpecFromSubplotSpec(1, 4, subplot_spec=outer[i],
+                                                 wspace=0.1, hspace=0.1)
+        row     = 0
+        col     = 0
+        maxCol  = 4
+
+        for j in range(4):
+            ax = plt.Subplot(fig, inner[j])
+            im = ax.imshow(plot_data[i, j, :, :], norm=norm, cmap=cmap, aspect='equal')
+            ax.set_xticks([])
+            ax.set_yticks([])
+            if i < 3:
+                if j == 0:
+                    ax.set_title('Target', fontsize=14)
+                    ax.set_ylabel(ylabels[i], fontsize=14)
+                    ax.set_xlabel(xlabels[i], fontsize=14)
+                if j == 1:
+                    ax.set_title("Mean", fontsize=14)
+                if j == 2:
+                    ax.set_title('Mode', fontsize=14)
+                if j == 3:
+                    ax.set_title('Std', fontsize=14)
             else:
-                print('Mode invalid.')
-                break
-        recon_survey_diff = recon_survey_diff + np.mean(np.square(target_survey[:,0]-plot_data))
-        plot_data = np.reshape(plot_data, (len_in_1d, len_in_1d))
-        im = axi.imshow(plot_data, cmap=cmap, norm=norm,  aspect='equal', extent=(-40, 40, -40, 40))
-        if idx == 0:
-            axi.set(xlabel='x [m]', ylabel='y [m]', title=f"Target", frame_on=False)
-        else:
-            axi.set(xticks=[], yticks=[], frame_on=False)
-        idx =+ 1
-    mean_mse = np.mean(recon_survey_diff)
-    cbar_ax = fig.add_axes([0.92, 0.291, 0.02, 0.405]) # left, bottom, width, height
-    cbar_ax.set(frame_on=False)
-    fig.colorbar(im, cax=cbar_ax, cmap=cmap, norm=norm, label=f"g [\u03BCGal]")
-    fig.text(0.56, 0.21, f"Mean MSE = {mean_mse:.3f}")
-    fig.text(0.62, 0.71, "Samples", fontdict={'size' : 12})
-    plt.savefig(saveloc+filename, bbox_inches='tight')
+                if j == 0:
+                    ax.set_ylabel(ylabels[i], fontsize=14)
+                    ax.set_xlabel(xlabels[i], fontsize=14)
+            fig.add_subplot(ax)
+
+    cbar_ax = fig.add_axes([0.91, 0.35, 0.015, 0.29])
+    fig.colorbar(im, cax=cbar_ax, cmap=cmap, norm=norm)
+    cbar_ax.set_ylabel(f"\u03C1 [kg/$m^{2}$]",fontsize=14)
+    cbar_ax.tick_params(labelsize=14)
+
+    plt.savefig(saveloc+filename+'.png', bbox_inches='tight', transparent=True)
     plt.close()
 
 
@@ -1153,4 +1233,3 @@ def frame_args(duration):
             "transition": {"duration": 0, "easing": "linear"},
         }
 
-# --------------------------- DEVELOPMENT PLACE --------------------------------------
