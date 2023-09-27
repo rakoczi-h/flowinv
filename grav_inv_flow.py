@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import joblib
 import warnings
 from train import train
-from test import forward_and_logprob
+from test import forward_and_logprob, KL_divergence_latent
 np.random.seed(1434)
 
 # ---------------SETTING UP--------------------
