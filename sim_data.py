@@ -35,9 +35,6 @@ make_box_params(voxel_grid, widths_voxels, testsize, dataloc=dataloc, filename="
 test_models, test_surveys = make_parameterised_box_dataset(survey_grid, noise_on_grid=False, device_noise=False, testdata=True, filename=testname+'_parameterised')
 models, surveys = make_parameterised_box_dataset(survey_grid, noise_on_grid=False, device_noise=False, testdata=False, filename=dataname+'_parameterised')
 
-test_models, test_surveys = make_voxelised_box_dataset(voxel_grid_limits, survey_grid, noise_on_grid=False, device_noise=False, background_noise=True, testdata=True, filename=testname+'_voxelised')
-models, surveys = make_voxelised_box_dataset(voxel_grid_limits, survey_grid, noise_on_grid=False, device_noise=False, background_noise=True, testdata=False, filename=dataname+'_voxelised')
-
 end_time = datetime.now()
 print(f"Time taken to generate data: {end_time-start_time}")
 
