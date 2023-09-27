@@ -22,18 +22,19 @@ def make_parameterised_box_dataset(survey_coords, noise_on_grid=False, device_no
         survey_coords: array
             Contains the survey location xyz coordinates. [no. of survey locations, 3]
         noise_on_grid: bool
-            If True, Gaussian noise is added to the survey locations, with std specified in params_makedata.json
+            If True, Gaussian noise is added to the survey locations, with std specified in dataset_params.json
         device_noise: bool
-            If True Gaussian noise is added to the gravity values, with std specified in params_makedata.json
+            If True Gaussian noise is added to the gravity values, with std specified in dataset_params.json
         testdata: bool
-            If True then a smaller dataset is made with manually set values. If false, box_params_v2.hdf5 is searched for,
-            which contains the randomly generated set of parameters that are used to construct the dataset.
+            If True then the box_params_test.hdf5 is searched for.
+            If False then the box_params_train.hdf5 is searched for.
+            If netiher are found, then new parameters are generated with datasize given as an input to this method
         filename: str,
             The name under which the generated dataset will be saved
         dataloc: str,
             The location where to save the data. (if saving)
         datasize: int,
-            The size of the dataset to be made. (ignored if making test data)
+            The size of the dataset to be made. (ignored if data is made from pre-made parameters file)
         saving: bool, if True, the dataset is saved, is not, the generated data is only returned as the output
     Output
     ------
@@ -42,46 +43,47 @@ def make_parameterised_box_dataset(survey_coords, noise_on_grid=False, device_no
         surveys: array
             The forward modelled surveys corresponding to each set of parameters. [np. of datapoints, no. of survey locations]
     """
-    if not os.path.exists('params.json'):
-        raise FileNotFoundError('The params_makedata.json file has to exist.')
-    starttime = datetime.now()
-    with open('params.json') as json_file:
+    if saving:
+        path_to_datafile = dataloc+filename
+        if os.path.exists(path_to_datafile+'.hdf5'):
+            raise FileExistsError("File with this name already exists.")
+    if not os.path.exists('dataset_params.json'):
+        raise FileNotFoundError('The dataset_params.json file has to exist.')
+    with open('dataset_params.json') as json_file:
         params = json.load(json_file)
-    # hardcoding here again, should get rid of this too
+    # Getting the box parameters
     if testdata == True:
-        data_size = params['test_size']
-        px = np.array([-45, -40, -20, -20, 0, 0, 20, 20, 45, 55])
-        py = np.array([50, 20, 0, -50, -20, 0, 45, 20, 0, -40])
-        pz = np.array([20, 0, -20, 0, -55, -20, 20, -55, 0, 0])
-        lx = np.array([20, 40, 60, 80, 100, 20, 40, 60, 80, 100])
-        ly = np.array([40, 20, 80, 60, 20, 60, 100, 80, 80, 20])
-        lz = np.array([20, 80, 60, 80, 60, 20, 60, 60, 20, 80])
-        alpha_x = np.array([1, 0.5, 0.7, 0.25, 0.5, 0.7, 1, 0.25, 0.25, 0.7])
-        alpha_y = np.array([0, 0.25, 0.7, 0.1, 0.5, 0.1, 0.7, 0, 0.5, 1])
+        path_to_paramsfile = params['dataloc'] + 'box_params_test.hdf5'
     else:
-        path_to_paramsfile = '/data/wiay/2263373r/grav_inv/box_params_v2.hdf5'
-        if os.path.exists(path_to_paramsfile):
-            h = h5py.File('/data/wiay/2263373r/grav_inv/box_params_v2.hdf5', "r")
-            px = np.array(h['px'])
-            py = np.array(h['py'])
-            pz = np.array(h['pz'])
-            lx = np.array(h['lx'])
-            ly = np.array(h['ly'])
-            lz = np.array(h['lz'])
-            alpha_x = np.array(h['alpha_x'])
-            alpha_y = np.array(h['alpha_y'])
-            h.close()
-        else:
-            n_per_side = params['n_per_side']
-            widths_grid = params['widths_grid']
-            voxel_grid, widths_voxels = make_3D_grid(widths_grid, [n_per_side, n_per_side, n_per_side])
-            px, py, pz, lx, ly, lz, alpha_x, alpha_y = make_box_params(voxel_grid, widths_voxels, data_size)
+        path_to_paramsfile = params['dataloc'] + 'box_params_train.hdf5'
+    if os.path.exists(path_to_paramsfile):
+        print("Making data from parameters file.")
+        h = h5py.File(path_to_paramsfile, "r")
+        px = np.array(h['px'])
+        py = np.array(h['py'])
+        pz = np.array(h['pz'])
+        lx = np.array(h['lx'])
+        ly = np.array(h['ly'])
+        lz = np.array(h['lz'])
+        alpha_x = np.array(h['alpha_x'])
+        alpha_y = np.array(h['alpha_y'])
+        h.close()
+        datasize = np.shape(px)[0] # if we are using the new dataset, the data size is inferred from this data set.
+        print(f"Data set size inferred from file: {datasize}. Given value overwritten.")
+    else: # if these have not been pre-made, make them now
+        print("Data set randomly generated.")
+        n_per_side = params['n_per_side']
+        widths_grid = params['widths_grid']
+        voxel_grid, widths_voxels = make_3D_grid(widths_grid, [n_per_side, n_per_side, n_per_side])
+        px, py, pz, lx, ly, lz, alpha_x, alpha_y = make_box_params(voxel_grid, widths_voxels, datasize, saving=False)
+        print(f"Data set size given: {datasize}")
     alpha = np.arctan(alpha_y/alpha_x)
     rho = params['delta_rho']
     surveys = []
     models = []
     survey_trans = np.zeros(np.shape(survey_coords))
-    for i in range(data_size): # looping over each instance of set of coordinates and computing the survey for each
+    starttime = datetime.now()
+    for i in range(datasize): # looping over each instance of set of coordinates and computing the survey for each
         survey_c = np.zeros(np.shape(survey_coords))
         survey_c[:,0] = survey_coords[:,0]
         survey_c[:,1] = survey_coords[:,1]
@@ -107,11 +109,11 @@ def make_parameterised_box_dataset(survey_coords, noise_on_grid=False, device_no
         models.append(parameters)
         if i % 1000 == 0:
             nowtime = datetime.now()
-            print(f"Data generated {i}/{data_size} \t Time elapsed: {nowtime-starttime}")
+            print(f"Data generated {i}/{datasize} \t Time elapsed: {nowtime-starttime}")
     surveys = np.array(surveys)
     models = np.array(models)
     if saving==True:
-        h = h5py.File(dataloc+filename+'.hdf5', "a")
+        h = h5py.File(path_to_datafile+'.hdf5', "a")
         h.create_dataset("models_parameterised", data=models)
         h.create_dataset("surveys", data=surveys)
         h.create_dataset("noise_on_grid", data=noise_on_grid)
@@ -137,15 +139,15 @@ def make_voxelised_box_dataset(voxel_coords, survey_coords, noise_on_grid=False,
         survey_coords: array
             Contains the survey location xyz coordinates, [no. of survey locations, 3]
         noise_on_grid: bool
-            If True Gaussian noise is added to the survey locations, with std specified in params_makedata.json
+            If True Gaussian noise is added to the survey locations, with std specified in dataset_params.json
         device_noise: bool
-            If True Gaussian noise is added to the gravity values, with std specified in params_makedata.json
+            If True Gaussian noise is added to the gravity values, with std specified in dataset_params.json
         background_noise: bool
             If True Gaussian noise is added to the voxel model to simualte noise in the density distribution
         testdata: bool
-            If True then a smaller dataset is made with manually set values.
-            If False, box_params_v2.hdf5 is searched for, which contains the randomly generated set of parameters that are used to construct the dataset,
-            if not found then parameters are generated.
+            If True then the box_params_test.hdf5 is searched for.
+            If False then the box_params_train.hdf5 is searched for.
+            If netiher are found, then new parameters are generated with datasize given as an input to this method
         filename: str
             The name under which the generated dataset will be saved
         dataloc: str,
@@ -161,71 +163,77 @@ def make_voxelised_box_dataset(voxel_coords, survey_coords, noise_on_grid=False,
         surveys: array
             The forward modelled surveys corresponding to each set of parameters. [np. of datapoints, no. of survey locations]
     """
-    if not os.path.exists('params.json'):
-        raise FileNotFoundError('The params_makedata.json file has to exist.')
+    if saving:
+        path_to_datafile = dataloc+filename
+        if os.path.exists(path_to_datafile+'.hdf5'):
+            raise FileExistsError("File with this name already exists.")
+    if not os.path.exists('dataset_params.json'):
+        raise FileNotFoundError('The dataset_params.json file has to exist.')
     starttime = datetime.now()
-    with open('params.json') as json_file:
+    with open('dataset_params.json') as json_file:
         params = json.load(json_file)
     if testdata == True:
-        data_size = params['test_size']
-        px = np.array([-45, -40, -20, -20, 0, 0, 20, 20, 45, 55])
-        py = np.array([50, 20, 0, -50, -20, 0, 45, 20, 0, -40])
-        pz = np.array([20, 0, -20, 0, -55, -20, 20, -55, 0, 0])
-        lx = np.array([20, 40, 60, 80, 100, 20, 40, 60, 80, 100])
-        ly = np.array([40, 20, 80, 60, 20, 60, 100, 80, 80, 20])
-        lz = np.array([20, 80, 60, 80, 60, 20, 60, 60, 20, 80])
-        alpha_x = np.array([1, 0.5, 0.7, 0.25, 0.5, 0.7, 1, 0.25, 0.25, 0.7])
-        alpha_y = np.array([0, 0.25, 0.7, 0.1, 0.5, 0.1, 0.7, 0, 0.5, 1])
+        path_to_paramsfile = params['dataloc'] + 'box_params_test.hdf5'
     else:
-        path_to_file = '/data/wiay/2263373r/grav_inv/box_params_v2.hdf5'
-        if os.path.exists(path_to_file):
-            h = h5py.File('/data/wiay/2263373r/grav_inv/box_params_v2.hdf5', "r")
-            px = np.array(h['px'])
-            py = np.array(h['py'])
-            pz = np.array(h['pz'])
-            lx = np.array(h['lx'])
-            ly = np.array(h['ly'])
-            lz = np.array(h['lz'])
-            alpha_x = np.array(h['alpha_x'])
-            alpha_y = np.array(h['alpha_y'])
-            h.close()
-            data_size = np.shape(px)[0] # if we are using the new dataset, the data size is inferred from this data set.
-            print(f"Data set size inferred from file: {data_size}. Given value overwritten.")
-        else:
-            n_per_side = params['n_per_side']
-            widths_grid = params['widths_grid']
-            voxel_grid, widths_voxels = make_3D_grid(widths_grid, [n_per_side, n_per_side, n_per_side])
-            px, py, pz, lx, ly, lz, alpha_x, alpha_y = make_box_params(voxel_grid, widths_voxels, data_size)
+        path_to_paramsfile = params['dataloc'] + 'box_params_train.hdf5'
+    if os.path.exists(path_to_paramsfile):
+        print("Making data from parameters file.")
+        h = h5py.File(path_to_paramsfile, "r")
+        px = np.array(h['px'])
+        py = np.array(h['py'])
+        pz = np.array(h['pz'])
+        lx = np.array(h['lx'])
+        ly = np.array(h['ly'])
+        lz = np.array(h['lz'])
+        alpha_x = np.array(h['alpha_x'])
+        alpha_y = np.array(h['alpha_y'])
+        h.close()
+        datasize = np.shape(px)[0] # if we are using the new dataset, the data size is inferred from this data set.
+        print(f"Data set size inferred from file: {datasize}. Given value overwritten.")
+    else:
+        print("Data set randomly generated.")
+        n_per_side = params['n_per_side']
+        widths_grid = params['widths_grid']
+        voxel_grid, widths_voxels = make_3D_grid(widths_grid, [n_per_side, n_per_side, n_per_side])
+        px, py, pz, lx, ly, lz, alpha_x, alpha_y = make_box_params(voxel_grid, widths_voxels, datasize, saving=False)
+        print(f"Data set size given: {datasize}")
     rho = params['delta_rho']
     survey_c = np.zeros(np.shape(survey_coords))
     surveys = []
     models = []
     models_parameterised = []
-    for i in range(data_size): # looping over each set of parameters, to simulate the voxelised density distribution and the corresponding survey
+    for i in range(datasize): # looping over each set of parameters, to simulate the voxelised density distribution and the corresponding survey
         survey_c[:,0] = survey_coords[:,0]
         survey_c[:,1] = survey_coords[:,1]
         survey_c[:,2] = survey_coords[:,2]
-        if noise_on_grid == True:
+        if noise_on_grid:
+            if i == 0:
+                print(f"Noisy grid. Survey grid noise scale = {params['surveygrid_noise_scale']}")
             survey_c[:,0] = survey_coords[:,0] + np.random.normal(loc=0.0, scale=params['surveygrid_noise_scale'], size=np.shape(survey_c[:,0])[0])
             survey_c[:,1] = survey_coords[:,1] + np.random.normal(loc=0.0, scale=params['surveygrid_noise_scale'], size=np.shape(survey_c[:,1])[0])
             survey_c[:,2] = survey_coords[:,2]
         parameters = [px[i], py[i], pz[i], lx[i], ly[i], lz[i], alpha_x[i], alpha_y[i]]
         # making the voxelised representation of the box
+        if background_noise:
+            if i == 0:
+                print(f"Noisy background density. Density noise scale = {params['density_noise_scale']}")
         model = make_rotated_bunker(voxel_coords, parameters, rho, background_noise=background_noise)
         # the forward model
         gz = get_gz_analytical_vectorised(voxel_coords, model, survey_c)
-        if device_noise == True:
+        if device_noise:
+            if i == 0:
+                print(f"Noisy survey. Device noise scale = {params['device_noise_scale']}")
             gz = gz + np.random.normal(loc=0.0, scale=params['device_noise_scale'], size=np.shape(gz)[0])
         surveys.append(np.concatenate((np.expand_dims(gz, axis=1), survey_c), axis=1))
         models.append(model)
         models_parameterised.append(np.array(parameters))
         if i % 1000 == 0:
             nowtime = datetime.now()
-            print(f"Data generated {i}/{data_size} \t Time elapsed: {nowtime-starttime}")
+            print(f"Data generated {i}/{datasize} \t Time elapsed: {nowtime-starttime}")
     surveys = np.array(surveys)
     models = np.array(models)
     models_parameterised = np.array(models_parameterised)
-    if saving==True:
+    if saving:
         h = h5py.File(dataloc+filename+'.hdf5', "a")
         h.create_dataset("models_parameterised", data=models_parameterised)
         h.create_dataset("models", data=models)
@@ -242,7 +250,7 @@ def make_voxelised_box_dataset(voxel_coords, survey_coords, noise_on_grid=False,
     return models, surveys
 
 # ------------------------- Box parameter generation, and parameter translation to voxelised density model -------------------------
-def make_box_params(voxel_grid, widths_voxels, datasize, dataloc="", dataname="box_params", saving=True):
+def make_box_params(voxel_grid, widths_voxels, datasize, dataloc="", filename="box_params", saving=True):
     """Makes a dataset of boxes within a specified voxel space.
     Parameters
     ----------
@@ -256,7 +264,7 @@ def make_box_params(voxel_grid, widths_voxels, datasize, dataloc="", dataname="b
            If True, the dataset will be saved in a hdf5 file.
         dataloc: str
            The location where the datafile will be saved.
-        dataname: str
+        filename: str
            The filename where the data is saved.
     Output
     ------
@@ -277,6 +285,10 @@ def make_box_params(voxel_grid, widths_voxels, datasize, dataloc="", dataname="b
         alpha_y: array
            Second parameter defining the rotation [datasize]
     """
+    if saving:
+        path_to_datafile = dataloc+filename
+        if os.path.exists(path_to_datafile+'.hdf5'):
+            raise FileExistsError("File with this name already exists.")
     # specifying the range of possible locations for the box
     x_min = np.min(voxel_grid[:,0]) - widths_voxels[0]/2
     x_max = np.max(voxel_grid[:,0]) + widths_voxels[0]/2
@@ -301,16 +313,17 @@ def make_box_params(voxel_grid, widths_voxels, datasize, dataloc="", dataname="b
     alpha_x = np.random.normal(0, 0.5, size=datasize)
     alpha_y = np.random.normal(0, 0.5, size=datasize)
     # the angle of rotation can be reconstructed such as: alpha = np.arctan(alpha_y/alpha_x)
-    f = h5py.File(dataloc+dataname+'.hdf5', "a")
-    f.create_dataset("px", data=px)
-    f.create_dataset("py", data=py)
-    f.create_dataset("pz", data=pz)
-    f.create_dataset("lx", data=lx)
-    f.create_dataset("ly", data=ly)
-    f.create_dataset("lz", data=lz)
-    f.create_dataset("alpha_x", data=alpha_x)
-    f.create_dataset("alpha_y", data=alpha_y)
-    f.close()
+    if saving:
+        f = h5py.File(path_to_datafile+'.hdf5', "a")
+        f.create_dataset("px", data=px)
+        f.create_dataset("py", data=py)
+        f.create_dataset("pz", data=pz)
+        f.create_dataset("lx", data=lx)
+        f.create_dataset("ly", data=ly)
+        f.create_dataset("lz", data=lz)
+        f.create_dataset("alpha_x", data=alpha_x)
+        f.create_dataset("alpha_y", data=alpha_y)
+        f.close()
     return px, py, pz, lx, ly, lz, alpha_x, alpha_y
 
 def make_rotated_bunker(voxel_grid, parameters, rho=-1600, background_noise=True):
@@ -333,9 +346,9 @@ def make_rotated_bunker(voxel_grid, parameters, rho=-1600, background_noise=True
         model: array
             The voxelised representation of the box defined on the input grid and parameters. [number of voxels]
     """
-    if not os.path.exists('params_makedata.json'):
-        raise FileNotFoundError('The params_makedata.json file has to exist.')
-    with open('params_makedata.json') as json_file:
+    if not os.path.exists('dataset_params.json'):
+        raise FileNotFoundError('The dataset_params.json file has to exist.')
+    with open('dataset_params.json') as json_file:
         params = json.load(json_file)
     num_voxels = np.shape(voxel_grid)[0]
     rho_obj = rho # the relative density within the object
