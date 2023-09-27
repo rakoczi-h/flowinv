@@ -11,7 +11,7 @@ The [_nflows_](https://github.com/uofgravity/nflows#citing-nflows) (C. Durkan et
 ## Usage
 **Data generation:**
 1. make_data.py script includes all functions necessary for the generation of the data set.
-2. To generate a comprehensive example data set, with both parameterised and voxelised data representation the sim_data.py can be ran as
+2. To generate an example data set, with parameterised data representation, run
 ```bash
 python sim_data.py
 ```
@@ -25,7 +25,7 @@ python grav_inv_flow.py
 ```
 3. During training, diagnostics can be plotted and saved.
 4. After training, the trained flow model can be saved, which then can be used to test the performance of the method or simply use it for inversion. As long as the problem we are trying to solve is consistent with the training data set, the network does not need to be retrained.
-To run a test with an example set of data:
+To run a test with the example set of data and a pre-trained network model:
 ```bash
 python test_grav_inv_flow.py
 ```
