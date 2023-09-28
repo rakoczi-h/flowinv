@@ -1,20 +1,16 @@
 #!/scratch/wiay/2263373r/masters/conda_envs/venv/bin/python
 
-import scipy
 from datetime import datetime
 import json
 from glasflow.flows import RealNVP
 import numpy as np
-import matplotlib
 import os
 import h5py
 from sklearn.model_selection import train_test_split
-from plot import *
+from plot import plot_flow_diagnostics, plot_loss
 from utils import scale_data
 import torch
-import matplotlib.pyplot as plt
 import joblib
-import warnings
 from train import train
 from test import forward_and_logprob, KL_divergence_latent
 np.random.seed(1434)

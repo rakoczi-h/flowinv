@@ -1,19 +1,15 @@
-import h5py
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import numpy as np
 from forward_models import *
 from utils import scale_data, inv_scale_data
 from itertools import product
 from scipy.stats import norm
 import scipy.stats
-import json
 import matplotlib.gridspec as gridspec
 import pandas as pd
 import plotly.graph_objects as go
 from collections import namedtuple
 import plotly
-import scipy.interpolate
 import corner
 import matplotlib.lines as mlines
 from plotly.subplots import make_subplots

@@ -10,12 +10,11 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from plot import *
 import os
-import imageio
 
 compare_to_bilby = False
 bilby_dir = '/data/www.astro/2263373r/bilby_outdir/testcases/'
 
-model_loc = '/data/www.astro/2263373r/grav_inv/run_2023-09-15 17:20:19.895996/'
+model_loc = '/data/www.astro/2263373r/grav_inv_parameterised/run_2023-09-26 10:06:55.732919/'
 save_loc = model_loc
 with open(model_loc + 'params.json') as json_file:
     params = json.load(json_file)
