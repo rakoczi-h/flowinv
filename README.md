@@ -7,6 +7,9 @@ _G.I.Flow_ contains a machine learning tool applying normalising flows to Bayesi
 The [_nflows_](https://github.com/uofgravity/nflows#citing-nflows) (C. Durkan et al. (2019)) package is used to construct implement the normalising flow elements and [_glasflow_](https://github.com/uofgravity/glasflow) (Williams et al. (2023)) is used to construct the neural network. 
 
 ## Installation
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
 **Data generation:**
