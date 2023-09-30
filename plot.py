@@ -865,7 +865,7 @@ def intact_plot_3D_mesh_animated(data, axis_limits, arange_by="probability", inc
     print("Made 3d plot...")
 
 # --------------------------- Flow diagnostic plots ---------------------------------------
-def plot_flow_diagnostics(latent_samples, latent_log_probs, loss, mean_kldiv, saveloc='', filename='diagnostics'):
+def plot_flow_diagnostics(latent_samples, latent_log_probs, loss, mean_kldiv, timestamp, saveloc='', filename='diagnostics'):
     """Plots diagnostics during training.
     Parameters
     ----------
@@ -885,44 +885,46 @@ def plot_flow_diagnostics(latent_samples, latent_log_probs, loss, mean_kldiv, sa
     ------
     image file
     """
-    fig, axs = plt.subplot_mosaic([['A', 'A', 'A'], ['B', 'C', 'D']],
+    fig, axs = plt.subplot_mosaic([['A', 'A'], ['B', 'B'], ['C', 'D']],
                               layout='constrained')
     # Plotting the loss
-    ax = axs[0]
+    ax = axs['A']
     ax.plot(loss['train'], label='Train', color='navy')
     ax.plot(loss['val'], label='Validation', color='orange')
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Loss')
-    ax.set_title('Loss')
+    ax.set_xlabel('Epoch', fontdict={'fontsize': 10})
+    ax.set_ylabel('Loss', fontdict={'fontsize': 10})
+    ax.set_title(f"Loss | {timestamp}", fontdict={'fontsize': 10})
     ax.legend()
 
     # Plotting the latent space distribution
-    ax = axs[1]
+    ax = axs['B']
     for i in range(np.shape(latent_samples)[1]):
         if i == 0:
-            ax.hist(latent_samples[:,i], bins=100, hisstype='step', color='orange', alpha=0.3, density=True, label='Latent Samples')
+            ax.hist(latent_samples[:,i], bins=100, histtype='step', color='orange', density=True, label='Latent Samples')
         else:
-            ax.hist(latent_samples[:,i], bins=100, hisstype='step', color='orange', alpha=0.3, density=True)
+            ax.hist(latent_samples[:,i], bins=100, histtype='step', color='orange', density=True)
     g = np.linspace(-4, 4, 100)
     ax.plot(g, norm.pdf(g, loc=0.0, scale=1.0), color='navy', label='Unit Gaussian')
     ax.set_xlim(-4, 4)
-    ax.set_title(f"Latent Space Distribution \n Mean KL-Divergence = {mean_kldiv:.3f}")
-    ax.set_xlabel('Latent Parameter')
-    ax.set_ylabel('Sample Density')
+    ax.set_title(f"Latent Space Distribution | Mean KL = {mean_kldiv:.3f}", fontdict={'fontsize': 10})
+    ax.set_xlabel('Latent Parameter', fontdict={'fontsize': 10})
+    ax.set_ylabel('Sample Density', fontdict={'fontsize': 10})
     ax.legend()
 
     # Plotting a histogram of the latent log probabilites
-    ax = axs[2]
+    ax = axs['C']
     ax.hist(latent_log_probs, bins=100, color='navy', density=True)
-    ax.set_title('Latent Space Sample Probabilities')
-    ax.set_ylabel('Density of Probability')
-    ax.set_xlabel('Log-Probability Value')
+    ax.set_box_aspect(1)
+    ax.set_title('LS Sample Probabilities', fontdict={'fontsize': 10})
+    ax.set_ylabel('Prob Density', fontdict={'fontsize': 10})
+    ax.set_xlabel('Log-Prob', fontdict={'fontsize': 10})
 
     # Plotting an image of the correlation of the latent space samples
-    ax = axs[3]
+    ax = axs['D']
+    ax.set_box_aspect(1)
     sigma = np.corrcoef(latent_samples.T)
     ax.imshow(sigma)
-    ax.set_title('Latent Space Correlation')
+    ax.set_title('LS Correlation', fontdict={'fontsize': 10})
 
     plt.savefig(saveloc+filename+".png", transparent=True)
     plt.close()
