@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from forward_models import *
-from utils import scale_data, inv_scale_data
+from .forward_models import *
+from .utils import scale_data, inv_scale_data, rotate
 from itertools import product
 from scipy.stats import norm
 import scipy.stats
@@ -13,7 +13,6 @@ import plotly
 import corner
 import matplotlib.lines as mlines
 from plotly.subplots import make_subplots
-from utils import rotate
 
 # ------------------------------- 2D Data visualization ---------------------------
 def plot_voxels(model, saveloc, filename='density_voxels'):

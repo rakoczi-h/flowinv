@@ -1,5 +1,3 @@
-#!/scratch/wiay/2263373r/masters/conda_envs/venv/bin/python
-
 from datetime import datetime
 import json
 from glasflow.flows import RealNVP
@@ -7,12 +5,14 @@ import numpy as np
 import os
 import h5py
 from sklearn.model_selection import train_test_split
-from plot import plot_flow_diagnostics, plot_loss
-from utils import scale_data
 import torch
 import joblib
-from train import train
-from test import forward_and_logprob, KL_divergence_latent
+
+from lib.utils import scale_data
+from lib.train import train
+from lib.test import forward_and_logprob, KL_divergence_latent
+from lib.plot import plot_flow_diagnostics, plot_loss
+
 np.random.seed(1434)
 
 # ---------------SETTING UP--------------------
@@ -134,7 +134,7 @@ for i in range(epochs):
         flow.eval()
         latent_samples, latent_logprobs = forward_and_logprob(x_train_tensor[:10000,:], y_train_tensor[:10000, :], flow)
         mean_kldiv, std_kldiv = KL_divergence_latent(latent_samples)
-        plot_flow_diagnostics(latent_samples, latent_logprobs, loss, mean_kldiv, saveloc=saveloc, filename='diagnostics')
+        plot_flow_diagnostics(latent_samples, latent_logprobs, loss, mean_kldiv, "timestamp?", saveloc=saveloc, filename='diagnostics')
         end_test = datetime.now()
         print(f"Finished testing, time taken: \t {end_test-start_test}")
     # Setting early stopping condition

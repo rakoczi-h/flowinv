@@ -1,20 +1,20 @@
 import numpy as np
 import torch
-from utils import scale_data, inv_scale_data
 import json
 from glasflow.flows import RealNVP
-from test import *
 import h5py
 from datetime import datetime
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from plot import *
+from lib.utils import scale_data, inv_scale_data
+from lib.plot import *
+from lib.test import *
 import os
 
 compare_to_bilby = False
-bilby_dir = '/data/www.astro/2263373r/bilby_outdir/testcases/'
+bilby_dir = './'
 
-model_loc = '/data/www.astro/2263373r/grav_inv_parameterised/run_2023-09-26 10:06:55.732919/'
+model_loc = './'
 save_loc = model_loc
 with open(model_loc + 'params.json') as json_file:
     params = json.load(json_file)

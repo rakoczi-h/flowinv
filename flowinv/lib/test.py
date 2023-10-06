@@ -1,9 +1,8 @@
-#!/scratch/wiay/2263373r/masters/conda_envs/venv/bin/python
 import scipy.stats
 import numpy as np
 import torch
 import pandas as pd
-from plot import make_pp_plot
+from lib.plot import make_pp_plot
 from scipy.spatial.distance import jensenshannon
 
 # ---------------------------- P-P ----------------------------------------------

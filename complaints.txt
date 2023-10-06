@@ -1,0 +1,8 @@
+- Python < 3.10 is required
+- Python NVIDIA libraries occupy about 4GB of space
+- NVIDIA libraries only available for x86_64 arch
+- JSON configuration files hardcode to /data/somewhere/that/clearly/does/not/exist/
+- test_grav_inv_flow.py has stuff hardcoded.. maybe pass the data file as a command line argument? python test_grav_inv_flow.py data_dir
+- everything is dumped in a single directory. Make an output data directory and lib directory for python code that is imported and not run directly
+- never concatenate (save_dir + "filename.hdf5") use os.path.join(save_dir, "filename.hdf5") instead (because of missing or too many slashes /)
+- remove shebang #!/scratch/wiay/2263373r/masters/conda_envs/venv/bin/python from top of files
