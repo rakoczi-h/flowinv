@@ -1,6 +1,4 @@
 {
-"_save_dir" : "The location where the training results will be saved.",
-"save_dir" : "./output/",
 "_scaler_model" : "The scaler type to use for the model data. Can be minmax or quantile.",
 "scaler_model" : "minmax",
 "_scaler_survey" : "The scaler type to use for the survey data. Can be minmax of quantile.",
