@@ -252,7 +252,7 @@ def make_voxelised_box_dataset(voxel_coords, survey_coords, noise_on_grid=False,
 
 # ------------------------- Box parameter generation, and parameter translation to voxelised density model -------------------------
 def make_box_params(voxel_grid, widths_voxels, datasize, dataloc="", filename="box_params.hdf5", saving=True):
-    """Makes a dataset of boxes within a specified voxel space.
+    """Makes a dataset of boxes within a specified voxel space. The priors of the parameters are defined here
     Parameters
     ----------
         datasize: int
@@ -296,14 +296,14 @@ def make_box_params(voxel_grid, widths_voxels, datasize, dataloc="", filename="b
     y_min = np.min(voxel_grid[:,1]) - widths_voxels[1]/2
     y_max = np.max(voxel_grid[:,1]) + widths_voxels[1]/2
     z_min = np.min(voxel_grid[:,2]) - widths_voxels[2]/2
-    z_max = 20 # making sure that the box cannot poke out on the top
+    z_max = (np.max(voxel_grid[:,2]) + widths_voxels[2]/2) - 40 # making sure that the box cannot poke out on the top
     # need to get rid of this hardcoding here
     # location of the middle of the box
     px = np.random.uniform(low=x_min, high=x_max, size=datasize)
     py = np.random.uniform(low=y_min, high=y_max, size=datasize)
     pz = np.random.uniform(low=z_min, high=z_max, size=datasize)
     # its dimensions
-    lz_max = 80
+    lz_max = z_max - z_min - 40 # making sure that the box cannot poke out on the top
     lz = np.random.uniform(low=0.0, high=lz_max, size=datasize)
     lx_max = x_max-x_min
     lx = np.random.uniform(low=0.0, high=lx_max, size=datasize)
