@@ -27,10 +27,10 @@ python sim_data.py
 The inputs to the data generation can be edited in the *dataset_params.json* file.
 
 **Gravity inversion:**
-1. A neural network can be trained with the generated data set, or any other data set we desire to use. The data set used and the network parameters are defined in *flow_params.json*.
+1. A neural network can be trained with the generated data set, or any other data set we desire to use. The network parameters are defined in *flow_params.json* and the input data and output directory need to be passed as inputs to the script.
 
 ```bash
-python grav_inv_flow.py
+python grav_inv_flow.py /path/to/datafile.hdf5 /output/directory/
 ```
 3. During training, diagnostics can be plotted and saved.
 4. After training, the trained flow model can be saved, which then can be used to test the performance of the method or simply use it for inversion. As long as the problem we are trying to solve is consistent with the training data set, the network does not need to be retrained.

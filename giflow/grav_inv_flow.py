@@ -22,11 +22,15 @@ with open('flow_params.json') as json_file:
     params = json.load(json_file)
 
 datafile = sys.argv[1] # Passing the data as an input file
-
-# Directories:
-savedir = params['save_dir']
+savedir = sys.argv[2] # Passing the output directory as an input
+print("----------------------------------------")
+print(f"Input file: {datafile}")
+print(f"Output directory: {savedir}")
+if not os.path.exists(savedir):
+    print("Output directory already exists, contents will be overwritten.")
 if not os.path.exists(savedir):
     os.mkdir(savedir)
+print("----------------------------------------")
 
 # Device:
 gpu_num = params['gpu_num']
