@@ -20,9 +20,9 @@ pip install -r requirements.txt
 ## Usage
 **Data generation:**
 1. make_data.py script includes all functions necessary for the generation of the data set.
-2. To generate an example data set, with parameterised data representation, run
+2. To generate an example data set, with parameterised data representation, run the script below with an argument defining the location where the data is to be saved.
 ```bash
-python sim_data.py
+python sim_data.py /path/to/data/
 ```
 The inputs to the data generation can be edited in the *dataset_params.json* file.
 
@@ -30,7 +30,7 @@ The inputs to the data generation can be edited in the *dataset_params.json* fil
 1. A neural network can be trained with the generated data set, or any other data set we desire to use. The network parameters are defined in *flow_params.json* and the input data and output directory need to be passed as inputs to the script.
 
 ```bash
-python grav_inv_flow.py /path/to/datafile.hdf5 /output/directory/
+python grav_inv_flow.py /path/to/data/file.hdf5 /output/directory/
 ```
 3. During training, diagnostics can be plotted and saved.
 4. After training, the trained flow model can be saved, which then can be used to test the performance of the method or simply use it for inversion. As long as the problem we are trying to solve is consistent with the training data set, the network does not need to be retrained.
