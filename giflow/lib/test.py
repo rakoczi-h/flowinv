@@ -3,12 +3,13 @@ import scipy.stats
 import numpy as np
 import torch
 import pandas as pd
-from plot import make_pp_plot
 from scipy.spatial.distance import jensenshannon
+
+from plot import make_pp_plot
 
 # ---------------------------- P-P ----------------------------------------------
 
-def p_p_testing(model, truths, y_test, n_test_samples, n_test_cases=100, saveloc='', filename='pp_plot', keys=None, n_params=10):
+def p_p_testing(model, truths, y_test, n_test_samples, n_test_cases=100, saveloc='', filename='pp_plot.png', keys=None, n_params=10):
     """Draws samples from the flow and constructs a p-p plot.
     Parameters
     ----------
@@ -60,7 +61,7 @@ def p_p_testing(model, truths, y_test, n_test_samples, n_test_cases=100, saveloc
             posteriors.append(posterior)
             injections.append(injection)
     print("Calculated results for p-p...")
-    make_pp_plot(posteriors, injections, filename=saveloc+filename+'.png')
+    make_pp_plot(posteriors, injections, filename=os.path.join(saveloc, filename))
     print("Made p-p plot...")
 
 # ---------------------------- DIVERGENCES ---------------------------------------

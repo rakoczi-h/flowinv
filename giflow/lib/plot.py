@@ -1,7 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from forward_models import *
-from utils import scale_data, inv_scale_data
 from itertools import product
 from scipy.stats import norm
 import scipy.stats
@@ -13,10 +11,13 @@ import plotly
 import corner
 import matplotlib.lines as mlines
 from plotly.subplots import make_subplots
+
 from utils import rotate
+from utils import scale_data, inv_scale_data
+from forward_models import *
 
 # ------------------------------- 2D Data visualization ---------------------------
-def plot_voxels(model, saveloc, filename='density_voxels'):
+def plot_voxels(model, saveloc, filename='density_voxels.png'):
     """Plots the 2D projections of a 3D density distributed defined on a voxel grid.
     Parameters
     ----------
@@ -49,10 +50,10 @@ def plot_voxels(model, saveloc, filename='density_voxels'):
                 ylabel = "x"
                 xlabel = "y"
             axi.set(ylabel=ylabel, xlabel=xlabel)
-    plt.savefig(saveloc+filename+'.png')
+    plt.savefig(os.path.join(saveloc, filename))
     plt.close()
 
-def plot_survey(survey_coords, survey, saveloc, filename="survey_contour", contour=True):
+def plot_survey(survey_coords, survey, saveloc, filename="survey_contour.png", contour=True):
     """Plots gravimetry survey data.
     Parameters
     ----------
@@ -86,13 +87,13 @@ def plot_survey(survey_coords, survey, saveloc, filename="survey_contour", conto
     plt.ylabel("y [m]")
     plt.colorbar(label=f"\u0394g [\u03BCGal]")
     plt.scatter(survey_coords[:,:,0], survey_coords[:,:,1], marker='.', color='white')
-    plt.savefig(saveloc+filename+'.png')
+    plt.savefig(os.path.join(saveloc, filename))
     plt.close()
 
 
 # ------------------------------------ Output and target comparison --------------------------------------
 
-def plot_compare_survey(test_samples, target_survey, survey_coords, mode='model', saveloc='', contour=True, filename='survey_compare', **kwargs):
+def plot_compare_survey(test_samples, target_survey, survey_coords, mode='model', saveloc='', contour=True, filename='survey_compare.png', **kwargs):
     """Takes samples from the flow, forward models them and compares to the target survey.
     Parameters
     ----------
@@ -176,10 +177,10 @@ def plot_compare_survey(test_samples, target_survey, survey_coords, mode='model'
     fig.colorbar(im, cax=cbar_ax, cmap=cmap, norm=norm, label=f"g [\u03BCGal]")
     fig.text(0.56, 0.21, f"Mean RMSE = {mean_rmse:.3f}")
     fig.text(0.62, 0.71, "Samples", fontdict={'size' : 12})
-    plt.savefig(saveloc+filename+'.png', bbox_inches='tight', transparent=True)
+    plt.savefig(os.path.join(saveloc, filename), bbox_inches='tight', transparent=True)
     plt.close()
 
-def plot_compare_voxel_projections(output_model, target_model, saveloc, n_samples=4, filename='voxel_compare'):
+def plot_compare_voxel_projections(output_model, target_model, saveloc, n_samples=4, filename='voxel_compare.png'):
     """Compares the  2D projections of the 3D outputs of the sampling method to the target distribution's projections.
     Individual samples are shown as well as the mean and standard deviation of the samples.
     Parameters
@@ -238,10 +239,10 @@ def plot_compare_voxel_projections(output_model, target_model, saveloc, n_sample
     cbar_ax.set(frame_on=False)
     fig.text(0.52, 0.775, "Samples", fontdict={'size' : 10})
     fig.colorbar(im, cax=cbar_ax, cmap=cmap, norm=norm, label=f"\u03C1 [kg/m$^2$]")
-    plt.savefig(saveloc+filename+'.png', bbox_inches="tight", transparent=True)
+    plt.savefig(os.path.join(saveloc, filename), bbox_inches="tight", transparent=True)
     plt.close()
 
-def plot_compare_voxel_slices(samples, logprobs, true_model, slice_coords=[1,3,5], saveloc='', filename='sliced_voxels'):
+def plot_compare_voxel_slices(samples, logprobs, true_model, slice_coords=[1,3,5], saveloc='', filename='sliced_voxels.png'):
     """Makes a comparison plot consisting of slices of the voxelspace.
     Each column is slices along a different direction (x, y, z).
     Each row is a different slice, with increasing coordinates.
@@ -371,501 +372,12 @@ def plot_compare_voxel_slices(samples, logprobs, true_model, slice_coords=[1,3,5
     cbar_ax.set_ylabel(f"\u03C1 [kg/$m^{2}$]",fontsize=14)
     cbar_ax.tick_params(labelsize=14)
 
-    plt.savefig(saveloc+filename+'.png', bbox_inches='tight', transparent=True)
+    plt.savefig(os.path.join(saveloc, filename), bbox_inches='tight', transparent=True)
     plt.close()
 
-
-# -------------------------------------- 3D Plotting --------------------------------------
-# Under development
-def intact_plot_3D(voxel_coords, model, saveloc='', filetype='html', filename='3d_voxelplot'):
-    plotly.io.templates.default = 'plotly'
-    fig = go.Figure(data=go.Volume(
-        x = voxel_coords[:,0],
-        y = voxel_coords[:,1],
-        z = voxel_coords[:,2],
-        isomax = -100,
-        cmax = -500,
-        cmin = -1600,
-        value = model,
-        opacity = 0.5,
-        surface_count=25,
-        opacityscale='min'
-    ))
-    fig.update_layout(height = 800,
-                      width = 1000,
-                      font = dict(size=12),
-                      scene = dict(
-                           xaxis_title='x [m]',
-                           yaxis_title='y [m]',
-                           zaxis_title='z [m]'))
-    if filetype=='html':
-        fig.write_html(saveloc+filename+'.html')
-    if filetype=='png':
-        fig.write_image(saveloc+filename+'.png')
-    plt.close()
-
-def intact_plot_3D_volume_animated(data, axis_limits, arange_by="probability", include_truth=False, saveloc='', filename='3d_mesh_plot_animated'):
-    properties = data.keys()
-    if arange_by not in properties:
-        print("arange_by not in properties")
-        exit()
-    arange_idx_arr = np.argsort(data[arange_by])
-    frames = []
-    for i in arange_idx_arr:
-        model = data['models'][i]
-        voxel_coords = data['voxel_coords']
-        layout_i = go.Layout(
-            annotations=[
-            # go.layout.Annotation(
-            #         text=r'x = {px:.2f} <br>y = {py:.2f} <br>z = {pz:.2f} <br>l = {lx:.2f} <br>w = {ly:.2f} <br>d = {lz:.2f} <br>angle = {alpha:.2f} <br>probability = {probability:.2f}'.format(px=px, py=py, pz=pz, lx=lx, ly=ly, lz=lz, alpha=alpha, probability=probability),
-            #         align='left',
-            #         showarrow=False,
-            #         xref='paper',
-            #         yref='paper',
-            #         x=0.175,
-            #         y=-0.05,
-            #         bordercolor='black',
-            #         borderwidth=0),
-            go.layout.Annotation(
-            text=arange_by,
-                    align='left',
-                    showarrow=False,
-                    xref='paper',
-                    yref='paper',
-                    x=0.5,
-                    y=-0.15,
-                    bordercolor='black',
-                    borderwidth=0)
-            ])
-        frame_i = go.Frame(data=go.Volume(
-            x = voxel_coords[:,0],
-            y = voxel_coords[:,1],
-            z = voxel_coords[:,2],
-            isomax = -100,
-            cmax = -500,
-            cmin = -1600,
-            value = model,
-            opacity = 0.5,
-            surface_count=25
-            ),
-        name=str(i),
-        layout=layout_i)
-        frames.append(frame_i)
-    
-    fig = go.Figure(frames=frames)
-    fig.add_trace(go.Volume(
-        x = voxel_coords[:,0],
-        y = voxel_coords[:,1],
-        z = voxel_coords[:,2],
-        value = model,
-        opacity=0.15,
-        surface_count=10
-        ))
-
-    fig.add_annotation(text='text',
-                    align='left',
-                    showarrow=False,
-                    xref='paper',
-                    yref='paper',
-                    x=0.8,
-                    y=0.5,
-                    bordercolor='black',
-                    borderwidth=0)
-    
-    sliders = [
-                {
-                    "pad": {"b": 10, "t": 60},
-                    "len": 0.5,
-                    "x": 0.25,
-                    "y": 0,
-                    "steps": [
-                        {
-                            "args": [[f.name], frame_args(0)],
-                            "label": str(data[arange_by][k]),
-                            "method": "animate",
-                            "name" : str(arange_by)+str(data[arange_by][k]),
-                         }
-                        for k, f in enumerate(fig.frames)
-                    ],
-                }
-             ]
-
-    # Layout
-    fig.update_layout(
-        scene = dict(
-                           xaxis = dict(range=[axis_limits[0][0], axis_limits[0][1]],
-                                        backgroundcolor="rgb(200, 200, 230)",
-                                        gridcolor="white",
-                                        showbackground=True,
-                                        zerolinecolor="white",),
-                           yaxis = dict(range=[axis_limits[1][0], axis_limits[1][1]],
-                                        backgroundcolor="rgb(230, 200, 230)",
-                                        gridcolor="white",
-                                        showbackground=True,
-                                        zerolinecolor="white",),
-                           zaxis = dict(range=[axis_limits[2][0], axis_limits[2][1]],
-                                        backgroundcolor="rgb(241, 236, 167)",
-                                        gridcolor="white",
-                                        showbackground=True,
-                                        zerolinecolor="white",),
-                           aspectmode='manual',
-                           aspectratio=dict(x=(axis_limits[0][1]-axis_limits[0][0])/(axis_limits[0][1]-axis_limits[0][0]),
-                                            y=(axis_limits[1][1]-axis_limits[1][0])/(axis_limits[0][1]-axis_limits[0][0]),
-                                            z=(axis_limits[2][1]-axis_limits[2][0])/(axis_limits[0][1]-axis_limits[0][0]))),
-         updatemenus = [
-            {
-                "buttons": [
-                    {
-                        "args": [None, frame_args(50)],
-                        "label": "&#9654;", # play symbol
-                        "method": "animate",
-                    },
-                    {
-                        "args": [[None], frame_args(0)],
-                        "label": "&#9724;", # pause symbol
-                        "method": "animate",
-                    },
-                ],
-                "direction": "left",
-                "pad": {"r": 10, "t": 70},
-                "type": "buttons",
-                "x": 0.25,
-                "y": 0,
-            }
-         ],
-         sliders=sliders
-    )
-    fig.write_html(saveloc+filename+'.html')
-    plt.close()
-
-
-def intact_plot_3D_mesh(box_params, axis_limits, filetype='html', saveloc='', filename='3D_mesh'):
-    """
-    box_params: needs to be 1D list or array of box parameters [px, py, pz, lx, ly, lz, alpha_x, alpha_y]
-    axis_limits: list of lists, [[xmin, xmax], [ymin,ymax], [zmin,zmax]]
-    """
-    px = box_params[0]
-    py = box_params[1]
-    pz = box_params[2]
-    lx = box_params[3]
-    ly = box_params[4]
-    lz = box_params[5]
-    alpha_x = box_params[6]
-    alpha_y = box_params[7]
-    alpha = np.arctan(alpha_y/alpha_x)
-    # define the ranges of the coordinates
-    x1 = px - lx/2
-    x2 = px + lx/2
-    y1 = py - ly/2
-    y2 = py + ly/2
-    z1 = pz - lz/2
-    z2 = pz + lz/2
-    x_arr = np.arange(x1, x2, (x2-x1)/10) # 10 points in each grid
-    y_arr = np.arange(y1, y2, (y2-y1)/10) # 10 points in each grid
-    z_arr = np.arange(z1, z2, (z2-z1)/10) # 10 points in each grid
-    # make grids of points for the faces
-    arrs = [x_arr, y_arr, z_arr]
-    lims = [[x1, x2], [y1, y2], [z1, z2]]
-    points = []
-    for i in range(3):
-        arrs[0] = x_arr
-        arrs[1] = y_arr
-        arrs[2] = z_arr
-        for j in range(2):
-            arrs[i] = lims[i][j]
-            x, y, z = np.meshgrid(arrs[0], arrs[1], arrs[2], indexing='ij')
-            x, y, z = x.ravel(), y.ravel(), z.ravel()
-            coords = np.c_[x, y, z]
-            points.append(coords)
-    points = np.vstack(points)
-    points[:, :2] = rotate(points[:, :2], origin=(px, py), angle=alpha)
-    # plotting
-    fig = go.Figure(data=go.Mesh3d(x=points[:,0], y=points[:,1], z=points[:,2],
-                    alphahull=0, # ideal fox convex bodies
-                    opacity = 0.4,
-                    color = "rgb(49, 5, 151)"))
-    fig.update_layout(height = 800,
-                      width = 1000,
-                      font = dict(size=12),
-                      scene = dict(
-                           xaxis = dict(range=[axis_limits[0][0], axis_limits[0][1]],
-                                        backgroundcolor="rgb(226, 183, 249)",
-                                        gridcolor="white",
-                                        showbackground=True,
-                                        zerolinecolor="white",),
-                           yaxis = dict(range=[axis_limits[1][0], axis_limits[1][1]],
-                                        backgroundcolor="rgb(249, 173, 182)",
-                                        gridcolor="white",
-                                        showbackground=True,
-                                        zerolinecolor="white",),
-                           zaxis = dict(range=[axis_limits[2][0], axis_limits[2][1]],
-                                        backgroundcolor="rgb(247, 238, 166)",
-                                        gridcolor="white",
-                                        showbackground=True,
-                                        zerolinecolor="white",),
-                           xaxis_title='x [m]',
-                           yaxis_title='y [m]',
-                           zaxis_title='z [m]',
-                           aspectmode='manual',
-                           aspectratio=dict(x=(axis_limits[0][1]-axis_limits[0][0])/(axis_limits[0][1]-axis_limits[0][0]),
-                                            y=(axis_limits[1][1]-axis_limits[1][0])/(axis_limits[0][1]-axis_limits[0][0]),
-                                            z=(axis_limits[2][1]-axis_limits[2][0])/(axis_limits[0][1]-axis_limits[0][0]))))
-    fig.add_annotation(text=r'x = {px:.2f} m <br>y = {py:.2f} m <br>z = {pz:.2f} m <br>l = {lx:.2f} m <br>w = {ly:.2f} m <br>d = {lz:.2f} m <br>angle = {alpha:.2f} rad'.format(px=px, py=py, pz=pz, lx=lx, ly=ly, lz=lz, alpha=alpha),
-                    font = dict(size=12),
-                    align='left',
-                    showarrow=False,
-                    xref='paper',
-                    yref='paper',
-                    x=1.0,
-                    y=0.7,
-                    bordercolor='black',
-                    borderwidth=1)
-    if filetype=='html':
-        fig.write_html(saveloc+filename+'.html')
-    elif filetype=='png':
-        fig.write_image(saveloc+filename+'.png')
-    plt.close()
-
-
-def intact_plot_3D_mesh_subplot(box_params, axis_limits, saveloc='', filename='3d_mesh_subplot'):
-    fig = make_subplots(
-              rows=6, cols=6,
-              specs=[[{'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}],
-                     [{'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}],
-                     [{'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}],
-                     [{'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}],
-                     [{'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}],
-                     [{'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}, {'type' : 'mesh3d'}]])
-    idx = 0
-    for row in range(6):
-        for col in range(6):
-            px = box_params[idx, 0]
-            py = box_params[idx, 1]
-            pz = box_params[idx, 2]
-            lx = box_params[idx, 3]
-            ly = box_params[idx, 4]
-            lz = box_params[idx, 5]
-            alpha_x = box_params[idx, 6]
-            alpha_y = box_params[idx, 7]
-            alpha = np.arctan(alpha_y/alpha_x)
-            # define the ranges of the coordinates
-            x1 = px - lx/2
-            x2 = px + lx/2
-            y1 = py - ly/2
-            y2 = py + ly/2
-            z1 = pz - lz/2
-            z2 = pz + lz/2
-            x_arr = np.arange(x1, x2, (x2-x1)/10) # 10 points in each grid
-            y_arr = np.arange(y1, y2, (y2-y1)/10) # 10 points in each grid
-            z_arr = np.arange(z1, z2, (z2-z1)/10) # 10 points in each grid
-            # make grids of points for the faces
-            arrs = [x_arr, y_arr, z_arr]
-            lims = [[x1, x2], [y1, y2], [z1, z2]]
-            points = []
-            for i in range(3):
-                arrs[0] = x_arr
-                arrs[1] = y_arr
-                arrs[2] = z_arr
-                for j in range(2):
-                    arrs[i] = lims[i][j]
-                    x, y, z = np.meshgrid(arrs[0], arrs[1], arrs[2], indexing='ij')
-                    x, y, z = x.ravel(), y.ravel(), z.ravel()
-                    coords = np.c_[x, y, z]
-                    points.append(coords)
-            points = np.vstack(points)
-            points[:, :2] = rotate(points[:, :2], origin=(px, py), angle=alpha)
-            # plotting
-            fig.add_trace(go.Mesh3d(x=points[:,0], y=points[:,1], z=points[:,2],
-                    alphahull=0, # ideal fox convex bodies
-                    opacity = 0.4,
-                    color = "rgb(49, 5, 151)"),
-                    row = row+1, col=col+1)
-            fig.update_layout(scene = dict(
-                           xaxis = dict(range=[axis_limits[0][0], axis_limits[0][1]],
-                                        backgroundcolor="rgb(226, 183, 249)",
-                                        gridcolor="white",
-                                        showbackground=True,
-                                        zerolinecolor="white",),
-                           yaxis = dict(range=[axis_limits[1][0], axis_limits[1][1]],
-                                        backgroundcolor="rgb(249, 173, 182)",
-                                        gridcolor="white",
-                                        showbackground=True,
-                                        zerolinecolor="white",),
-                           zaxis = dict(range=[axis_limits[2][0], axis_limits[2][1]],
-                                        backgroundcolor="rgb(247, 238, 166)",
-                                        gridcolor="white",
-                                        showbackground=True,
-                                        zerolinecolor="white",),
-                           aspectmode='manual',
-                           aspectratio=dict(x=(axis_limits[0][1]-axis_limits[0][0])/(axis_limits[0][1]-axis_limits[0][0]),
-                                            y=(axis_limits[1][1]-axis_limits[1][0])/(axis_limits[0][1]-axis_limits[0][0]),
-                                            z=(axis_limits[2][1]-axis_limits[2][0])/(axis_limits[0][1]-axis_limits[0][0]))))
-            idx =+ 1
-    fig.write_html(saveloc+filename+'.html')
-    plt.close()
-
-
-def intact_plot_3D_mesh_animated(data, axis_limits, arange_by="probability", include_truth=False, saveloc='', filename='3d_mesh_plot_animated'):
-    properties = data.keys()
-    if arange_by not in properties:
-        print("arange_by not in properties")
-        exit()
-    arange_idx_arr = np.argsort(data[arange_by])
-    frames = []
-    for i in arange_idx_arr:
-        px = float(data['px'][i])
-        py = float(data['py'][i])
-        pz = float(data['pz'][i])
-        lx = float(data['lx'][i])
-        ly = float(data['ly'][i])
-        lz = float(data['lz'][i])
-        alpha_x = float(data['alpha_x'][i])
-        alpha_y = float(data['alpha_y'][i])
-        probability = float(data['probability'][i])
-        alpha = -np.arctan(alpha_y/alpha_x)
-        # define the ranges of the coordinates
-        x1 = px - lx/2
-        x2 = px + lx/2
-        y1 = py - ly/2
-        y2 = py + ly/2
-        z1 = pz - lz/2
-        z2 = pz + lz/2
-        x_arr = np.arange(x1, x2, (x2-x1)/10) # 10 points in each grid
-        y_arr = np.arange(y1, y2, (y2-y1)/10) # 10 points in each grid
-        z_arr = np.arange(z1, z2, (z2-z1)/10) # 10 points in each grid
-        # make grids of points for the faces
-        arrs = [x_arr, y_arr, z_arr]
-        lims = [[x1, x2], [y1, y2], [z1, z2]]
-        points = []
-        for j in range(3):
-            arrs[0] = x_arr
-            arrs[1] = y_arr
-            arrs[2] = z_arr
-            for k in range(2):
-                arrs[j] = lims[j][k]
-                x, y, z = np.meshgrid(arrs[0], arrs[1], arrs[2], indexing='ij')
-                x, y, z = x.ravel(), y.ravel(), z.ravel()
-                coords = np.c_[x, y, z]
-                points.append(coords)
-        points = np.vstack(points)
-        points[:, :2] = rotate(points[:, :2], origin=(px, py), angle=alpha)
-        # plot_arr.append(points)
-        layout_i = go.Layout(
-            annotations=[
-            go.layout.Annotation(
-                    text=r'x = {px:.2f} <br>y = {py:.2f} <br>z = {pz:.2f} <br>l = {lx:.2f} <br>w = {ly:.2f} <br>d = {lz:.2f} <br>angle = {alpha:.2f} <br>probability = {probability:.2f}'.format(px=px, py=py, pz=pz, lx=lx, ly=ly, lz=lz, alpha=alpha, probability=probability),
-                    align='left',
-                    showarrow=False,
-                    xref='paper',
-                    yref='paper',
-                    x=0.175,
-                    y=-0.05,
-                    bordercolor='black',
-                    borderwidth=0),
-            go.layout.Annotation(
-            text=arange_by,
-                    align='left',
-                    showarrow=False,
-                    xref='paper',
-                    yref='paper',
-                    x=0.5,
-                    y=-0.15,
-                    bordercolor='black',
-                    borderwidth=0)
-            ])
-        frame_i = go.Frame(data=[go.Mesh3d(x=points[:,0], y=points[:,1], z=points[:,2],
-                    alphahull=0, # ideal fox convex bodies
-                    opacity = 0.5,
-                    color = 'darkblue')],
-                    name=str(i),
-                    layout=layout_i)
-        frames.append(frame_i)
-    
-    fig = go.Figure(frames=frames)
-    fig.add_trace(go.Mesh3d(x=points[:,0], y=points[:,1], z=points[:,2],
-                alphahull=0, # ideal fox convex bodies
-                opacity = 0.4,
-                color = 'darkblue'))
-
-    fig.add_annotation(text='text',
-                    align='left',
-                    showarrow=False,
-                    xref='paper',
-                    yref='paper',
-                    x=0.8,
-                    y=0.5,
-                    bordercolor='black',
-                    borderwidth=0)
-    
-    sliders = [
-                {
-                    "pad": {"b": 10, "t": 60},
-                    "len": 0.5,
-                    "x": 0.25,
-                    "y": 0,
-                    "steps": [
-                        {
-                            "args": [[f.name], frame_args(50)],
-                            "label": f"{float(data[arange_by][arange_idx_arr[k]]):.2f}",
-                            "method": "animate",
-                            "name" : str(arange_by)+str(data[arange_by][arange_idx_arr[k]]),
-                         }
-                        for k, f in enumerate(fig.frames)
-                    ],
-                }
-             ]
-
-    # Layout
-    fig.update_layout(
-        scene = dict(
-                           xaxis = dict(range=[axis_limits[0][0], axis_limits[0][1]],
-                                        backgroundcolor="rgb(200, 200, 230)",
-                                        gridcolor="white",
-                                        showbackground=True,
-                                        zerolinecolor="white",),
-                           yaxis = dict(range=[axis_limits[1][0], axis_limits[1][1]],
-                                        backgroundcolor="rgb(230, 200, 230)",
-                                        gridcolor="white",
-                                        showbackground=True,
-                                        zerolinecolor="white",),
-                           zaxis = dict(range=[axis_limits[2][0], axis_limits[2][1]],
-                                        backgroundcolor="rgb(230, 230, 200)",
-                                        gridcolor="white",
-                                        showbackground=True,
-                                        zerolinecolor="white",),
-                           aspectmode='manual',
-                           aspectratio=dict(x=(axis_limits[0][1]-axis_limits[0][0])/(axis_limits[0][1]-axis_limits[0][0]),
-                                            y=(axis_limits[1][1]-axis_limits[1][0])/(axis_limits[0][1]-axis_limits[0][0]),
-                                            z=(axis_limits[2][1]-axis_limits[2][0])/(axis_limits[0][1]-axis_limits[0][0]))),
-         updatemenus = [
-            {
-                "buttons": [
-                    {
-                        "args": [None, frame_args(50)],
-                        "label": "&#9654;", # play symbol
-                        "method": "animate",
-                    },
-                    {
-                        "args": [[None], frame_args(0)],
-                        "label": "&#9724;", # pause symbol
-                        "method": "animate",
-                    },
-                ],
-                "direction": "left",
-                "pad": {"r": 10, "t": 70},
-                "type": "buttons",
-                "x": 0.25,
-                "y": 0,
-            }
-         ],
-         sliders=sliders
-    )
-    fig.write_html(saveloc+filename+'.html')
-    plt.close()
-    print("Made 3d plot...")
 
 # --------------------------- Flow diagnostic plots ---------------------------------------
-def plot_flow_diagnostics(latent_samples, latent_log_probs, loss, mean_kldiv, timestamp, saveloc='', filename='diagnostics'):
+def plot_flow_diagnostics(latent_samples, latent_log_probs, loss, mean_kldiv, timestamp, saveloc='', filename='diagnostics.png'):
     """Plots diagnostics during training.
     Parameters
     ----------
@@ -926,11 +438,11 @@ def plot_flow_diagnostics(latent_samples, latent_log_probs, loss, mean_kldiv, ti
     ax.imshow(sigma)
     ax.set_title('LS Correlation', fontdict={'fontsize': 10})
 
-    plt.savefig(saveloc+filename+".png", transparent=True)
+    plt.savefig(os.path.join(saveloc, filename), transparent=True)
     plt.close()
     print("Made diagnostic plot...")
 
-def plot_latent_hist(samples, mean_kldiv, std_kldiv, saveloc='', bins=100, filename='latent_hist'):
+def plot_latent_hist(samples, mean_kldiv, std_kldiv, saveloc='', bins=100, filename='latent_hist.png'):
     for i in range(np.shape(samples)[1]):
         plt.hist(samples[:, i], bins, histtype='step', color='green', alpha=0.3, density=True)
     g = np.linspace(-4,4,100)
@@ -939,14 +451,14 @@ def plot_latent_hist(samples, mean_kldiv, std_kldiv, saveloc='', bins=100, filen
     plt.title(f"Latent space distribution \n mean_kldiv={mean_kldiv:.3f}, std_kldiv={std_kldiv:.3f}")
     plt.xlim(-4, 4)
     plt.ylim(0, 1)
-    plt.savefig(saveloc+filename+'.png')
+    plt.savefig(os.path.join(saveloc, filename))
     plt.close()
 
 def plot_latent_logprob(log_probs, saveloc, filename='latent_logprobs.png'):
     plt.figure(figsize=(7,7))
     plt.hist(log_probs, bins=100, color='green')
     plt.title('Latent space sample log probabilities')
-    plt.savefig(saveloc+filename)
+    plt.savefig(os.path.join(saveloc, filename))
     plt.close()
 
 def plot_latent_corr(latent_samples, saveloc, filename='latent_correlation.png'):
@@ -954,17 +466,17 @@ def plot_latent_corr(latent_samples, saveloc, filename='latent_correlation.png')
     plt.figure(figsize=(7,7))
     plt.imshow(sigma)
     plt.colorbar()
-    plt.savefig(saveloc+filename)
+    plt.savefig(os.path.join(saveloc, filename))
     plt.close()
 
-def plot_loss(loss, saveloc):
+def plot_loss(loss, saveloc, filename='loss.png'):
     plt.figure(figsize=(7,5))
     plt.plot(loss['train'], label='Train')
     plt.plot(loss['val'], label='Val.')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig(saveloc+"loss.png")
+    plt.savefig(os.path.join(saveloc, filename))
     plt.close()
 
 
@@ -991,11 +503,11 @@ def corner_plot(samples, labels, values=None, saveloc='', filename='corner_plot.
     if not values == None:
         corner.overplot_lines(figure, values, color="C1")
         corner.overplot_points(figure, values[None], marker="s", color="C1")
-    plt.savefig(saveloc+filename+'.png', transparent=True)
+    plt.savefig(os.path.join(saveloc, filename), transparent=True)
     plt.close()
     print("Made corner plot...")
 
-def overlaid_corner(samples_list, parameter_labels, dataset_labels, values=None, saveloc='', filename='corner_plot_compare'):
+def overlaid_corner(samples_list, parameter_labels, dataset_labels, values=None, saveloc='', filename='corner_plot_compare.png'):
     """
     Plots multiple corners on top of each other
     Parameters
@@ -1069,7 +581,7 @@ def overlaid_corner(samples_list, parameter_labels, dataset_labels, values=None,
         fontsize=20, frameon=False,
         bbox_to_anchor=(1, ndim), loc="upper right"
     )
-    plt.savefig(saveloc+filename+'.png', transparent=True)
+    plt.savefig(os.path.join(saveloc, filename), transparent=True)
     plt.close()
     print("Made corner plot...")
 

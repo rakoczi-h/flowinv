@@ -3,6 +3,7 @@ import json
 from glasflow.flows import RealNVP
 import numpy as np
 import os
+import sys
 import h5py
 from sklearn.model_selection import train_test_split
 import torch
@@ -19,18 +20,21 @@ start_time = datetime.now()
 print(f"Start of new run: {start_time}")
 with open('flow_params.json') as json_file:
     params = json.load(json_file)
+
+datafile = sys.argv[1] # Passing the data as an input file
+
 # Directories:
 savedir = params['save_dir']
-dataloc = params['data_loc']
+if not os.path.exists(savedir):
+    os.mkdir(savedir)
 
 # Device:
 gpu_num = params['gpu_num']
 device = torch.device("cuda:%d" % gpu_num if torch.cuda.is_available() else "cpu")
 
 # ------------------MAKING DATA------------------------
-dataname = params['data_name']
 datasize = params['data_size'] # This is the size of the data set that is used for the training.
-f = h5py.File(dataloc+dataname+'.hdf5', "r")
+f = h5py.File(datafile, "r")
 # Reading in survey data
 surveys = np.array(f['surveys'][:datasize,:,:])
 if params['add_survey_noise']:
@@ -77,7 +81,7 @@ val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shu
 # Saving parmeters file and making save directory
 os.mkdir(savedir + 'run_' + str(start_time))
 saveloc = savedir + 'run_' + str(start_time) + '/'
-out_file = open(saveloc+"params.json", "w")
+out_file = open(os.path.join(saveloc, "params.json"), "w")
 json.dump(params, out_file, indent=4)
 out_file.close()
 
@@ -133,7 +137,7 @@ for i in range(epochs):
         flow.eval()
         latent_samples, latent_logprobs = forward_and_logprob(x_train_tensor[:10000,:], y_train_tensor[:10000, :], flow)
         mean_kldiv, std_kldiv = KL_divergence_latent(latent_samples)
-        plot_flow_diagnostics(latent_samples, latent_logprobs, loss, mean_kldiv, saveloc=saveloc, filename='diagnostics')
+        plot_flow_diagnostics(latent_samples, latent_logprobs, loss, mean_kldiv, saveloc=saveloc, filename='diagnostics.png')
         end_test = datetime.now()
         print(f"Finished testing, time taken: \t {end_test-start_test}")
     # Setting early stopping condition
@@ -144,12 +148,12 @@ for i in range(epochs):
     else:
         iters_no_improve += 1
     if (params['early_stopping'] and iters_no_improve == params['patience']):
-        torch.save(best_model, saveloc+'flow_model.pt')
+        torch.save(best_model, os.path.join(saveloc, 'flow_model.pt'))
         print("Early stopping!")
         break
     end_epoch = datetime.now()
     if not i % 10:
-        torch.save(best_model, saveloc+'flow_model.pt')
+        torch.save(best_model, os.path.join(saveloc, 'flow_model.pt'))
         print(f"Epoch {i} \t train: {loss['train'][-1]:.3f} \t val: {loss['val'][-1]:.3f} \t t: {end_epoch-start_epoch}")
 flow.eval()
 print('Finished training...')

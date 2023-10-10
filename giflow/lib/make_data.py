@@ -5,13 +5,14 @@ from datetime import datetime
 from random import random
 from shapely.geometry import Polygon
 import os
+
 from utils import rotate
 from forward_models import get_gz_analytical_vectorised, get_gz_analytical
 
 np.random.seed(1234)
 
 # --------------------------------------------- Data set generation ---------------------------------------------
-def make_parameterised_box_dataset(survey_coords, noise_on_grid=False, device_noise=False, testdata=False, filename='analytical_box_dataset', dataloc='', datasize=100, saving=True):
+def make_parameterised_box_dataset(survey_coords, noise_on_grid=False, device_noise=False, testdata=False, filename='analytical_box_dataset.hdf5', dataloc='', datasize=100, saving=True):
     """Reads in box parameters from a file (optional, if file exists) and analytically calculates the gravitational signature of those boxed at the specified survey locations.
     The px, py, pz coordinates of the box are used to shift the survey points, the alpha coordinates are used to rotationally translate them.
     The dimensions of the box are then used in the analytical expression.
@@ -44,8 +45,8 @@ def make_parameterised_box_dataset(survey_coords, noise_on_grid=False, device_no
             The forward modelled surveys corresponding to each set of parameters. [np. of datapoints, no. of survey locations]
     """
     if saving:
-        path_to_datafile = dataloc+filename
-        if os.path.exists(path_to_datafile+'.hdf5'):
+        path_to_datafile = os.path.join(dataloc, filename)
+        if os.path.exists(path_to_datafile):
             raise FileExistsError("File with this name already exists.")
     if not os.path.exists('dataset_params.json'):
         raise FileNotFoundError('The dataset_params.json file has to exist.')
@@ -53,9 +54,9 @@ def make_parameterised_box_dataset(survey_coords, noise_on_grid=False, device_no
         params = json.load(json_file)
     # Getting the box parameters
     if testdata == True:
-        path_to_paramsfile = params['dataloc'] + 'box_params_test.hdf5'
+        path_to_paramsfile = os.path.join(params['dataloc'], 'box_params_test.hdf5')
     else:
-        path_to_paramsfile = params['dataloc'] + 'box_params_train.hdf5'
+        path_to_paramsfile = os.path.join(params['dataloc'], 'box_params_train.hdf5')
     if os.path.exists(path_to_paramsfile):
         print("Making data from parameters file.")
         h = h5py.File(path_to_paramsfile, "r")
@@ -113,7 +114,7 @@ def make_parameterised_box_dataset(survey_coords, noise_on_grid=False, device_no
     surveys = np.array(surveys)
     models = np.array(models)
     if saving==True:
-        h = h5py.File(path_to_datafile+'.hdf5', "a")
+        h = h5py.File(path_to_datafile, "a")
         h.create_dataset("models_parameterised", data=models)
         h.create_dataset("surveys", data=surveys)
         h.create_dataset("noise_on_grid", data=noise_on_grid)
@@ -126,7 +127,7 @@ def make_parameterised_box_dataset(survey_coords, noise_on_grid=False, device_no
     return models, surveys
 
 def make_voxelised_box_dataset(voxel_coords, survey_coords, noise_on_grid=False, device_noise=False, background_noise=True, testdata=False,
-                               filename='analytical_box_voxelised_dataset', dataloc='', datasize=100, saving=True):
+                               filename='analytical_box_voxelised_dataset.hdf5', dataloc='', datasize=100, saving=True):
     """ Reads in box parameters from a file (optional, if file exists), translates these into a voxelised model representation and analytically calculates
     the gravitational signature of those boxed at the specified survey locations.
     Noise can be addedd optionally to the measurement locations and the gravity values themselves, as well as density noise to the background of the box.
@@ -164,8 +165,8 @@ def make_voxelised_box_dataset(voxel_coords, survey_coords, noise_on_grid=False,
             The forward modelled surveys corresponding to each set of parameters. [np. of datapoints, no. of survey locations]
     """
     if saving:
-        path_to_datafile = dataloc+filename
-        if os.path.exists(path_to_datafile+'.hdf5'):
+        path_to_datafile = os.path.join(dataloc, filename)
+        if os.path.exists(path_to_datafile):
             raise FileExistsError("File with this name already exists.")
     if not os.path.exists('dataset_params.json'):
         raise FileNotFoundError('The dataset_params.json file has to exist.')
@@ -173,9 +174,9 @@ def make_voxelised_box_dataset(voxel_coords, survey_coords, noise_on_grid=False,
     with open('dataset_params.json') as json_file:
         params = json.load(json_file)
     if testdata == True:
-        path_to_paramsfile = params['dataloc'] + 'box_params_test.hdf5'
+        path_to_paramsfile = os.path.join(params['dataloc'], 'box_params_test.hdf5')
     else:
-        path_to_paramsfile = params['dataloc'] + 'box_params_train.hdf5'
+        path_to_paramsfile = os.path.join(params['dataloc'], 'box_params_train.hdf5')
     if os.path.exists(path_to_paramsfile):
         print("Making data from parameters file.")
         h = h5py.File(path_to_paramsfile, "r")
@@ -234,7 +235,7 @@ def make_voxelised_box_dataset(voxel_coords, survey_coords, noise_on_grid=False,
     models = np.array(models)
     models_parameterised = np.array(models_parameterised)
     if saving:
-        h = h5py.File(dataloc+filename+'.hdf5', "a")
+        h = h5py.File(path_to_datafile, "a")
         h.create_dataset("models_parameterised", data=models_parameterised)
         h.create_dataset("models", data=models)
         h.create_dataset("surveys", data=surveys)
@@ -250,7 +251,7 @@ def make_voxelised_box_dataset(voxel_coords, survey_coords, noise_on_grid=False,
     return models, surveys
 
 # ------------------------- Box parameter generation, and parameter translation to voxelised density model -------------------------
-def make_box_params(voxel_grid, widths_voxels, datasize, dataloc="", filename="box_params", saving=True):
+def make_box_params(voxel_grid, widths_voxels, datasize, dataloc="", filename="box_params.hdf5", saving=True):
     """Makes a dataset of boxes within a specified voxel space.
     Parameters
     ----------
@@ -286,8 +287,8 @@ def make_box_params(voxel_grid, widths_voxels, datasize, dataloc="", filename="b
            Second parameter defining the rotation [datasize]
     """
     if saving:
-        path_to_datafile = dataloc+filename
-        if os.path.exists(path_to_datafile+'.hdf5'):
+        path_to_datafile = os.path.join(dataloc, filename)
+        if os.path.exists(path_to_datafile):
             raise FileExistsError("File with this name already exists.")
     # specifying the range of possible locations for the box
     x_min = np.min(voxel_grid[:,0]) - widths_voxels[0]/2
@@ -314,7 +315,7 @@ def make_box_params(voxel_grid, widths_voxels, datasize, dataloc="", filename="b
     alpha_y = np.random.normal(0, 0.5, size=datasize)
     # the angle of rotation can be reconstructed such as: alpha = np.arctan(alpha_y/alpha_x)
     if saving:
-        f = h5py.File(path_to_datafile+'.hdf5', "a")
+        f = h5py.File(path_to_datafile, "a")
         f.create_dataset("px", data=px)
         f.create_dataset("py", data=py)
         f.create_dataset("pz", data=pz)
