@@ -26,7 +26,7 @@ savedir = sys.argv[2] # Passing the output directory as an input
 print("----------------------------------------")
 print(f"Input file: {datafile}")
 print(f"Output directory: {savedir}")
-if not os.path.exists(savedir):
+if os.path.exists(savedir):
     print("Output directory already exists, contents will be overwritten.")
 if not os.path.exists(savedir):
     os.mkdir(savedir)
@@ -43,7 +43,7 @@ f = h5py.File(datafile, "r")
 surveys = np.array(f['surveys'][:datasize,:,:])
 if params['add_survey_noise']:
     sigma = params['survey_noise_scale']
-surveys[:,:,0] = surveys[:,:,0] + np.random.normal(0, sigma, np.shape(surveys[:,:,0]))
+    surveys[:,:,0] = surveys[:,:,0] + np.random.normal(0, sigma, np.shape(surveys[:,:,0]))
 surveys_toscale = np.reshape(surveys, (np.shape(surveys)[0]*np.shape(surveys)[1], np.shape(surveys)[2]))
 surveys_toscale = scale_data(surveys_toscale, mode='survey', fit=True, name=dataname, dataloc=dataloc, scaler=params['scaler_survey'])
 surveys = np.reshape(surveys_toscale, np.shape(surveys))
