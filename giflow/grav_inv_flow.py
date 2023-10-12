@@ -43,6 +43,7 @@ f = h5py.File(datafile, "r")
 surveys = np.array(f['surveys'][:datasize,:,:])
 if params['add_survey_noise']:
     sigma = params['survey_noise_scale']
+    print(f"Adding instrumental noise: {sigma}")
     surveys[:,:,0] = surveys[:,:,0] + np.random.normal(0, sigma, np.shape(surveys[:,:,0]))
 surveys_toscale = np.reshape(surveys, (np.shape(surveys)[0]*np.shape(surveys)[1], np.shape(surveys)[2]))
 surveys_toscale = scale_data(surveys_toscale, mode='survey', fit=True, name=dataname, dataloc=dataloc, scaler=params['scaler_survey'])
