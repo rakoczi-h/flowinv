@@ -1,12 +1,6 @@
 {
-"_dataloc" : "The location where the data is going to be stored after generation.",
-"dataloc" : "",
-"_dataname" : "The name of the training data file.",
-"dataname" : "box_trainset.hdf5",
-"_testname" : "The name of the testing data file.",
-"testname" : "box_testset.hdf5",
 "_datasize" : "The size of the data set to be generated,",
-"datasize" : 101,
+"datasize" : 1000000,
 "_testsize" : "The size of the testing data set to be generated.",
 "testsize" : 10,
 "_n_per_side" : "The number of voxels/pixels per side in the defined survey and voxel grid arrays.",
