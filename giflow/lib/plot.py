@@ -11,6 +11,7 @@ import plotly
 import corner
 import matplotlib.lines as mlines
 from plotly.subplots import make_subplots
+import os
 
 from .utils import rotate
 from .utils import scale_data, inv_scale_data
