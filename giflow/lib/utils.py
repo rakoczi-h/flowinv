@@ -25,7 +25,7 @@ def scale_data(data, mode, fit, name='', dataloc='', scaler='minmax'):
         else:
             raise NameError('Wrong scaler name given. It can be minmax or quantile.')
         scaled_data = sc.fit_transform(data)
-        joblib.dump(sc, os.path.join(dataloc, mode+name+scaler+'_scaler.pkl')
+        joblib.dump(sc, os.path.join(dataloc, mode+name+scaler+'_scaler.pkl'))
     else:
         path_to_scaler = os.path.join(dataloc, mode+name+scaler+'_scaler.pkl')
         if not os.path.exists(path_to_scaler):
