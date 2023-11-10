@@ -14,6 +14,7 @@ This software only runs on `x84_64/amd64` architectures and requires Python `3.1
 
 ```bash
 git clone https://github.com/rakoczi-h/flowinv.git
+cd flowinv
 ```
 
 ```bash
