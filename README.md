@@ -32,13 +32,17 @@ The inputs to the data generation can be edited in the *dataset_params.json* fil
 ```bash
 python grav_inv_flow.py /path/to/data/file.hdf5 /output/directory/
 ```
-3. During training, diagnostics can be plotted and saved.
+3. During training, diagnostics can be plotted.
 ![Alt text](/fig/diagnostics.png "Diagnostics")
 4. After training, the trained flow model can be saved, which then can be used to test the performance of the method or simply use it for inversion. As long as the problem we are trying to solve is consistent with the training data set, the network does not need to be retrained.
-To run a test with the example set of data and a pre-trained network model:
+To run a test with the example set of data and a pre-trained network model, run the following with an input argument pointing to the data directory and one pointing to the location of the trained flow.
 ```bash
+python test_flow.py /path/to/data/ path/to/flow/
 ```
-The test data location and flow model locations are defined in _params.json_.
+Examples of the plots created:
+![Alt text](/fig/corner_plot.png "Corner plot")
+![Alt text](/fig/compare_survey.png "Survey comparison")
+
 ## Contributing
 
 ## Acknowledgements
