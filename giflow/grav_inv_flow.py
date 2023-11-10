@@ -84,8 +84,8 @@ val_dataset = torch.utils.data.TensorDataset(x_val_tensor, y_val_tensor)
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
 # Saving parmeters file and making save directory
-os.mkdir(savedir + 'run_' + str(start_time))
-saveloc = savedir + 'run_' + str(start_time) + '/'
+os.mkdir(os.path.join(savedir, 'run_' + str(start_time)))
+saveloc = os.path.join(savedir, 'run_' + str(start_time) + '/')
 out_file = open(os.path.join(saveloc, "params.json"), "w")
 json.dump(params, out_file, indent=4)
 out_file.close()
