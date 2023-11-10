@@ -54,9 +54,9 @@ def make_parameterised_box_dataset(survey_coords, noise_on_grid=False, device_no
         params = json.load(json_file)
     # Getting the box parameters
     if testdata == True:
-        path_to_paramsfile = os.path.join(params['dataloc'], 'box_params_test.hdf5')
+        path_to_paramsfile = os.path.join(dataloc, 'box_params_test.hdf5')
     else:
-        path_to_paramsfile = os.path.join(params['dataloc'], 'box_params_train.hdf5')
+        path_to_paramsfile = os.path.join(dataloc, 'box_params_train.hdf5')
     if os.path.exists(path_to_paramsfile):
         print("Making data from parameters file.")
         h = h5py.File(path_to_paramsfile, "r")
@@ -174,9 +174,9 @@ def make_voxelised_box_dataset(voxel_coords, survey_coords, noise_on_grid=False,
     with open('dataset_params.json') as json_file:
         params = json.load(json_file)
     if testdata == True:
-        path_to_paramsfile = os.path.join(params['dataloc'], 'box_params_test.hdf5')
+        path_to_paramsfile = os.path.join(dataloc, 'box_params_test.hdf5')
     else:
-        path_to_paramsfile = os.path.join(params['dataloc'], 'box_params_train.hdf5')
+        path_to_paramsfile = os.path.join(dataloc, 'box_params_train.hdf5')
     if os.path.exists(path_to_paramsfile):
         print("Making data from parameters file.")
         h = h5py.File(path_to_paramsfile, "r")
