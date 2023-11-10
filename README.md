@@ -11,6 +11,11 @@ The [_nflows_](https://github.com/uofgravity/nflows#citing-nflows) (C. Durkan et
 This software only runs on `x84_64/amd64` architectures and requires Python `3.10` or less. Dependencies occupy approximately `4GB` of space.
 
 ## Installation
+
+```bash
+git clone https://github.com/rakoczi-h/flowinv.git
+```
+
 ```bash
 python3.10 -m venv venv
 source venv/bin/activate
