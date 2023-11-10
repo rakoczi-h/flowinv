@@ -6,8 +6,8 @@ from random import random
 from shapely.geometry import Polygon
 import os
 
-from utils import rotate
-from forward_models import get_gz_analytical_vectorised, get_gz_analytical
+from .utils import rotate
+from .forward_models import get_gz_analytical_vectorised, get_gz_analytical
 
 np.random.seed(1234)
 
