@@ -29,6 +29,7 @@ pip install -r requirements.txt
 1. make_data.py script includes all functions necessary for the generation of the data set.
 2. To generate an example data set, with parameterised data representation, run the script below with an argument defining the location where the data is to be saved.
 ```bash
+cd giflow
 python sim_data.py /path/to/data/
 ```
 The inputs to the data generation can be edited in the *dataset_params.json* file.
