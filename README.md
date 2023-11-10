@@ -6,7 +6,8 @@ _G.I.Flow_ contains a machine learning tool applying normalising flows to Bayesi
 2. Using the generated data set a neural network can be trained which uses a normalising flow method to infer the parameters (9 parameteres, or array of densities) of the box. Tools to test the network and plot the results are also included.
 The [_nflows_](https://github.com/uofgravity/nflows#citing-nflows) (C. Durkan et al. (2019)) package is used to construct implement the normalising flow elements and [_glasflow_](https://github.com/uofgravity/glasflow) (Williams et al. (2023)) is used to construct the neural network. 
 
-# Requirements
+## Requirements
+
 This software only runs on `x84_64/amd64` architectures and requires Python `3.10` or less. Dependencies occupy approximately `4GB` of space.
 
 ## Installation
@@ -40,6 +41,7 @@ To run a test with the example set of data and a pre-trained network model, run 
 python test_flow.py /path/to/data/ path/to/flow/
 ```
 **Examples of the plots created:**
+
 Corner plot showing the posterior distribution of the source parameters.
 ![Alt text](/fig/corner_plot.png "Corner plot")
 A comparison between the input to the inversion and the forward model computed from individual samples.
