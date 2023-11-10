@@ -12,9 +12,9 @@ import corner
 import matplotlib.lines as mlines
 from plotly.subplots import make_subplots
 
-from utils import rotate
-from utils import scale_data, inv_scale_data
-from forward_models import *
+from .utils import rotate
+from .utils import scale_data, inv_scale_data
+from .forward_models import *
 
 # ------------------------------- 2D Data visualization ---------------------------
 def plot_voxels(model, saveloc, filename='density_voxels.png'):
