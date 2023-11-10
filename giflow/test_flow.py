@@ -101,6 +101,7 @@ print(f"Loaded the flow and sent to {device}...")
 labels = [r'$p_x$', r'$p_y$', r'$p_z$', r'$l_x$', r'$l_y$', r'$l_z$', r'$alpha_x$', r'$alpha_y$']
 p_p_testing(flow, x_train_tensor, y_train_tensor, n_test_samples=1000, n_params=len(labels), saveloc=savedir, keys=labels)
 
+# -------------------------- Test Cases ---------------------------
 for i in range(testsize):
     print(f"Test case {i}...")
     testdir = os.mkdir(os.path.join(savedir, f"testcase_{i}"))
