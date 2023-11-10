@@ -46,7 +46,7 @@ if params['add_survey_noise']:
     print(f"Adding instrumental noise: {sigma}")
     surveys[:,:,0] = surveys[:,:,0] + np.random.normal(0, sigma, np.shape(surveys[:,:,0]))
 surveys_toscale = np.reshape(surveys, (np.shape(surveys)[0]*np.shape(surveys)[1], np.shape(surveys)[2]))
-surveys_toscale = scale_data(surveys_toscale, mode='survey', fit=True, name=dataname, dataloc=dataloc, scaler=params['scaler_survey'])
+surveys_toscale = scale_data(surveys_toscale, mode='survey', fit=True, name='', dataloc=savedir, scaler=params['scaler_survey'])
 surveys = np.reshape(surveys_toscale, np.shape(surveys))
 if params['noisygrid']:
     surveys = surveys[:,:,:3]
@@ -57,10 +57,10 @@ else:
 # Reading in the source models
 if params['parameterised']:
     models = np.array(f['models_parameterised'][:datasize,:])
-    models = scale_data(models, mode='model_parameterised', fit=True, name=dataname, dataloc=dataloc, scaler=params['scaler_model'])
+    models = scale_data(models, mode='model_parameterised', fit=True, name='', dataloc=savedir, scaler=params['scaler_model'])
 else:
     models = np.array(f['models'][:datasize,:])
-    models = scale_data(models, mode='model', fit=True, name=dataname, dataloc=dataloc, scaler=params['scaler_model'])
+    models = scale_data(models, mode='model', fit=True, name='', dataloc=savedir, scaler=params['scaler_model'])
 f.close()
 
 print("Loaded the dataset...")
