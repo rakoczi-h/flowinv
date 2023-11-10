@@ -39,10 +39,10 @@ To run a test with the example set of data and a pre-trained network model, run 
 ```bash
 python test_flow.py /path/to/data/ path/to/flow/
 ```
-Examples of the plots created:
+**Examples of the plots created:**
+Corner plot showing the posterior distribution of the source parameters.
 ![Alt text](/fig/corner_plot.png "Corner plot")
+A comparison between the input to the inversion and the forward model computed from individual samples.
 ![Alt text](/fig/compare_survey.png "Survey comparison")
 
-## Contributing
-
-## Acknowledgements
+## Citing
