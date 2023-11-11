@@ -126,6 +126,7 @@ epochs = params['epochs']
 iters_no_improve = 0
 min_val_loss = np.inf
 loss = dict(train=[], val=[])
+start_train = datetime.now()
 for i in range(epochs):
     start_epoch = datetime.now()
     train_loss, val_loss = train(flow, optimiser, val_loader, train_loader, device)
@@ -142,8 +143,8 @@ for i in range(epochs):
         flow.eval()
         latent_samples, latent_logprobs = forward_and_logprob(x_train_tensor[:10000,:], y_train_tensor[:10000, :], flow)
         mean_kldiv, std_kldiv = KL_divergence_latent(latent_samples)
-        plot_flow_diagnostics(latent_samples, latent_logprobs, loss, mean_kldiv, saveloc=saveloc, filename='diagnostics.png')
         end_test = datetime.now()
+        plot_flow_diagnostics(latent_samples, latent_logprobs, loss, mean_kldiv, timestamp=end_test-start_train, saveloc=saveloc, filename='diagnostics.png')
         print(f"Finished testing, time taken: \t {end_test-start_test}")
     # Setting early stopping condition
     if loss['val'][-1] < min_val_loss:
