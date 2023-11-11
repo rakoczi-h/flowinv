@@ -13,7 +13,6 @@ from lib.utils import scale_data
 from lib.plot import plot_flow_diagnostics, plot_loss
 from lib.train import train
 from lib.test import forward_and_logprob, KL_divergence_latent
-np.random.seed(1434)
 
 # ---------------SETTING UP--------------------
 start_time = datetime.now()
