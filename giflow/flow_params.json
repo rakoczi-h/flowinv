@@ -38,7 +38,7 @@
 "_weight_decay" : "Rate of weight decay.",
 "weight_decay" : 0,
 "_test_freq" : "How many epochs pass between each testing stage.",
-"test_freq" : 20,
+"test_freq" : 100,
 "_loss_plot_freq" : "How many epochs pass between each loss plot.",
 "loss_plot_freq" : 10,
 "_early stopping" : "Whether to stop training when the validation loss stops evolving.",
