@@ -8,7 +8,7 @@ from glasflow.flows import RealNVP
 from datetime import datetime
 
 from lib.plot import plot_compare_survey, corner_plot
-from lib.test import p_p_testing
+from lib.test import p_p_testing, sample_and_logprob
 from lib.utils import scale_data, inv_scale_data
 
 datadir = sys.argv[1] # Folder containing the data to be used
