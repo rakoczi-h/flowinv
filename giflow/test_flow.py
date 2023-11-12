@@ -59,6 +59,8 @@ else:
     test_models_scaled = scale_data(test_models, mode='model', fit=True, name='', scalerloc=flowloc, scaler=params['scaler_model'])
 testfile.close()
 
+x_test_tensor = torch.from_numpy(test_models_scaled.astype(np.float32)).to(device)
+y_test_tensor = torch.from_numpy(test_surveys_scaled.astype(np.float32)).to(device)
 #------------------------ TRAINING DATA FILE ---------------------------
 datafile = h5py.File(os.path.join(datadir, 'traindata.hdf5'), "r")
 datasize = 10000 # NOT READING IN THE WHOLE DATASET
