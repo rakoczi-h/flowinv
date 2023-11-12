@@ -3,6 +3,7 @@ import sys
 import os
 import numpy as np
 import json
+import torch
 
 from lib.plot import plot_compare_survey, corner_plot
 from lib.test import p_p_testing
