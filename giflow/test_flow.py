@@ -42,9 +42,7 @@ surveys_toscale = np.reshape(test_surveys, (np.shape(test_surveys)[0]*np.shape(t
 surveys_toscale = scale_data(surveys_toscale, mode='survey', fit=False, name='', scalerloc=flowloc, scaler=params['scaler_survey'])
 test_surveys_scaled = np.reshape(surveys_toscale, np.shape(test_surveys))
 if params['noisygrid']:
-    test_surveys = test_surveys[:,:,:3]
     test_surveys_scaled = test_surveys_scaled[:,:,:3]
-    test_surveys = np.reshape(test_surveys, (np.shape(test_surveys)[0], np.shape(test_surveys)[1]*np.shape(test_surveys)[2]))
     test_surveys_scaled = np.reshape(test_surveys_scaled, (np.shape(test_surveys_scaled)[0], np.shape(test_surveys_scaled)[1]*np.shape(test_surveys_scaled)[2]))
 else:
     test_surveys = test_surveys[:,:,0]
@@ -73,12 +71,9 @@ surveys_toscale = np.reshape(surveys, (np.shape(surveys)[0]*np.shape(surveys)[1]
 surveys_toscale = scale_data(surveys_toscale, mode='survey', fit=True, name='', scaleraloc=flowloc, scaler=params['scaler_survey'])
 surveys_scaled = np.reshape(surveys_toscale, np.shape(surveys))
 if params['noisygrid']:
-    surveys = surveys[:,:,:3]
     surveys_scaled = surveys_scaled[:,:,:3]
     surveys_scaled = np.reshape(surveys_scaled, (np.shape(surveys_scaled)[0], np.shape(surveys_scaled)[1]*np.shape(surveys_scaled)[2]))
-    surveys = np.reshape(surveys, (np.shape(surveys)[0], np.shape(surveys)[1]*np.shape(surveys)[2]))
 else:
-    surveys = surveys[:,:,0]
     surveys_scaled = surveys_scaled[:,:,0]
 
 # Reading in the source models
