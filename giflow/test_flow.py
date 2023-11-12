@@ -4,6 +4,7 @@ import os
 import numpy as np
 import json
 import torch
+from glasflow import RealNVP
 
 from lib.plot import plot_compare_survey, corner_plot
 from lib.test import p_p_testing
@@ -19,6 +20,10 @@ print("----------------------------------------")
 
 with open(os.path.join(flowloc, 'params.json')) as json_file: # Reading the parameters file
     params = json.load(json_file)
+
+# Device
+gpu_num = params['gpu_num']
+device = torch.device("cuda:%d" % gpu_num if torch.cuda.is_available() else "cpu")
 
 savedir = os.path.join(flowloc, 'plots/') # This is where the plots will be saved
 if not os.path.exists(savedir):
