@@ -4,7 +4,7 @@ import os
 import numpy as np
 import json
 import torch
-from glasflow import RealNVP
+from glasflow.flows import RealNVP
 
 from lib.plot import plot_compare_survey, corner_plot
 from lib.test import p_p_testing
