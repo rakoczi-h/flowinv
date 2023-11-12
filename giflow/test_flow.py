@@ -2,8 +2,11 @@ import h5py
 import sys
 import os
 import numpy as np
+import json
+
 from lib.plot import plot_compare_survey, corner_plot
 from lib.test import p_p_testing
+from lib.utils import scale_data, inv_scale_data
 
 datadir = sys.argv[1] # Folder containing the data to be used
 flowloc = sys.argv[2] # Path to the directory which contains the flow model and corresponding parameter file
@@ -17,7 +20,8 @@ with open(os.path.join(flowloc, 'params.json')) as json_file: # Reading the para
     params = json.load(json_file)
 
 savedir = os.path.join(flowloc, 'plots/') # This is where the plots will be saved
-os.mkdir(savedir)
+if not os.path.exists(savedir):
+    os.mkdir(savedir)
 
 # --------------------------- TEST FILE ---------------------------
 testfile = h5py.File(os.path.join(datadir, 'testdata.hdf5'), "r")
@@ -28,8 +32,8 @@ if params['add_survey_noise']:
     sigma = params['survey_noise_scale']
     test_surveys[:,:,0] = test_surveys[:,:,0] + np.random.normal(0, sigma, np.shape(test_surveys[:,:,0]))
 surveys_toscale = np.reshape(test_surveys, (np.shape(test_surveys)[0]*np.shape(test_surveys)[1], np.shape(test_surveys)[2]))
-surveys_toscale = scale_data(surveys_toscale, mode='survey', fit=False, name=dataname, dataloc=dataloc, scaler=params['scaler_survey'])
-test_surveys_scaled = np.reshape(surveys_toscale, np.shape(surveys))
+surveys_toscale = scale_data(surveys_toscale, mode='survey', fit=False, name='', scalerloc=flowloc, scaler=params['scaler_survey'])
+test_surveys_scaled = np.reshape(surveys_toscale, np.shape(test_surveys))
 if params['noisygrid']:
     test_surveys = test_surveys[:,:,:3]
     test_surveys_scaled = test_surveys_scaled[:,:,:3]
@@ -42,10 +46,10 @@ else:
 # Reading in the source models
 if params['parameterised']:
     test_models = np.array(testfile['models_parameterised'])
-    test_models_scaled = scale_data(test_models, mode='model_parameterised', fit=False, name=dataname, dataloc=dataloc, scaler=params['scaler_model'])
+    test_models_scaled = scale_data(test_models, mode='model_parameterised', fit=False, name='', scalerloc=flowloc, scaler=params['scaler_model'])
 else:
     test_models = np.array(testfile['models'])
-    test_models_scaled = scale_data(test_models, mode='model', fit=True, name=dataname, dataloc=dataloc, scaler=params['scaler_model'])
+    test_models_scaled = scale_data(test_models, mode='model', fit=True, name='', scalerloc=flowloc, scaler=params['scaler_model'])
 testfile.close()
 
 #------------------------ TRAINING DATA FILE ---------------------------
@@ -57,7 +61,7 @@ if params['add_survey_noise']:
     sigma = params['survey_noise_scale']
     surveys[:,:,0] = surveys[:,:,0] + np.random.normal(0, sigma, np.shape(surveys[:,:,0]))
 surveys_toscale = np.reshape(surveys, (np.shape(surveys)[0]*np.shape(surveys)[1], np.shape(surveys)[2]))
-surveys_toscale = scale_data(surveys_toscale, mode='survey', fit=True, name=dataname, dataloc=dataloc, scaler=params['scaler_survey'])
+surveys_toscale = scale_data(surveys_toscale, mode='survey', fit=True, name='', scaleraloc=flowloc, scaler=params['scaler_survey'])
 surveys_scaled = np.reshape(surveys_toscale, np.shape(surveys))
 if params['noisygrid']:
     surveys = surveys[:,:,:3]
@@ -71,10 +75,10 @@ else:
 # Reading in the source models
 if params['parameterised']:
     models = np.array(datafile['models_parameterised'][:datasize,:])
-    models_scaled = scale_data(models, mode='model_parameterised', fit=False, name=dataname, dataloc=dataloc, scaler=params['scaler_model'])
+    models_scaled = scale_data(models, mode='model_parameterised', fit=False, name='', scalerloc=flowloc, scaler=params['scaler_model'])
 else:
     models = np.array(datafile['models'][:datasize,:])
-    models_scaled = scale_data(models, mode='model', fit=False, name=dataname, dataloc=dataloc, scaler=params['scaler_model'])
+    models_scaled = scale_data(models, mode='model', fit=False, name='', scalerloc=flowloc, scaler=params['scaler_model'])
 datafile.close()
 
 print("Loaded the data...")
@@ -112,7 +116,7 @@ for i in range(testsize):
     end_sample = datetime.now()
     print(f"Time taken with sampling {end_sample-start_sample}")
     # Scaling the samples
-    samples_scaled = inv_scale_data(samples, mode='model_parameterised', name=dataname, dataloc=dataloc, scaler=params['scaler_model'])
+    samples_scaled = inv_scale_data(samples, mode='model_parameterised', name='', scalerloc=flowloc, scaler=params['scaler_model'])
     # Making survey comparison plot
     plot_compare_survey(samples_scaled[:10,:], test_surveys[i,:,0], test_surveys[i,:,1:], mode='model_parameterised', contour=True, saveloc=testdir, filename=f"comp_survey_contour_{i}")
     # Making corner plot
