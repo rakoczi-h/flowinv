@@ -4,15 +4,27 @@ import joblib
 import os
 
 # ---------------------------------------- Data set scaling -----------------------------------------
-def scale_data(data, mode, fit, name='', dataloc='', scaler='minmax'):
+def scale_data(data, mode, fit, name='', scalerloc='', scaler='minmax'):
     """
     Normalises the data set.
-    param: data: the data to be normalised. [number of samples, number of features]
-           mode: 'model', 'survey' or 'models_parameterised', but can be anything. It just specifies how the scaler file is saved.
-           fit: bool, if True then the data is fitted to and the scaler is saved, if False, a scaler file is searched for
-           name: the name of the file where the original data is stored, again just specified how the scaler file is saved.
-           scaler: 'minmax' or 'quantile', specifies what scaler to use
-    output: scaled_data: the normalised data with [number of samples, number of features]
+    Parameters
+    ----------
+        data: array
+            The data to be normalised. [number of samples, number of features]
+        mode: str
+            'model', 'survey' or 'models_parameterised', but can be anything. It just specifies how the scaler file is saved.
+        fit: bool
+            If True then the data is fitted to and the scaler is saved, if False, a scaler file is searched for
+        name: str
+            The name of the file where the original data is stored, again just specified how the scaler file is saved.
+        scalerloc: str
+            Defines the location where the scaler is (to be saved).
+        scaler: str
+            'minmax' or 'quantile', specifies what scaler to use
+    Outputs
+    -------
+        scaled_data: array
+            The normalised data with [number of samples, number of features]
     """
     datadim = data.ndim
     if datadim == 1: # data has to be 2D before goes into scaler
@@ -25,9 +37,9 @@ def scale_data(data, mode, fit, name='', dataloc='', scaler='minmax'):
         else:
             raise NameError('Wrong scaler name given. It can be minmax or quantile.')
         scaled_data = sc.fit_transform(data)
-        joblib.dump(sc, os.path.join(dataloc, mode+name+scaler+'_scaler.pkl'))
+        joblib.dump(sc, os.path.join(scalerloc, mode+name+scaler+'_scaler.pkl'))
     else:
-        path_to_scaler = os.path.join(dataloc, mode+name+scaler+'_scaler.pkl')
+        path_to_scaler = os.path.join(scalerloc, mode+name+scaler+'_scaler.pkl')
         if not os.path.exists(path_to_scaler):
             raise FileNotFoundError('Scaler file does not exist.')
         sc = joblib.load(path_to_scaler)
@@ -36,16 +48,27 @@ def scale_data(data, mode, fit, name='', dataloc='', scaler='minmax'):
         scaled_data = np.squeeze(scaled_data)
     return scaled_data
 
-def inv_scale_data(data, mode, name='', dataloc='', scaler='minmax'):
+def inv_scale_data(data, mode, name='', scalerloc='', scaler='minmax'):
     """
     Scales back a normalised data set.
-    param: data: the data to be unscaled. [number of samples, number of features]
-           mode: 'model', 'survey' or 'models_parameterised', but can be anything. It just specifies how the scaler file is saved.
-           name: the name of the file where the original data is stored, again just specified how the scaler file is saved.
-           scaler: 'minmax' or 'quantile', specifies what scaler to use
-    output: inv_scaled_data: the unnormalised data with [number of samples, number of features]
+    Parameters
+    ----------
+        data: array
+            The data to be normalised. [number of samples, number of features]
+        mode: str
+            'model', 'survey' or 'models_parameterised', but can be anything. It just specifies how the scaler file is saved.
+        name: str
+            The name of the file where the original data is stored, again just specified how the scaler file is saved.
+        scalerloc: str
+            Defines the location where the scaler is (to be saved).
+        scaler: str
+            'minmax' or 'quantile', specifies what scaler to use
+    Otputs
+    ------
+        inv_scaled_data: array
+            The unnormalised data with [number of samples, number of features]
     """
-    path_to_scaler = os.path.join(dataloc, mode+name+scaler+'_scaler.pkl')
+    path_to_scaler = os.path.join(scalerloc, mode+name+scaler+'_scaler.pkl')
     if not os.path.exists(path_to_scaler):
         raise FileNotFoundError('Scaler file does not exist.')
     sc = joblib.load(path_to_scaler)
