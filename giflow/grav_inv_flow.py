@@ -83,9 +83,7 @@ val_dataset = torch.utils.data.TensorDataset(x_val_tensor, y_val_tensor)
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
 # Saving parmeters file and making save directory
-os.mkdir(os.path.join(savedir, 'run_' + str(start_time)))
-saveloc = os.path.join(savedir, 'run_' + str(start_time) + '/')
-out_file = open(os.path.join(saveloc, "params.json"), "w")
+out_file = open(os.path.join(savedir, "params.json"), "w")
 json.dump(params, out_file, indent=4)
 out_file.close()
 
@@ -134,7 +132,7 @@ for i in range(epochs):
     scheduler.step(loss['val'][-1])
     # Plotting the loss
     if not i % params['loss_plot_freq']:
-        plot_loss(loss, saveloc=saveloc)
+        plot_loss(loss, saveloc=savedir)
     # Testing
     if not i % params['test_freq'] and i != 0:
         print("Testing...")
@@ -143,7 +141,7 @@ for i in range(epochs):
         latent_samples, latent_logprobs = forward_and_logprob(x_train_tensor[:10000,:], y_train_tensor[:10000, :], flow)
         mean_kldiv, std_kldiv = KL_divergence_latent(latent_samples)
         end_test = datetime.now()
-        plot_flow_diagnostics(latent_samples, latent_logprobs, loss, mean_kldiv, timestamp=end_test-start_train, saveloc=saveloc, filename='diagnostics.png')
+        plot_flow_diagnostics(latent_samples, latent_logprobs, loss, mean_kldiv, timestamp=end_test-start_train, saveloc=savedir, filename='diagnostics.png')
         print(f"Finished testing, time taken: \t {end_test-start_test}")
     # Setting early stopping condition
     if loss['val'][-1] < min_val_loss:
@@ -153,18 +151,18 @@ for i in range(epochs):
     else:
         iters_no_improve += 1
     if (params['early_stopping'] and iters_no_improve == params['patience']):
-        torch.save(best_model, os.path.join(saveloc, 'flow_model.pt'))
+        torch.save(best_model, os.path.join(savedir, 'flow_model.pt'))
         print("Early stopping!")
         break
     end_epoch = datetime.now()
     if not i % 10:
-        torch.save(best_model, os.path.join(saveloc, 'flow_model.pt'))
+        torch.save(best_model, os.path.join(savedir, 'flow_model.pt'))
         print(f"Epoch {i} \t train: {loss['train'][-1]:.3f} \t val: {loss['val'][-1]:.3f} \t t: {end_epoch-start_epoch}")
 flow.eval()
 print('Finished training...')
 
 # Plotting the loss
-plot_loss(loss, saveloc=saveloc)
+plot_loss(loss, saveloc=savedir)
 
 end_time = datetime.now()
 print("Run time: ", end_time-start_time)
