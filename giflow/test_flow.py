@@ -5,6 +5,7 @@ import numpy as np
 import json
 import torch
 from glasflow.flows import RealNVP
+from datetime import datetime
 
 from lib.plot import plot_compare_survey, corner_plot
 from lib.test import p_p_testing
@@ -114,7 +115,9 @@ p_p_testing(flow, x_train_tensor, y_train_tensor, n_test_samples=1000, n_params=
 # -------------------------- Test Cases ---------------------------
 for i in range(testsize):
     print(f"Test case {i}...")
-    testdir = os.mkdir(os.path.join(savedir, f"testcase_{i}"))
+    testdir = os.path.join(savedir, f"testcase_{i}")
+    if not os.path.exists(testdir):
+        os.mkdir(testdir)
     # Sampling
     num_samples = 10000
     start_sample = datetime.now()
