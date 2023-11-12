@@ -501,7 +501,7 @@ def corner_plot(samples, labels, values=None, saveloc='', filename='corner_plot.
     image file
     """
     figure = corner.corner(samples, labels=labels)
-    if not values == None:
+    if not values.any() == None:
         corner.overplot_lines(figure, values, color="C1")
         corner.overplot_points(figure, values[None], marker="s", color="C1")
     plt.savefig(os.path.join(saveloc, filename), transparent=True)
