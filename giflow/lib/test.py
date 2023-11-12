@@ -40,7 +40,6 @@ def p_p_testing(model, truths, y_test, n_test_samples, n_test_cases=100, saveloc
         indices = np.random.randint(np.shape(truths)[1], size=n_params)
     else:
         indices = np.arange(0, np.shape(truths)[1])
-    print(indices)
     if keys == None:
         keys = [f"q{x}" for x in range(n_params)] # number of parameters to get the posterior for (will be 512)
     posteriors = []
