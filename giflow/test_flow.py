@@ -59,56 +59,6 @@ testfile.close()
 
 x_test_tensor = torch.from_numpy(test_models_scaled.astype(np.float32)).to(device)
 y_test_tensor = torch.from_numpy(test_surveys_scaled.astype(np.float32)).to(device)
-#------------------------ TRAINING DATA FILE ---------------------------
-datafile = h5py.File(os.path.join(datadir, 'traindata.hdf5'), "r")
-datasize = 10000 # NOT READING IN THE WHOLE DATASET
-# Reading in survey data
-surveys = np.array(datafile['surveys'][:datasize,:,:])
-if params['add_survey_noise']:
-    sigma = params['survey_noise_scale']
-    surveys[:,:,0] = surveys[:,:,0] + np.random.normal(0, sigma, np.shape(surveys[:,:,0]))
-surveys_toscale = np.reshape(surveys, (np.shape(surveys)[0]*np.shape(surveys)[1], np.shape(surveys)[2]))
-surveys_toscale = scale_data(surveys_toscale, mode='survey', fit=True, name='', scaleraloc=flowloc, scaler=params['scaler_survey'])
-surveys_scaled = np.reshape(surveys_toscale, np.shape(surveys))
-if params['noisygrid']:
-    surveys_scaled = surveys_scaled[:,:,:3]
-    surveys_scaled = np.reshape(surveys_scaled, (np.shape(surveys_scaled)[0], np.shape(surveys_scaled)[1]*np.shape(surveys_scaled)[2]))
-else:
-    surveys_scaled = surveys_scaled[:,:,0]
-
-# Reading in the source models
-if params['parameterised']:
-    models = np.array(datafile['models_parameterised'][:datasize,:])
-    models_scaled = scale_data(models, mode='model_parameterised', fit=False, name='', scalerloc=flowloc, scaler=params['scaler_model'])
-else:
-    models = np.array(datafile['models'][:datasize,:])
-    models_scaled = scale_data(models, mode='model', fit=False, name='', scalerloc=flowloc, scaler=params['scaler_model'])
-datafile.close()
-
-print("Loaded the data...")
-
-x_train_tensor = torch.from_numpy(models_scaled.astype(np.float32)).to(device)
-y_train_tensor = torch.from_numpy(surveys_scaled.astype(np.float32)).to(device)
-# --------------------------- The Flow ---------------------------
-gpu_num = params['gpu_num']
-device = torch.device("cuda:%d" % gpu_num if torch.cuda.is_available() else "cpu")
-flow = RealNVP(
-    n_inputs=params['n_inputs'],
-    n_transforms=params['n_transforms'],
-    n_conditional_inputs=params['n_conditional_inputs'],
-    n_neurons=params['n_neurons'],
-    n_blocks_per_transform=params['n_blocks_per_transform'],
-    batch_norm_between_transforms=params['batch_norm']
-)
-flow.load_state_dict(torch.load(os.path.join(flowloc, 'flow_model.pt')))
-flow.to(device)
-flow.eval()
-print(f"Loaded the flow and sent to {device}...")
-
-# --------------------------- P-P  Plot ---------------------------
-labels = [r'$p_x$', r'$p_y$', r'$p_z$', r'$l_x$', r'$l_y$', r'$l_z$', r'$alpha_x$', r'$alpha_y$']
-p_p_testing(flow, x_train_tensor, y_train_tensor, n_test_samples=1000, n_params=len(labels), saveloc=savedir, keys=labels)
-
 # -------------------------- Test Cases ---------------------------
 for i in range(testsize):
     print(f"Test case {i}...")
