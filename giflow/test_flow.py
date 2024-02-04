@@ -59,8 +59,8 @@ testfile.close()
 
 x_test_tensor = torch.from_numpy(test_models_scaled.astype(np.float32)).to(device)
 y_test_tensor = torch.from_numpy(test_surveys_scaled.astype(np.float32)).to(device)
-#------------------------ TRAINING DATA FILE ---------------------------
-datafile = h5py.File(os.path.join(datadir, 'traindata.hdf5'), "r")
+#------------------------ VALIDATION DATA FILE ---------------------------
+datafile = h5py.File(os.path.join(datadir, 'validationdata.hdf5'), "r")
 datasize = 10000 # NOT READING IN THE WHOLE DATASET
 # Reading in survey data
 surveys = np.array(datafile['surveys'][:datasize,:,:])
@@ -87,8 +87,8 @@ datafile.close()
 
 print("Loaded the data...")
 
-x_train_tensor = torch.from_numpy(models_scaled.astype(np.float32)).to(device)
-y_train_tensor = torch.from_numpy(surveys_scaled.astype(np.float32)).to(device)
+x_val_tensor = torch.from_numpy(models_scaled.astype(np.float32)).to(device)
+y_val_tensor = torch.from_numpy(surveys_scaled.astype(np.float32)).to(device)
 # --------------------------- The Flow ---------------------------
 gpu_num = params['gpu_num']
 device = torch.device("cuda:%d" % gpu_num if torch.cuda.is_available() else "cpu")
@@ -107,7 +107,7 @@ print(f"Loaded the flow and sent to {device}...")
 
 # --------------------------- P-P  Plot ---------------------------
 labels = [r'$p_x$', r'$p_y$', r'$p_z$', r'$l_x$', r'$l_y$', r'$l_z$', r'$alpha_x$', r'$alpha_y$']
-p_p_testing(flow, x_train_tensor, y_train_tensor, n_test_samples=1000, n_params=len(labels), saveloc=savedir, keys=labels)
+p_p_testing(flow, x_val_tensor, y_val_tensor, n_test_samples=1000, n_params=len(labels), saveloc=savedir, keys=labels)
 
 # -------------------------- Test Cases ---------------------------
 for i in range(testsize):
