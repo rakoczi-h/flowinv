@@ -32,6 +32,7 @@ voxel_grid, widths_voxels = make_3D_grid(widths_grid, np.array([n_per_side, n_pe
 # The survey is set to be taken on a uniform grid, no noise added
 test_models, test_surveys = make_parameterised_box_dataset(survey_grid, noise_on_grid=False, device_noise=False, testdata=True, filename='testdata.hdf5', dataloc=savedir, datasize=params['testsize'])
 models, surveys = make_parameterised_box_dataset(survey_grid, noise_on_grid=False, device_noise=False, testdata=False, filename='traindata.hdf5', dataloc=savedir, datasize=params['datasize'])
+val_models, val_surveys = make_parameterised_box_dataset(survey_grid, noise_on_grid=False, device_noise=False, testdata=False, filename='validationdata.hdf5', dataloc=savedir, datasize=params['valsize'])
 
 end_time = datetime.now()
 print(f"Time taken to generate data: {end_time-start_time}")
