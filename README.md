@@ -38,7 +38,7 @@ The output is saved in */results* in the root folder.
 During training, diagnostics can be plotted and saved.
 ![Alt text](/fig/diagnostics.png "Diagnostics")
 
-After training, the trained flow model can is saved, which then can be used to test the performance of the method or simply use it for inversion. As long as the problem we are trying to solve is consistent with the training data set, the network does not need to be retrained.
+After training, the trained flow model is saved, which then can be used to test the performance of the method or simply use it for inversion. As long as the problem we are trying to solve is consistent with the training data set, the network does not need to be retrained.
 To run a test with the example set of data and a pre-trained network model:
 
 ```bash
