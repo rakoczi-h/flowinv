@@ -10,26 +10,29 @@ from giflow.flowmodel import FlowModel, save_flow
 from giflow.box import BoxDataset
 
 # ------------- Directories ---------------------------------
-data_location = '/data/' # THIS needs to be edited to give the data location
-save_location = '/data/www.astro/2263373r/giflow/' # THIS needs to be edited to give the saving location
+data_location = '/data/wiay/2263373r/giflow/box/parameterised/' # THIS needs to be edited to give the data location
+save_dir = '/data/www.astro/2263373r/giflow/box/parameterised/' # THIS needs to be edited to give the saving location
 
 # ------------- Reading the data ----------------------------
 datasize = 500000 # THIS needs to be edited to give the overall desired data set size
 survey_coordinates_to_include = [] # THIS needs to be edited if we want to include survey coordinates in the conditional
 
-with open(os.path.join(data_location, f"trainset.pkl"), 'rb') as file:
+with open(os.path.join(data_location, f"trainset_0_v2.pkl"), 'rb') as file:
     dt = pkl.load(file)
-train_data, tradin_conditional = dt.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
+train_data, train_conditional = dt.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
 train_data = train_data[:datasize,:]
 train_conditional = train_conditional[:datasize,:]
 
-with open(os.path.join(data_location, 'validationset.pkl'), 'rb') as file:
+with open(os.path.join(data_location, 'validationset_v2.pkl'), 'rb') as file:
    dt = pkl.load(file)
 val_data, val_conditional = dt.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
 
 print(f"Data read. Location: \t {data_location}")
 
 # ------------- Defining scalers ---------------------------
+start_time = datetime.now()
+save_location = os.path.join(save_dir, 'run_'+str(start_time))
+os.mkdir(save_location)
 # only fitting to the data to construct scaler, scaling is done within the flow class
 sc_data = MinMaxScaler()
 sc_data.fit(train_data)
