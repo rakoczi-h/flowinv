@@ -11,7 +11,7 @@ from giflow.box import BoxDataset
 
 # ------------- Directories ---------------------------------
 data_location = '/data/' # THIS needs to be edited to give the data location
-save_location = '/results/' # THIS needs to be edited to give the saving location
+save_location = '/data/www.astro/2263373r/giflow/' # THIS needs to be edited to give the saving location
 
 # ------------- Reading the data ----------------------------
 datasize = 500000 # THIS needs to be edited to give the overall desired data set size
