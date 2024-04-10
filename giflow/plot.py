@@ -233,8 +233,8 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
     fig, axes = plt.subplots(nrows=3, ncols=3)
     vmin = np.array([target.min(), mean.min()]).min()
     #vmax = np.array([target.max(), mean.max()]).max()
-    vmax = 210
-    levels = np.linspace(vmin, vmax, 15)
+    vmax = 220
+    levels = np.linspace(vmin, vmax, 10)
     cmap = 'plasma'
     norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
     #norm = matplotlib.colors.BoundaryNorm(boundaries=levels, ncolors=15)
@@ -246,7 +246,7 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
         if any([idx==i for i in [0,1,2]]):
             ax.set(title=titles[idx])
     cax = ax.inset_axes([1.1, 0.0, 0.1, 3.35])
-    plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ticks=levels, boundaries=levels, cax=cax, label=r'microGal')
+    plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ticks=levels, boundaries=levels, cax=cax, label=r'\u00b5 Gal')
     plt.savefig(filename, transparent=False)
     plt.close()
 
