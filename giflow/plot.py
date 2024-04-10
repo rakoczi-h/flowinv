@@ -204,9 +204,13 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
             Whether to plot a few individual samples.
     """
     plot_data = []
+    coordinates = []
     for idx, result in enumerate(results_list):
+        coordinates.append(result.survey_coordinates.copy())
+        coordinates.append(result.survey_coordinates.copy())
+        coordinates.append(result.survey_coordinates.copy())
         target_array = result.conditional[:,0]
-        target = target_array - np.mean(target_array)
+        target = target_array - np.min(target_array)
         plot_data.append(target)
         mode = model_frameworks_list[idx]['type']
         gzs = []
@@ -215,9 +219,9 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
                 box = Box(parameterised_model=result.samples[i,:], parameter_labels=result.parameter_labels, density=model_frameworks_list[idx]['density'])
                 box.translate_to_parameters()
             elif mode == 'voxelised':
-                box = Box(voxelised_model=self.samples[i,:])
+                box = Box(voxelised_model=result.samples[i,:])
                 box.make_voxel_grid(ranges=model_frameworks_list[idx]['ranges'], grid_shape=model_frameworks_list[idx]['grid_shape'])
-            gz = box.forward_model(survey_coordinates=coordinates.copy(), model_type=mode)-np.mean(target_array)
+            gz = box.forward_model(survey_coordinates=result.survey_coordinates.copy(), model_type=mode)-np.min(target_array)
             gzs.append(gz)
         gzs = np.array(gzs)
         mean = np.mean(gzs, axis=0)
@@ -226,23 +230,23 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
         plot_data.append(std)
 
     titles = ['Target', 'Mean', 'Std']
-    if include_examples:
-        fig, axes = plt.subplots(nrows=3, ncols=3)
-    else:
-        fig, axes = plt.subplots(nrows=1, ncols=3)
+    fig, axes = plt.subplots(nrows=3, ncols=3)
     vmin = np.array([target.min(), mean.min()]).min()
-    vmax = np.array([target.max(), mean.max()]).max()
+    #vmax = np.array([target.max(), mean.max()]).max()
+    vmax = 210
     levels = np.linspace(vmin, vmax, 15)
     cmap = 'plasma'
     norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    #norm = matplotlib.colors.BoundaryNorm(boundaries=levels, ncolors=15)
     for idx, ax in enumerate(axes.flatten()):
-        ax.plot(coordinates[:,0], coordinates[:,1], 'o', markersize=2, color='black')
-        ax.tricontourf(coordinates[:,0], coordinates[:,1], plot_data[idx], levels=levels, cmap=cmap, norm=norm)
-        ax.set(xlim=(np.min(coordinates[:,0]), np.max(coordinates[:,0])), ylim=(np.min(coordinates[:,1]), np.max(coordinates[:,1])), aspect='equal')
+        if idx==0 or idx==3 or idx==6:
+            ax.plot(coordinates[idx][:,0], coordinates[idx][:,1], 'o', markersize=2, color='black')
+        ax.tricontourf(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels, cmap=cmap, norm=norm)
+        ax.set(xlim=(np.min(coordinates[idx][:,0]), np.max(coordinates[idx][:,0])), ylim=(np.min(coordinates[idx][:,1]), np.max(coordinates[idx][:,1])), aspect='equal')
         if any([idx==i for i in [0,1,2]]):
             ax.set(title=titles[idx])
     cax = ax.inset_axes([1.1, 0.0, 0.1, 3.35])
-    plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax, label=r'microGal')
+    plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ticks=levels, boundaries=levels, cax=cax, label=r'microGal')
     plt.savefig(filename, transparent=False)
     plt.close()
 
