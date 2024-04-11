@@ -10,16 +10,24 @@ from giflow.flowmodel import FlowModel, save_flow
 from giflow.box import BoxDataset
 
 # ------------- Directories ---------------------------------
-data_location = '/data/wiay/2263373r/giflow/box/parameterised/' # THIS needs to be edited to give the data location
-save_dir = '/data/www.astro/2263373r/giflow/box/parameterised/' # THIS needs to be edited to give the saving location
+data_location = '/data/wiay/2263373r/giflow/box/voxelised/noisy_grid/' # THIS needs to be edited to give the data location
+save_dir = '/data/www.astro/2263373r/giflow/box/voxelised/noisy_grid/' # THIS needs to be edited to give the saving location
 
 # ------------- Reading the data ----------------------------
-datasize = 500000 # THIS needs to be edited to give the overall desired data set size
-survey_coordinates_to_include = [] # THIS needs to be edited if we want to include survey coordinates in the conditional
+datasize = 1000000 # THIS needs to be edited to give the overall desired data set size
+num_files = 2 #number of files that needs to be read
+survey_coordinates_to_include = ['x', 'y'] # THIS needs to be edited if we want to include survey coordinates in the conditional
 
-with open(os.path.join(data_location, f"trainset_0_v2.pkl"), 'rb') as file:
-    dt = pkl.load(file)
-train_data, train_conditional = dt.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
+train_data = []
+train_conditional = []
+for n in range(num_files):
+    with open(os.path.join(data_location, f"trainset_{n}_v2.pkl"), 'rb') as file:
+        dt = pkl.load(file)
+    td, tc = dt.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
+    train_data.append(td)
+    train_conditional.append(tc)
+train_data = np.vstack(train_data)
+train_conditional = np.vstack(train_conditional)
 train_data = train_data[:datasize,:]
 train_conditional = train_conditional[:datasize,:]
 
@@ -43,8 +51,8 @@ scalers = {'conditional': sc_conditional, 'data': sc_data}
 # --------------- Defining the flow ------------------------
 device = torch.device('cuda')
 # THIS needs to be edited for the hyperparameters of the flow
-hyperparameters={'n_inputs': 7,
-                 'n_conditional_inputs': 64,
+hyperparameters={'n_inputs': 512,
+                 'n_conditional_inputs':192,
                  'n_transforms': 12,
                  'n_blocks_per_transform': 2,
                  'n_neurons': 64,

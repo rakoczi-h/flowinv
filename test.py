@@ -8,13 +8,12 @@ import h5py
 from giflow.results import BoxFlowResults
 from giflow.flowmodel import FlowModel
 from giflow.plot import plot_js_hist
-from utils import scale_data
 
-survey_coordinates_to_include = ['x', 'y']
+survey_coordinates_to_include = []
 num_test_cases = 10
 #bilby_location = '/data/www.astro/2263373r/giflow/bilby/box/'
 bilby_location = None
-flow_location = '/data/www.astro/2263373r/giflow/box/voxelised/noisy_grid/run_2024-03-29 19:38:12.842048/'
+flow_location = '/data/www.astro/2263373r/giflow/box/parameterised/run_2024-04-10 12:53:56.517577'
 
 # -------------------- Reading the flow --------------------------
 device = torch.device('cuda')
@@ -23,15 +22,15 @@ flow.load(flow_location)
 flow.flowmodel.to(device)
 
 # -------------------- Validation data --------------
-with open(os.path.join(flow.data_location, "validationset.pkl"), 'rb') as file:
+with open(os.path.join(flow.data_location, "validationset_v2.pkl"), 'rb') as file:
     dt_val = pkl.load(file)
-#keys = dt_val.parameter_labels
-keys = None
+keys = dt_val.parameter_labels
+#keys = None
 val_data, val_conditional = dt_val.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
 val_dataset = flow.make_tensor_dataset(val_data, val_conditional, device=device, scale=True)
 
 # -------------------- Test data  ------------------
-with open(os.path.join(flow.data_location, "testset.pkl"), 'rb') as file:
+with open(os.path.join(flow.data_location, "testset_v2.pkl"), 'rb') as file:
     dt_test = pkl.load(file)
 test_boxes = dt_test.boxes
 test_data, test_conditional = dt_test.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
@@ -50,20 +49,20 @@ for i in range(num_test_cases):
 ## P-P TEST
 flow.pp_test(validation_dataset=val_dataset)
 #
-## CORNER PLOTS
-#for i, result in enumerate(results):
-#    result.corner_plot(filename="corner_plot.png")
-#    print(f"Made {i+1}/{num_test_cases} corner plots.")
-#
+# CORNER PLOTS
+for i, result in enumerate(results):
+    result.corner_plot(filename="corner_plot.png")
+    print(f"Made {i+1}/{num_test_cases} corner plots.")
+
 # SURVEY CONSISTENCY
 for i, result in enumerate(results):
     result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
     print(f"Made {i+1}/{num_test_cases} survey comparison plots.")
 
 # VOXELISED MODEL COMPARISON
-for i, result in enumerate(results):
-    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png")
-    print(f"Made {i+1}/{num_test_cases} voxel slice comparison plots.")
+#for i, result in enumerate(results):
+#    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png")
+#    print(f"Made {i+1}/{num_test_cases} voxel slice comparison plots.")
 
 # ------------------------ Comparison with Bilby --------------------------------
 if bilby_location is not None:
