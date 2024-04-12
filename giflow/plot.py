@@ -229,24 +229,36 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
         std = np.std(gzs, axis=0)
         plot_data.append(std)
 
-    titles = ['Target', 'Mean', 'Std']
+    titles = ['Target', 'Sample Mean', 'Sample Std']
     fig, axes = plt.subplots(nrows=3, ncols=3)
-    vmin = np.array([target.min(), mean.min()]).min()
-    #vmax = np.array([target.max(), mean.max()]).max()
-    vmax = 220
-    levels = np.linspace(vmin, vmax, 10)
+    #vmin1 = np.array([target.min(), mean.min()]).min()
+    #vmin2 = std.min()
+    #vmax1 = np.array([target.max(), mean.max()]).max()
+    #vmax2 = std.max()
+    vmin1 = 0
+    vmin2 = 0
+    vmax1 = 220
+    vmax2 = 10
+    levels1 = np.linspace(vmin1, vmax1, 10)
+    levels2 = np.linspace(vmin2, vmax2, 20)
     cmap = 'plasma'
-    norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    norm1 = matplotlib.colors.Normalize(vmin=vmin1, vmax=vmax1)
+    norm2 = matplotlib.colors.Normalize(vmin=vmin2, vmax=vmax2)
     #norm = matplotlib.colors.BoundaryNorm(boundaries=levels, ncolors=15)
     for idx, ax in enumerate(axes.flatten()):
         if idx==0 or idx==3 or idx==6:
             ax.plot(coordinates[idx][:,0], coordinates[idx][:,1], 'o', markersize=2, color='black')
-        ax.tricontourf(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels, cmap=cmap, norm=norm)
-        ax.set(xlim=(np.min(coordinates[idx][:,0]), np.max(coordinates[idx][:,0])), ylim=(np.min(coordinates[idx][:,1]), np.max(coordinates[idx][:,1])), aspect='equal')
+        if idx==2 or idx==5 or idx==8:
+            ax.tricontourf(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels2, cmap=cmap, norm=norm2)
+        else:
+            ax.tricontourf(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels1, cmap=cmap, norm=norm1)
+        ax.set(xlim=(np.min(coordinates[0][:,0]), np.max(coordinates[0][:,0])), ylim=(np.min(coordinates[0][:,1]), np.max(coordinates[0][:,1])), aspect='equal')
         if any([idx==i for i in [0,1,2]]):
             ax.set(title=titles[idx])
-    cax = ax.inset_axes([1.1, 0.0, 0.1, 3.35])
-    plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ticks=levels, boundaries=levels, cax=cax, label=r'\u00b5 Gal')
+    cax1 = ax.inset_axes([0.0, -0.5, 2.0, 0.1])
+    fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm1, cmap=cmap), orientation='horizontal', ticks=levels1, boundaries=levels1, cax=cax1, label=r'$\delta g [\mu$Gal]')
+    cax2 = ax.inset_axes([1.0, -0.5, 2.0, 0.1])
+    fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', ticks=levels2, boundaries=levels2, cax=cax2, label=r'$\delta g [\mu$Gal]')
     plt.savefig(filename, transparent=False)
     plt.close()
 
