@@ -8,6 +8,7 @@ from collections import namedtuple
 
 from .box import Box
 plt.style.use('seaborn-v0_8-deep')
+matplotlib.rcParams['axes.titlesize'] = 10
 
 def make_pp_plot(posterior_samples_list, truths, filename=None, confidence_interval=[0.68, 0.95, 0.997],
                  lines=None, legend_fontsize='x-small', title=True,
@@ -230,7 +231,9 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
         plot_data.append(std)
 
     titles = ['Target', 'Sample Mean', 'Sample Std']
+    ylabels = ['(a)', '(b)', '(c)']
     fig, axes = plt.subplots(nrows=3, ncols=3)
+    plt.subplots_adjust(wspace=-0.5, hspace=0.15)
     #vmin1 = np.array([target.min(), mean.min()]).min()
     #vmin2 = std.min()
     #vmax1 = np.array([target.max(), mean.max()]).max()
@@ -239,15 +242,29 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
     vmin2 = 0
     vmax1 = 220
     vmax2 = 10
-    levels1 = np.linspace(vmin1, vmax1, 10)
-    levels2 = np.linspace(vmin2, vmax2, 20)
+    levels1 = np.linspace(vmin1, vmax1, 15)
+    levels2 = np.linspace(vmin2, vmax2, 15)
     cmap = 'plasma'
     norm1 = matplotlib.colors.Normalize(vmin=vmin1, vmax=vmax1)
     norm2 = matplotlib.colors.Normalize(vmin=vmin2, vmax=vmax2)
     #norm = matplotlib.colors.BoundaryNorm(boundaries=levels, ncolors=15)
     for idx, ax in enumerate(axes.flatten()):
+        if any([idx==i for i in [0,1,2]]):
+            ax.set_title(titles[idx])
+            ax.tick_params(axis='x', top=True, labeltop=True, bottom=False, labelbottom=False, labelsize=8)
+        else:
+            ax.tick_params(axis='x', top=False, labeltop=False, bottom=False, labelbottom=False)
         if idx==0 or idx==3 or idx==6:
             ax.plot(coordinates[idx][:,0], coordinates[idx][:,1], 'o', markersize=2, color='black')
+            ax.tick_params(axis='y', left=True, labelleft=True, right=False, labelright=False, labelsize=8)
+            ax.set_ylabel(ylabels[int(idx/3)], rotation=0, fontsize=10)
+        else:
+            ax.tick_params(axis='y', left=False, labelleft=False, right=False, labelright=False)
+        if any([idx==i for i in [6,7,8]]):
+            ax.set_xlabel('x[m]', fontsize=8)
+        if any([idx==i for i in [2,5,8]]):
+            ax.set_ylabel('y[m]', fontsize=8)
+            ax.yaxis.set_label_position("right")
         if idx==2 or idx==5 or idx==8:
             ax.tricontourf(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels2, cmap=cmap, norm=norm2)
         else:
@@ -255,10 +272,14 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
         ax.set(xlim=(np.min(coordinates[0][:,0]), np.max(coordinates[0][:,0])), ylim=(np.min(coordinates[0][:,1]), np.max(coordinates[0][:,1])), aspect='equal')
         if any([idx==i for i in [0,1,2]]):
             ax.set(title=titles[idx])
-    cax1 = ax.inset_axes([0.0, -0.5, 2.0, 0.1])
-    fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm1, cmap=cmap), orientation='horizontal', ticks=levels1, boundaries=levels1, cax=cax1, label=r'$\delta g [\mu$Gal]')
-    cax2 = ax.inset_axes([1.0, -0.5, 2.0, 0.1])
-    fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', ticks=levels2, boundaries=levels2, cax=cax2, label=r'$\delta g [\mu$Gal]')
-    plt.savefig(filename, transparent=False)
+    cax1 = ax.inset_axes([-2.2, -0.3, 2.1, 0.1])
+    cbar = fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm1, cmap=cmap), orientation='horizontal', ticks=[0.0, 27.5, 55.0, 82.5, 110.0, 137.5, 165.0, 192.5, 220.0], boundaries=levels1, cax=cax1)
+    cbar.set_label(r'$\Delta$g [$\mu$Gal]', size=8)
+    cbar.ax.tick_params(rotation=90, labelsize=8)
+    #cax2 = ax.inset_axes([0.0, -0.3, 1.0, 0.1])
+    #cbar=fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', ticks=[0.0, 2.5, 5.0, 7.5, 10.0], boundaries=levels2, cax=cax2)
+    #cbar.set_label(r'$\Delta$g [$\mu$Gal]', size=8)
+    #cbar.ax.tick_params(rotation=90, labelsize=8)
+    plt.savefig(filename, transparent=False, bbox_inches='tight')
     plt.close()
 
