@@ -1,4 +1,4 @@
-#!/scratch/wiay/2263373r/masters/conda_envs/venv/bin/python
+#!/scratch/wiay/2263373r/masters/conda_envs/flowenv/bin/python
 import os
 import pickle as pkl
 import torch
@@ -10,13 +10,13 @@ from giflow.flowmodel import FlowModel, save_flow
 from giflow.box import BoxDataset
 
 # ------------- Directories ---------------------------------
-data_location = '/data/wiay/2263373r/giflow/box/voxelised/noisy_grid/' # THIS needs to be edited to give the data location
-save_dir = '/data/www.astro/2263373r/giflow/box/voxelised/noisy_grid/' # THIS needs to be edited to give the saving location
+data_location = '/data/wiay/2263373r/giflow/box/parameterised/' # THIS needs to be edited to give the data location
+save_dir = '/data/www.astro/2263373r/giflow/box/parameterised/' # THIS needs to be edited to give the saving location
 
 # ------------- Reading the data ----------------------------
 datasize = 1000000 # THIS needs to be edited to give the overall desired data set size
 num_files = 2 #number of files that needs to be read
-survey_coordinates_to_include = ['x', 'y'] # THIS needs to be edited if we want to include survey coordinates in the conditional
+survey_coordinates_to_include = [] # THIS needs to be edited if we want to include survey coordinates in the conditional
 
 train_data = []
 train_conditional = []
@@ -51,8 +51,8 @@ scalers = {'conditional': sc_conditional, 'data': sc_data}
 # --------------- Defining the flow ------------------------
 device = torch.device('cuda')
 # THIS needs to be edited for the hyperparameters of the flow
-hyperparameters={'n_inputs': 512,
-                 'n_conditional_inputs':192,
+hyperparameters={'n_inputs': 7,
+                 'n_conditional_inputs':64,
                  'n_transforms': 12,
                  'n_blocks_per_transform': 2,
                  'n_neurons': 64,
