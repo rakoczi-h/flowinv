@@ -5,17 +5,16 @@ import numpy as np
 import os
 import pickle as pkl
 import json
-import h5py
 
 from giflow.results import BoxFlowResults
 from giflow.flowmodel import FlowModel
 from giflow.plot import plot_js_hist
 
-survey_coordinates_to_include = ['x', 'y']
+survey_coordinates_to_include = []
 num_test_cases = 10
 #bilby_location = '/data/www.astro/2263373r/giflow/bilby/box/'
 bilby_location = None
-flow_location = '/data/www.astro/2263373r/giflow/box/voxelised/noisy_grid/run_2024-04-11 12:48:37.595016/'
+flow_location = '/data/www.astro/2263373r/giflow/box/parameterised/run_2024-05-30 15:09:42.601963/'
 
 
 # -------------------- Reading the flow --------------------------
@@ -27,8 +26,8 @@ flow.flowmodel.to(device)
 # -------------------- Validation data --------------
 with open(os.path.join(flow.data_location, "validationset_v2.pkl"), 'rb') as file:
     dt_val = pkl.load(file)
-#keys = dt_val.parameter_labels
-keys = None
+keys = dt_val.parameter_labels
+#keys = None
 val_data, val_conditional = dt_val.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
 val_dataset = flow.make_tensor_dataset(val_data, val_conditional, device=device, scale=True)
 
@@ -53,9 +52,9 @@ for i in range(num_test_cases):
 flow.pp_test(validation_dataset=val_dataset)
 #
 # CORNER PLOTS
-#for i, result in enumerate(results):
-#    result.corner_plot(filename="corner_plot.png")
-#    print(f"Made {i+1}/{num_test_cases} corner plots.")
+for i, result in enumerate(results):
+    result.corner_plot(filename="corner_plot.png")
+    print(f"Made {i+1}/{num_test_cases} corner plots.")
 
 # SURVEY CONSISTENCY
 for i, result in enumerate(results):
@@ -63,9 +62,9 @@ for i, result in enumerate(results):
     print(f"Made {i+1}/{num_test_cases} survey comparison plots.")
 
 # VOXELISED MODEL COMPARISON
-for i, result in enumerate(results):
-    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png")
-    print(f"Made {i+1}/{num_test_cases} voxel slice comparison plots.")
+#for i, result in enumerate(results):
+#    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png")
+#    print(f"Made {i+1}/{num_test_cases} voxel slice comparison plots.")
 
 # ------------------------ Comparison with Bilby --------------------------------
 if bilby_location is not None:
