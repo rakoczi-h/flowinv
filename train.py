@@ -10,8 +10,8 @@ from giflow.flowmodel import FlowModel, save_flow
 from giflow.box import BoxDataset
 
 # ------------- Directories ---------------------------------
-data_location = '/data/wiay/2263373r/giflow/box/parameterised/' # THIS needs to be edited to give the data location
-save_dir = '/data/www.astro/2263373r/giflow/box/parameterised/' # THIS needs to be edited to give the saving location
+data_location = '/data/wiay/2263373r/giflow/box/voxelised/' # THIS needs to be edited to give the data location
+save_dir = '/data/www.astro/2263373r/giflow/box/voxelised/' # THIS needs to be edited to give the saving location
 
 # ------------- Reading the data ----------------------------
 datasize = 1000000 # THIS needs to be edited to give the overall desired data set size
@@ -45,13 +45,14 @@ os.mkdir(save_location)
 sc_data = MinMaxScaler()
 sc_data.fit(train_data)
 sc_conditional = MinMaxScaler()
+print(np.shape(train_conditional.reshape(-1, train_conditional.shape[-1])))
 sc_conditional.fit(train_conditional.reshape(-1, train_conditional.shape[-1]))
 scalers = {'conditional': sc_conditional, 'data': sc_data}
 
 # --------------- Defining the flow ------------------------
 device = torch.device('cuda')
 # THIS needs to be edited for the hyperparameters of the flow
-hyperparameters={'n_inputs': 7,
+hyperparameters={'n_inputs': 512,
                  'n_conditional_inputs':64,
                  'n_transforms': 12,
                  'n_blocks_per_transform': 2,
