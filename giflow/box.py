@@ -73,6 +73,7 @@ class Box:
             gz = self.get_gz(limits=self.voxel_grid, densities=self.voxelised_model, survey_coordinates=survey_coordinates)
         else:
             raise ValueError('model_type can only be parameterised or voxelised.')
+        gz = gz-np.min(gz)
         return gz
 
     def get_gz(self, limits, densities, survey_coordinates):
