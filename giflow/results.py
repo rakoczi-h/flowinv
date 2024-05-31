@@ -114,6 +114,7 @@ class FlowResults:
         js = np.array(js)
         return js
 
+
     def corner_plot(self, filename='corner.png'):
         """Makes a simple corner plot with a single set of posterior samples.
         Parameter
@@ -134,7 +135,7 @@ class FlowResults:
                             show_titles=True,
                             label_kwargs=dict(fontsize=20),
                             title_kwargs=dict(fontsize=20),
-                            quantiles=[0.16, 0.84],
+                            quantiles=[0.16, 0.5, 0.84],
                             levels=(1 - np.exp(-0.5), 1 - np.exp(-2), 1 - np.exp(-9 / 2.)),
                             plot_density=False,
                             plot_datapoints=False,
@@ -246,6 +247,11 @@ class FlowResults:
         print("Made corner plot...")
 
 class BoxFlowResults(FlowResults):
+    def rescale(self, scaling_factor, parameters_to_rescale=[]):
+        for i, pl in enumerate(self.parameter_labels):
+            if any([i==c for c in parameters_to_rescale]):
+                self.samples[:,i] = self.samples[:,i]*scaling_factor
+
     def plot_compare_surveys(self, model_framework, survey_framework=None, num=1000, include_examples=False, filename='compare_survey.png'):
         """
         Forward models the samples from the flow and compares the forward mdoel to the input.
