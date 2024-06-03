@@ -19,11 +19,11 @@ distributions = {"px": ['Uniform', -0.75, 0.75], "py": ['Uniform', -0.75, 0.75],
 priors = Prior(distributions=distributions)
 
 # FRAMEWORKS
-survey_framework = {'noise_scale' : , 'survey_shape' : [8,8], 'ranges': [[-0.5,0.5],[-0.5, 0.5],[0]], 'noise_on_location_scale' : 0.0}
+survey_framework = {'noise_scale' : ['Uniform', 0.0, 0.25], 'survey_shape' : [8,8], 'ranges': [[-0.5,0.5],[-0.5, 0.5],[0]], 'noise_on_location_scale' : 0.0}
 model_framework = {'type': 'parameterised', 'density': -1500.0, 'noise_scale': 50.0, 'grid_shape': [8,8,8], 'ranges': [[-0.75,0.75],[-0.75,0.75],[-1,0]]}
 
 # Make train data:
-size = 5000
+size = 5000000
 dt_train = BoxDataset(priors=priors, size=size, survey_framework=survey_framework, model_framework=model_framework)
 dt_train.make_dataset()
 file_name = os.path.join(save_loc, f"trainset_{n}.pkl")
@@ -31,14 +31,6 @@ with open(file_name, 'wb') as file:
     pkl.dump(dt_train, file)
 print(f"Data set of size {size} made and saved as {file_name}.")
 
-gravity_vals = []
-for s in dt_train.surveys:
-    gravity_vals.append(s.gravity)
-gravity_vals = np.array(gravity_vals).flatten()
-
-plt.hist(gravity_vals)
-plt.savefig('/data/www.astro/2263373r/gravity_val_hist.png')
-plt.close()
 
 # Make validaton data:
 #size = 10000
