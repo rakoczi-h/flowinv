@@ -466,9 +466,10 @@ class BoxDataset:
                 box_parameters[key] = parameters_dict[key][i]
             box = Box(parameters=box_parameters, density=self.model_framework['density'], background_noise_scale=self.model_framework['noise_scale'])
             noise_prior = Prior(distributions={"noise_scale": self.survey_framework['noise_scale']})
-            noise_scale = noise_prior.sample(size=1, returntype='array').flatten()
-            survey = GravitySurvey(ranges=self.survey_framework['ranges'], noise_scale=noise_scale, survey_shape=self.survey_framework['survey_shape'], noise_on_location_scale=self.survey_framework['noise_on_location_scale'])
+            noise_scale = noise_prior.sample(size=1, returntype='dict')['noise_scale'][0]
+            survey = GravitySurvey(ranges=self.survey_framework['ranges'], survey_shape=self.survey_framework['survey_shape'], noise_on_location_scale=self.survey_framework['noise_on_location_scale'])
             survey.make_survey()
+            survey.noise_scale = noise_scale
             # Computing gravity
             if self.model_framework['type'] == 'voxelised':
                 box.make_voxel_grid(ranges=self.model_framework['ranges'], grid_shape=self.model_framework['grid_shape'])
