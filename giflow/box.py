@@ -489,12 +489,14 @@ class BoxDataset:
         self.boxes = boxes
         return self.surveys, self.boxes
 
-    def make_data_arrays(self, survey_coordinates_to_include=['x', 'y', 'z'], include_noise=True):
+    def make_data_arrays(self, survey_coordinates_to_include=[]):
         """
         Parameters
         ----------
             survey_coordinates_to_include: list
-                elements can be 'x' 'y' or 'z', otherwise they are not considered
+                elements can be 'x', 'y', 'z': the array of measurement coordinates are included for each data point
+                            'x_range' 'y_range' 'z_range': only the range of the coordinates are included. Lower and upper limits
+                            'noise_scale': the scale of the gaussian noise is included
         """
         # Making the box model array
         if self.model_framework['type'] == 'parameterised':
@@ -503,16 +505,20 @@ class BoxDataset:
             data = np.array([self.boxes[i].voxelised_model for i in range(self.size)])
         # Making the survey array
         conditional_gz = np.array([self.surveys[i].gravity for i in range(self.size)])
-        if include_noise:
-            noise = np.array([self.surveys[i].noise for i in range(self.size)])
-            conditional_gz = conditional_gz + noise # Adding noise
+        noise = np.array([se;f.surveys[i].noise for i in range(self.size)])
+        conditional_gz = conditional_gz+noise
+        conditional = []
+        conditional.append(conditional_gz)
         conditional_coordinates = np.array([self.surveys[i].survey_coordinates for i in range(self.size)])
-        conditional = np.expand_dims(conditional_gz, axis=2)
         labels = ['x', 'y', 'z']
         for idx, label in enumerate(labels):
             if any([l==label for l in survey_coordinates_to_include]):
-                conditional = np.concatenate((conditional,conditional_coordinates[:,:,idx:idx+1]), axis=2)
-        #conditional = conditional.reshape(*conditional.shape[:-2], -1)
-        print(np.shape(conditional))
+                conditional.append(conditional_coordinates[:,:,idx])
+        labels = ['x_ranges', 'y_ranges', 'z_ranges']
+        for idx, label in enumerate(labels):
+            if any([l==label for l in survey_coordinates_to_include]):
+                conditional.append(np.array([self.surveys[i].ranges[idx] for i in range(self.size)]))
+        if any([l=='noise_scale' for l in survey_coordinates_to_include]):
+            conditional.append(np.expand_dims(np.array([self.surveys[i].noise_scale for i in range(self.size)]), axis=1))
         return data, conditional
 
