@@ -242,9 +242,9 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
     vmin2 = 0
     vmax1 = 220
     vmax2 = 10
-    levels1 = np.linspace(vmin1, vmax1, 15)
-    levels2 = np.linspace(vmin2, vmax2, 15)
-    cmap = 'plasma'
+    levels1 = np.linspace(vmin1, vmax1, 256)
+    levels2 = np.linspace(vmin2, vmax2, 256)
+    cmap = 'rainbow'
     norm1 = matplotlib.colors.Normalize(vmin=vmin1, vmax=vmax1)
     norm2 = matplotlib.colors.Normalize(vmin=vmin2, vmax=vmax2)
     #norm = matplotlib.colors.BoundaryNorm(boundaries=levels, ncolors=15)
@@ -255,7 +255,7 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
         else:
             ax.tick_params(axis='x', top=False, labeltop=False, bottom=False, labelbottom=False)
         if idx==0 or idx==3 or idx==6:
-            ax.plot(coordinates[idx][:,0], coordinates[idx][:,1], 'o', markersize=2, color='black')
+            ax.plot(coordinates[idx][:,0], coordinates[idx][:,1], 'o', markersize=1, color='black')
             ax.tick_params(axis='y', left=True, labelleft=True, right=False, labelright=False, labelsize=8)
             ax.set_ylabel(ylabels[int(idx/3)], rotation=0, fontsize=10)
         else:
@@ -267,19 +267,21 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
             ax.yaxis.set_label_position("right")
         if idx==2 or idx==5 or idx==8:
             ax.tricontourf(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels2, cmap=cmap, norm=norm2)
+            #ax.tricontour(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=10, colors='k', linewidths=0.2)
         else:
             ax.tricontourf(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels1, cmap=cmap, norm=norm1)
+            #ax.tricontour(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=10, colors='k', linewidths=0.2)
         ax.set(xlim=(np.min(coordinates[0][:,0]), np.max(coordinates[0][:,0])), ylim=(np.min(coordinates[0][:,1]), np.max(coordinates[0][:,1])), aspect='equal')
         if any([idx==i for i in [0,1,2]]):
             ax.set(title=titles[idx])
-    cax1 = ax.inset_axes([-2.2, -0.3, 2.1, 0.1])
+    cax1 = ax.inset_axes([-2.15, -0.3, 2.0, 0.1])
     cbar = fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm1, cmap=cmap), orientation='horizontal', ticks=[0.0, 27.5, 55.0, 82.5, 110.0, 137.5, 165.0, 192.5, 220.0], boundaries=levels1, cax=cax1)
     cbar.set_label(r'$\Delta$g [$\mu$Gal]', size=8)
-    cbar.ax.tick_params(rotation=90, labelsize=8)
-    #cax2 = ax.inset_axes([0.0, -0.3, 1.0, 0.1])
-    #cbar=fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', ticks=[0.0, 2.5, 5.0, 7.5, 10.0], boundaries=levels2, cax=cax2)
-    #cbar.set_label(r'$\Delta$g [$\mu$Gal]', size=8)
-    #cbar.ax.tick_params(rotation=90, labelsize=8)
+    cbar.ax.tick_params(rotation=45, labelsize=8)
+    cax2 = ax.inset_axes([0.05, -0.3, 0.9, 0.1])
+    cbar=fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', ticks=[0.0, 2.5, 5.0, 7.5, 10.0], boundaries=levels2, cax=cax2)
+    cbar.set_label(r'$\Delta$g [$\mu$Gal]', size=8)
+    cbar.ax.tick_params(rotation=45, labelsize=8)
     plt.savefig(filename, transparent=False, bbox_inches='tight')
     plt.close()
 
