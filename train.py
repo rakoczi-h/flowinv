@@ -6,6 +6,8 @@ from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 from datetime import datetime
 
+from giflow.scaler import Scaler
+from giflow.read_files import read_files
 from giflow.flowmodel import FlowModel, save_flow
 from giflow.box import BoxDataset
 
@@ -14,46 +16,39 @@ data_location = '/data/wiay/2263373r/giflow/box/parameterised/normalised/' # THI
 save_dir = '/data/www.astro/2263373r/giflow/box/parameterised/normalised/' # THIS needs to be edited to give the saving location
 
 # ------------- Reading the data ----------------------------
+survey_coordinates_to_include = ['noise_scale'] # THIS needs to be edited if we want to include survey coordinates in the conditional
+
 datasize = 1000000 # THIS needs to be edited to give the overall desired data set size
 num_files = 2 #number of files that needs to be read
-survey_coordinates_to_include = [] # THIS needs to be edited if we want to include survey coordinates in the conditional
+train_data, train_conditional = read_files(data_location=data_location, filename='trainset', datasize=datasize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include)
 
-train_data = []
-train_conditional = []
-for n in range(num_files):
-    with open(os.path.join(data_location, f"trainset_{n}.pkl"), 'rb') as file:
-        dt = pkl.load(file)
-    td, tc = dt.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
-    train_data.append(td)
-    train_conditional.append(tc)
-train_data = np.vstack(train_data)
-train_conditional = np.vstack(train_conditional)
-train_data = train_data[:datasize,:]
-train_conditional = train_conditional[:datasize,:]
+valsize = 100000 # THIS needs to be edited to give the overall desired data set size
+num_files = 1 #number of files that needs to be read
+train_data, train_conditional = read_files(data_location=data_location, filename='validationset', datasize=valasize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include)
 
-with open(os.path.join(data_location, 'validationset.pkl'), 'rb') as file:
-   dt = pkl.load(file)
-val_data, val_conditional = dt.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
 
 print(f"Data read. Location: \t {data_location}")
 
 # ------------- Defining scalers ---------------------------
-start_time = datetime.now()
-save_location = os.path.join(save_dir, 'run_'+str(start_time))
-os.mkdir(save_location)
-# only fitting to the data to construct scaler, scaling is done within the flow class
-sc_data = MinMaxScaler()
-sc_data.fit(train_data)
-sc_conditional = MinMaxScaler()
-print(np.shape(train_conditional.reshape(-1, train_conditional.shape[-1])))
-sc_conditional.fit(train_conditional.reshape(-1, train_conditional.shape[-1]))
+scalers = [MinMaxScaler()]
+sc_data = Scaler(scalers=scalers)
+sc_data.scale_data(train_data, fit=True)
+
+scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler()]
+sc_conditional=Scaler(scalers=scalers)
+sc_conditional.scale_data(train_conditional, fit=True)
+
 scalers = {'conditional': sc_conditional, 'data': sc_data}
 
 # --------------- Defining the flow ------------------------
+start_time = datetime.now()
+save_location = os.path.join(save_dir, 'run_'+str(start_time))
+os.mkdir(save_location)
+
 device = torch.device('cuda')
 # THIS needs to be edited for the hyperparameters of the flow
 hyperparameters={'n_inputs': 7,
-                 'n_conditional_inputs':64,
+                 'n_conditional_inputs':65,
                  'n_transforms': 12,
                  'n_blocks_per_transform': 2,
                  'n_neurons': 64,
