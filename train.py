@@ -10,8 +10,8 @@ from giflow.flowmodel import FlowModel, save_flow
 from giflow.box import BoxDataset
 
 # ------------- Directories ---------------------------------
-data_location = '/data/wiay/2263373r/giflow/box/voxelised/' # THIS needs to be edited to give the data location
-save_dir = '/data/www.astro/2263373r/giflow/box/voxelised/' # THIS needs to be edited to give the saving location
+data_location = '/data/wiay/2263373r/giflow/box/parameterised/normalised/' # THIS needs to be edited to give the data location
+save_dir = '/data/www.astro/2263373r/giflow/box/parameterised/normalised/' # THIS needs to be edited to give the saving location
 
 # ------------- Reading the data ----------------------------
 datasize = 1000000 # THIS needs to be edited to give the overall desired data set size
@@ -21,7 +21,7 @@ survey_coordinates_to_include = [] # THIS needs to be edited if we want to inclu
 train_data = []
 train_conditional = []
 for n in range(num_files):
-    with open(os.path.join(data_location, f"trainset_{n}_v2.pkl"), 'rb') as file:
+    with open(os.path.join(data_location, f"trainset_{n}.pkl"), 'rb') as file:
         dt = pkl.load(file)
     td, tc = dt.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
     train_data.append(td)
@@ -31,7 +31,7 @@ train_conditional = np.vstack(train_conditional)
 train_data = train_data[:datasize,:]
 train_conditional = train_conditional[:datasize,:]
 
-with open(os.path.join(data_location, 'validationset_v2.pkl'), 'rb') as file:
+with open(os.path.join(data_location, 'validationset.pkl'), 'rb') as file:
    dt = pkl.load(file)
 val_data, val_conditional = dt.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
 
@@ -52,7 +52,7 @@ scalers = {'conditional': sc_conditional, 'data': sc_data}
 # --------------- Defining the flow ------------------------
 device = torch.device('cuda')
 # THIS needs to be edited for the hyperparameters of the flow
-hyperparameters={'n_inputs': 512,
+hyperparameters={'n_inputs': 7,
                  'n_conditional_inputs':64,
                  'n_transforms': 12,
                  'n_blocks_per_transform': 2,
@@ -61,7 +61,7 @@ hyperparameters={'n_inputs': 512,
                  'batch_size': 5000,
                  'early_stopping': False,
                  'lr': 0.001,
-                 'epochs': 2000
+                 'epochs': 3000
 }
 flow = FlowModel(hyperparameters=hyperparameters, datasize=datasize, scalers=scalers)
 flow.save_location = save_location

@@ -1,4 +1,4 @@
-#!/scratch/wiay/2263373r/masters/conda_envs/venv/bin/python
+#!/scratch/wiay/2263373r/masters/conda_envs/flowenv/bin/python
 
 import pickle as pkl
 import os
@@ -10,7 +10,7 @@ from giflow.prior import Prior
 from giflow.box import BoxDataset
 
 n = int(sys.argv[1])
-save_loc = '/data/wiay/2263373r/giflow/box/parameterised/normalised/'
+save_loc = '/data/wiay/2263373r/giflow/box/voxelised/normalised/'
 
 
 # PRIOR
@@ -20,10 +20,11 @@ priors = Prior(distributions=distributions)
 
 # FRAMEWORKS
 survey_framework = {'noise_scale' : ['Uniform', 0.0, 0.25], 'survey_shape' : [8,8], 'ranges': [[-0.5,0.5],[-0.5, 0.5],[0]], 'noise_on_location_scale' : 0.0}
-model_framework = {'type': 'parameterised', 'density': -1500.0, 'noise_scale': 50.0, 'grid_shape': [8,8,8], 'ranges': [[-0.75,0.75],[-0.75,0.75],[-1,0]]}
+model_framework = {'type': 'voxelised', 'density': -1500.0, 'noise_scale': 50.0, 'grid_shape': [8,8,8], 'ranges': [[-0.75,0.75],[-0.75,0.75],[-1,0]]}
 
-# Make train data:
-size = 5000000
+
+## Make train data:
+size = 500000
 dt_train = BoxDataset(priors=priors, size=size, survey_framework=survey_framework, model_framework=model_framework)
 dt_train.make_dataset()
 file_name = os.path.join(save_loc, f"trainset_{n}.pkl")
@@ -33,27 +34,27 @@ print(f"Data set of size {size} made and saved as {file_name}.")
 
 
 # Make validaton data:
-#size = 10000
+#size = 100000
 #dt_val = BoxDataset(priors=priors, size=size, survey_framework=survey_framework, model_framework=model_framework)
 #dt_val.make_dataset()
-#file_name = os.path.join(save_loc, 'validationset_v2.pkl')
+#file_name = os.path.join(save_loc, 'validationset.pkl')
 #with open(file_name, 'wb') as file:
 #    pkl.dump(dt_val, file)
 #print(f"Data set of size {size} made and saved as {file_name}.")
-
-## Make test data:
+#
+### Make test data:
 #size = 10
 #dt_test = BoxDataset(priors=priors, size=size, survey_framework=survey_framework, model_framework=model_framework)
 #parameters_dict = dict.fromkeys(priors.keys)
-#parameters_dict['px'] = np.array([0, 0, 0, 0, 10, 10, 10, 10, 10, 10])
-#parameters_dict['py'] = np.array([0, 0, 0, 0, 10, 10, 10, 10, 10, 10])
-#parameters_dict['pz'] = np.array([-50, -70, -50, -70, -50, -70, -50, -70, -50, -70])
-#parameters_dict['lx'] = np.array([90, 90, 80, 80, 60, 60, 70, 70, 40, 40])
-#parameters_dict['ly'] = np.array([60, 60, 50, 50, 40, 40, 50, 50, 35, 35])
-#parameters_dict['lz'] = np.array([60, 60, 60, 60, 60, 60, 60, 60, 60, 60])
+#parameters_dict['px'] = np.array([0, 0, 0, 0, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25])
+#parameters_dict['py'] = np.array([0, 0, 0, 0, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25])
+#parameters_dict['pz'] = np.array([-0.55, -0.75, -0.55, -0.75, -0.55, -0.75, -0.55, -0.75, -0.55, -0.75])
+#parameters_dict['lx'] = np.array([1, 1, 0.8, 0.8, 0.6, 0.6, 0.7, 0.7, 0.4, 0.4])
+#parameters_dict['ly'] = np.array([0.6, 0.6, 0.6, 0.6, 0.4, 0.4, 0.5, 0.5, 0.35, 0.35])
+#parameters_dict['lz'] = np.array([0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6])
 #parameters_dict['alpha'] = np.array([0.8726, 0.8726, 0.8726, 0.8726, 0.8726, 0.8726, 0.8726, 0.8726, 0.8726, 0.8726])
 #dt_test.make_dataset(parameters_dict=parameters_dict)
-#file_name = os.path.join(save_loc, 'testset_v2.pkl')
+#file_name = os.path.join(save_loc, 'testset.pkl')
 #with open(file_name, 'wb') as file:
 #    pkl.dump(dt_test, file)
 #print(f"Data set of size {size} made and saved as {file_name}.")

@@ -12,9 +12,9 @@ from giflow.plot import plot_js_hist
 
 survey_coordinates_to_include = []
 num_test_cases = 10
-#bilby_location = '/data/www.astro/2263373r/giflow/bilby/box/'
-bilby_location = None
-flow_location = '/data/www.astro/2263373r/giflow/box/parameterised/run_2024-05-30 15:09:42.601963/'
+bilby_location = '/data/www.astro/2263373r/giflow/bilby/box/normalised/'
+#bilby_location = None
+flow_location = '/data/www.astro/2263373r/giflow/box/parameterised/normalised/run_2024-06-03 10:13:21.656567/'
 
 
 # -------------------- Reading the flow --------------------------
@@ -24,7 +24,7 @@ flow.load(flow_location)
 flow.flowmodel.to(device)
 
 # -------------------- Validation data --------------
-with open(os.path.join(flow.data_location, "validationset_v2.pkl"), 'rb') as file:
+with open(os.path.join(flow.data_location, "validationset.pkl"), 'rb') as file:
     dt_val = pkl.load(file)
 keys = dt_val.parameter_labels
 #keys = None
@@ -32,7 +32,7 @@ val_data, val_conditional = dt_val.make_data_arrays(survey_coordinates_to_includ
 val_dataset = flow.make_tensor_dataset(val_data, val_conditional, device=device, scale=True)
 
 # -------------------- Test data  ------------------
-with open(os.path.join(flow.data_location, "testset_v2.pkl"), 'rb') as file:
+with open(os.path.join(flow.data_location, "testset.pkl"), 'rb') as file:
     dt_test = pkl.load(file)
 test_boxes = dt_test.boxes
 test_data, test_conditional = dt_test.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
@@ -69,25 +69,25 @@ for i, result in enumerate(results):
 # ------------------------ Comparison with Bilby --------------------------------
 if bilby_location is not None:
     # JS-DIVERGENCE WITH BILBY (done with validation data)
-    js_100_cases = []
-    for i in range(100):
-        samples, log_probabilities = flow.sample_and_logprob(val_dataset.tensors[1][i], num=2000)
-        result = BoxFlowResults(samples=samples, conditional=val_conditional[i,:], log_probabilities=log_probabilities, true_parameters=val_data[i,:], parameter_labels=keys)
-        with open(os.path.join(bilby_location, f"100_cases/testcase_{i}/box_parameterised_result.json"), 'r') as file:
-            bilby_results = json.load(file)
-            bilby_posterior_dict = bilby_results['posterior']['content']
-            bilby_samples = []
-            for key in keys:
-                bilby_samples.append(bilby_posterior_dict[key])
-            bilby_samples = np.array(bilby_samples).T
-        js_100_cases.append(result.get_js_divergence(bilby_samples))
-    js_100_cases = np.vstack(js_100_cases).T
-    _, _, median = plot_js_hist(js_100_cases, keys=keys, filename=os.path.join(flow_location, 'js_divergence_hist.png'))
-    print(f"The median JS-divergence value is {median}")
-
+#    js_100_cases = []
+#    for i in range(100):
+#        samples, log_probabilities = flow.sample_and_logprob(val_dataset.tensors[1][i], num=2000)
+#        result = BoxFlowResults(samples=samples, conditional=val_conditional[i,:], log_probabilities=log_probabilities, true_parameters=val_data[i,:], parameter_labels=keys)
+#        with open(os.path.join(bilby_location, f"100_cases/testcase_{i}/box_parameterised_result.json"), 'r') as file:
+#            bilby_results = json.load(file)
+#            bilby_posterior_dict = bilby_results['posterior']['content']
+#            bilby_samples = []
+#            for key in keys:
+#                bilby_samples.append(bilby_posterior_dict[key])
+#            bilby_samples = np.array(bilby_samples).T
+#        js_100_cases.append(result.get_js_divergence(bilby_samples))
+#    js_100_cases = np.vstack(js_100_cases).T
+#    _, _, median = plot_js_hist(js_100_cases, keys=keys, filename=os.path.join(flow_location, 'js_divergence_hist.png'))
+#    print(f"The median JS-divergence value is {median}")
+#
     # CORNER PLOT WITH BILBY (done with test data)
     for i, result in enumerate(results):
-        with open(os.path.join(bilby_location, f"testcase_{i}/box_parameterised_result.json"), 'r') as file:
+        with open(os.path.join(bilby_location, f"testcase_{i}/inversion_result.json"), 'r') as file:
             bilby_results = json.load(file)
             bilby_posterior_dict = bilby_results['posterior']['content']
             bilby_samples = []
