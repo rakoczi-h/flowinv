@@ -202,7 +202,7 @@ class FlowResults:
         show_titles=True,
         label_kwargs=dict(fontsize=20),
         title_kwargs=dict(fontsize=20),
-        quantiles=[0.16, 0.84],
+        quantiles=[0.16, 0.5, 0.84],
         levels=(1 - np.exp(-0.5), 1 - np.exp(-2), 1 - np.exp(-9 / 2.)),
         plot_density=False,
         plot_datapoints=False,
@@ -284,6 +284,7 @@ class BoxFlowResults(FlowResults):
 
         #num_survey_points = np.shape(coordinates)[0]
         #num_survey_coordinates = int(np.shape(self.conditional)[0]/num_survey_points)
+        print(np.shape(self.conditional))
         target_array = self.conditional[:,0]
         target = target_array
         #target = target_array - np.mean(target_array)
@@ -327,7 +328,7 @@ class BoxFlowResults(FlowResults):
             plt.savefig(filename, transparent=False)
         plt.close()
 
-    def plot_compare_voxel_slices(self, slice_coords=[1,3,5], filename='sliced_voxels.png'):
+    def plot_compare_voxel_slices(self, slice_coords=[1,3,5], filename='sliced_voxels.png', plot_truth=False):
         """Makes a comparison plot consisting of slices of the voxelspace.
         Each column is slices along a different direction (x, y, z).
         Each row is a different slice, with increasing coordinates.
@@ -339,104 +340,122 @@ class BoxFlowResults(FlowResults):
             filename: str
                 The name of the file under which it will be saved.
         """
-        if self.true_parameters is None:
-            raise ValueError("Give the model as the true_parameters attribute to the class")
-        true_model = self.true_parameters
-        d = round(np.power(np.shape(true_model)[0], 1/3))
+        if plot_truth:
+            if self.true_parameters is None:
+                raise ValueError("Give the model as the true_parameters attribute to the class")
+            true_model = self.true_parameters
+            d = round(np.power(np.shape(true_model)[0], 1/3))
+        else:
+            d = round(np.power(np.shape(self.samples[0])[0], 1/3))
         s1, s2, s3 = slice_coords
-        plot_data = np.zeros((9, 4, d, d)) # [number of subfigures, number of subplots, dim1, dim2]
-        # Plotting the true slices
-        true_model = np.reshape(true_model, (d,d,d))
-        plot_data[0, 0, :, :] = true_model[s1, :, :]
-        plot_data[3, 0, :, :] = true_model[s2, :, :]
-        plot_data[6, 0, :, :] = true_model[s3, :, :]
+        if plot_truth:
+            shift_idx = 0
+            plot_data = np.zeros((9, len(slice_coords)+1, d, d)) # [number of subfigures, number of subplots, dim1, dim2]
+            # Plotting the true slices
+            true_model = np.reshape(true_model, (d,d,d))
+            plot_data[0, 0, :, :] = true_model[s1, :, :]
+            plot_data[3, 0, :, :] = true_model[s2, :, :]
+            plot_data[6, 0, :, :] = true_model[s3, :, :]
 
-        plot_data[1, 0, :, :] = true_model[:, s1, :]
-        plot_data[4, 0, :, :] = true_model[:, s2, :]
-        plot_data[7, 0, :, :] = true_model[:, s3, :]
+            plot_data[1, 0, :, :] = true_model[:, s1, :]
+            plot_data[4, 0, :, :] = true_model[:, s2, :]
+            plot_data[7, 0, :, :] = true_model[:, s3, :]
 
-        plot_data[2, 0, :, :] = true_model[:, :, s1]
-        plot_data[5, 0, :, :] = true_model[:, :, s2]
-        plot_data[8, 0, :, :] = true_model[:, :, s3]
+            plot_data[2, 0, :, :] = true_model[:, :, s1]
+            plot_data[5, 0, :, :] = true_model[:, :, s2]
+            plot_data[8, 0, :, :] = true_model[:, :, s3]
+        else:
+            shift_idx = 1
+            plot_data = np.zeros((9, len(slice_coords), d, d))
 
         # Mean
         mean_model = np.mean(self.samples, axis=0)
         mean_model = np.reshape(mean_model, (d,d,d))
-        plot_data[0, 1, :, :] = mean_model[s1, :, :]
-        plot_data[3, 1, :, :] = mean_model[s2, :, :]
-        plot_data[6, 1, :, :] = mean_model[s3, :, :]
+        plot_data[0, 1-shift_idx, :, :] = mean_model[s1, :, :]
+        plot_data[3, 1-shift_idx, :, :] = mean_model[s2, :, :]
+        plot_data[6, 1-shift_idx, :, :] = mean_model[s3, :, :]
 
-        plot_data[1, 1, :, :] = mean_model[:, s1, :]
-        plot_data[4, 1, :, :] = mean_model[:, s2, :]
-        plot_data[7, 1, :, :] = mean_model[:, s3, :]
+        plot_data[1, 1-shift_idx, :, :] = mean_model[:, s1, :]
+        plot_data[4, 1-shift_idx, :, :] = mean_model[:, s2, :]
+        plot_data[7, 1-shift_idx, :, :] = mean_model[:, s3, :]
 
-        plot_data[2, 1, :, :] = mean_model[:, :, s1]
-        plot_data[5, 1, :, :] = mean_model[:, :, s2]
-        plot_data[8, 1, :, :] = mean_model[:, :, s3]
+        plot_data[2, 1-shift_idx, :, :] = mean_model[:, :, s1]
+        plot_data[5, 1-shift_idx, :, :] = mean_model[:, :, s2]
+        plot_data[8, 1-shift_idx, :, :] = mean_model[:, :, s3]
 
         # Mode
         mode_model = self.samples[np.argmax(self.log_probabilities), :]
         mode_model = np.reshape(mode_model, (d,d,d))
-        plot_data[0, 2, :, :] = mode_model[s1, :, :]
-        plot_data[3, 2, :, :] = mode_model[s2, :, :]
-        plot_data[6, 2, :, :] = mode_model[s3, :, :]
+        plot_data[0, 2-shift_idx, :, :] = mode_model[s1, :, :]
+        plot_data[3, 2-shift_idx, :, :] = mode_model[s2, :, :]
+        plot_data[6, 2-shift_idx, :, :] = mode_model[s3, :, :]
 
-        plot_data[1, 2, :, :] = mode_model[:, s1, :]
-        plot_data[4, 2, :, :] = mode_model[:, s2, :]
-        plot_data[7, 2, :, :] = mode_model[:, s3, :]
+        plot_data[1, 2-shift_idx, :, :] = mode_model[:, s1, :]
+        plot_data[4, 2-shift_idx, :, :] = mode_model[:, s2, :]
+        plot_data[7, 2-shift_idx, :, :] = mode_model[:, s3, :]
 
-        plot_data[2, 2, :, :] = mode_model[:, :, s1]
-        plot_data[5, 2, :, :] = mode_model[:, :, s2]
-        plot_data[8, 2, :, :] = mode_model[:, :, s3]
+        plot_data[2, 2-shift_idx, :, :] = mode_model[:, :, s1]
+        plot_data[5, 2-shift_idx, :, :] = mode_model[:, :, s2]
+        plot_data[8, 2-shift_idx, :, :] = mode_model[:, :, s3]
 
         # Std
         std_model = -np.std(self.samples, axis=0)
         std_model = np.reshape(std_model, (d,d,d))
-        plot_data[0, 3, :, :] = std_model[s1, :, :]
-        plot_data[3, 3, :, :] = std_model[s2, :, :]
-        plot_data[6, 3, :, :] = std_model[s3, :, :]
+        plot_data[0, 3-shift_idx, :, :] = std_model[s1, :, :]
+        plot_data[3, 3-shift_idx, :, :] = std_model[s2, :, :]
+        plot_data[6, 3-shift_idx, :, :] = std_model[s3, :, :]
 
-        plot_data[1, 3, :, :] = std_model[:, s1, :]
-        plot_data[4, 3, :, :] = std_model[:, s2, :]
-        plot_data[7, 3, :, :] = std_model[:, s3, :]
+        plot_data[1, 3-shift_idx, :, :] = std_model[:, s1, :]
+        plot_data[4, 3-shift_idx, :, :] = std_model[:, s2, :]
+        plot_data[7, 3-shift_idx, :, :] = std_model[:, s3, :]
 
-        plot_data[2, 3, :, :] = std_model[:, :, s1]
-        plot_data[5, 3, :, :] = std_model[:, :, s2]
-        plot_data[8, 3, :, :] = std_model[:, :, s3]
+        plot_data[2, 3-shift_idx, :, :] = std_model[:, :, s1]
+        plot_data[5, 3-shift_idx, :, :] = std_model[:, :, s2]
+        plot_data[8, 3-shift_idx, :, :] = std_model[:, :, s3]
 
         norm = plt.cm.colors.Normalize(-1500.0, 0.0)
         cmap = 'plasma'
 
         fig = plt.figure(figsize=(16, 14))
-        outer = gridspec.GridSpec(3, 3, wspace=0.2, hspace=-0.79)
+        outer = gridspec.GridSpec(3, len(slice_coords), wspace=0.2, hspace=-0.79)
         ylabels = ['y', 'x', 'x',
                    'y', 'x', 'x',
                    'y', 'x', 'x']
         xlabels = ['z', 'z', 'y',
                    'z', 'z', 'y',
                    'z', 'z', 'y']
-        for i in range(9):
-            inner = gridspec.GridSpecFromSubplotSpec(1, 4, subplot_spec=outer[i],
+        for i in range(int(3*len(slice_coords))):
+            if plot_truth:
+                r = len(slice_coords)+1
+                inner = gridspec.GridSpecFromSubplotSpec(1, r, subplot_spec=outer[i],
+                                                     wspace=0.1, hspace=0.1)
+            else:
+                r = len(slice_coords)
+                inner = gridspec.GridSpecFromSubplotSpec(1, r, subplot_spec=outer[i],
                                                      wspace=0.1, hspace=0.1)
             row     = 0
             col     = 0
             maxCol  = 4
 
-            for j in range(4):
+            for j in range(r):
                 ax = plt.Subplot(fig, inner[j])
                 im = ax.imshow(plot_data[i, j, :, :], norm=norm, cmap=cmap, aspect='equal')
                 ax.set_xticks([])
                 ax.set_yticks([])
                 if i < 3:
-                    if j == 0:
-                        ax.set_title('Target', fontsize=14)
-                        ax.set_ylabel(ylabels[i], fontsize=14)
-                        ax.set_xlabel(xlabels[i], fontsize=14)
-                    if j == 1:
+                    if plot_truth:
+                        if j == 0:
+                            ax.set_title('Target', fontsize=14)
+                            ax.set_ylabel(ylabels[i], fontsize=14)
+                            ax.set_xlabel(xlabels[i], fontsize=14)
+                    if j == 1-shift_idx:
                         ax.set_title("Mean", fontsize=14)
-                    if j == 2:
+                        if not plot_truth:
+                            ax.set_ylabel(ylabels[i], fontsize=14)
+                            ax.set_xlabel(xlabels[i], fontsize=14)
+                    if j == 2-shift_idx:
                         ax.set_title('Mode', fontsize=14)
-                    if j == 3:
+                    if j == 3-shift_idx:
                         ax.set_title('Std', fontsize=14)
                 else:
                     if j == 0:
