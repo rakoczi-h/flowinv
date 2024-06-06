@@ -503,9 +503,10 @@ class BoxDataset:
             data = np.array([self.boxes[i].parameterised_model for i in range(self.size)])
         elif self.model_framework['type'] == 'voxelised':
             data = np.array([self.boxes[i].voxelised_model for i in range(self.size)])
+        data = [data]
         # Making the survey array
         conditional_gz = np.array([self.surveys[i].gravity for i in range(self.size)])
-        noise = np.array([se;f.surveys[i].noise for i in range(self.size)])
+        noise = np.array([self.surveys[i].noise for i in range(self.size)])
         conditional_gz = conditional_gz+noise
         conditional = []
         conditional.append(conditional_gz)
