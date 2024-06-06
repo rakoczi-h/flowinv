@@ -72,8 +72,7 @@ class Scaler:
 
     def inv_scale_data(self, data):
         desired_shape = np.sum([self.scaled_data_sizes[i][1] for i in range(len(self.scaled_data_sizes))])
-        print(desired_shape)
-        print(np.shape(data))
+
         if np.shape(data)[1] != desired_shape:
             raise ValueError('The input data is not the right shape.')
         data_list = []
