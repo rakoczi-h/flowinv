@@ -19,7 +19,7 @@ flow=FlowModel()
 flow.load(flow_location)
 flow.flowmodel.to(device)
 
-with open(os.path.join(flow.data_location, "validationset.pkl"), 'rb') as file:
+with open(os.path.join(flow.data_location, "validationset_0.pkl"), 'rb') as file:
     dt_val = pkl.load(file)
 priors = dt_val.priors
 model_framework = dt_val.model_framework
@@ -54,7 +54,7 @@ dt_test.boxes = [box]
 
 dt_test.surveys[0].plot_pixels(filename=os.path.join(flow_location, f"qinetiq_data/survey.png"))
 survey_coordinates_to_include = []
-test_data, test_conditional = dt_test.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include, include_noise=False)
+test_data, test_conditional = dt_test.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
 test_conditional_tensor = flow.scalers['conditional'].transform(test_conditional.reshape(-1,test_conditional.shape[-1]))
 test_conditional_tensor = test_conditional_tensor.reshape(1,-1)
 test_conditional_tensor = torch.from_numpy(test_conditional_tensor.astype(np.float32)).to(device)
@@ -89,11 +89,11 @@ result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="c
 
 # Comparing to bilby
 keys = dt_val.parameter_labels
-with open('/data/www.astro/2263373r/giflow/bilby/box/standrews/inversion_result.json', 'r') as file:
+with open('/data/www.astro/2263373r/giflow/bilby/box/standrews_noise_0.25/inversion_result.json', 'r') as file:
     bilby_results = json.load(file)
     bilby_posterior_dict = bilby_results['posterior']['content']
     bilby_samples = []
     for key in keys:
         bilby_samples.append(bilby_posterior_dict[key])
     bilby_samples = np.array(bilby_samples).T
-result.overlaid_corner(bilby_samples, ['Flow', 'Dynesty'], filename='overlaid_corner_bilby.png')
+result.overlaid_corner(bilby_samples, ['Flow', 'Dynesty'], filename='overlaid_corner_bilby_high_noise.png')
