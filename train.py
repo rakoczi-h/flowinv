@@ -21,10 +21,11 @@ survey_coordinates_to_include = ['noise_scale'] # THIS needs to be edited if we 
 datasize = 1000000 # THIS needs to be edited to give the overall desired data set size
 num_files = 2 #number of files that needs to be read
 train_data, train_conditional = read_files(data_location=data_location, filename='trainset', datasize=datasize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include)
+print(len(train_data))
 
 valsize = 100000 # THIS needs to be edited to give the overall desired data set size
 num_files = 1 #number of files that needs to be read
-train_data, train_conditional = read_files(data_location=data_location, filename='validationset', datasize=valasize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include)
+val_data, val_conditional = read_files(data_location=data_location, filename='validationset', datasize=valsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include)
 
 
 print(f"Data read. Location: \t {data_location}")
@@ -34,7 +35,7 @@ scalers = [MinMaxScaler()]
 sc_data = Scaler(scalers=scalers)
 sc_data.scale_data(train_data, fit=True)
 
-scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler()]
+scalers = [MinMaxScaler(), MinMaxScaler()]
 sc_conditional=Scaler(scalers=scalers)
 sc_conditional.scale_data(train_conditional, fit=True)
 

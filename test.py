@@ -9,12 +9,13 @@ import json
 from giflow.results import BoxFlowResults
 from giflow.flowmodel import FlowModel
 from giflow.plot import plot_js_hist
+from giflow.read_files import read_files
 
-survey_coordinates_to_include = []
+survey_coordinates_to_include = ['noise_scale']
 num_test_cases = 10
 bilby_location = '/data/www.astro/2263373r/giflow/bilby/box/normalised/'
 #bilby_location = None
-flow_location = '/data/www.astro/2263373r/giflow/box/parameterised/normalised/run_2024-06-03 10:13:21.656567/'
+flow_location = '/data/www.astro/2263373r/giflow/box/parameterised/normalised/run_2024-06-05 14:23:51.682263/'
 
 
 # -------------------- Reading the flow --------------------------
@@ -22,20 +23,20 @@ device = torch.device('cuda')
 flow=FlowModel()
 flow.load(flow_location)
 flow.flowmodel.to(device)
+data_location = flow.data_location
 
 # -------------------- Validation data --------------
-with open(os.path.join(flow.data_location, "validationset.pkl"), 'rb') as file:
-    dt_val = pkl.load(file)
-keys = dt_val.parameter_labels
-#keys = None
-val_data, val_conditional = dt_val.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
+valsize = 100000 # THIS needs to be edited to give the overall desired data set size
+num_files = 1 #number of files that needs to be read
+val_data, val_conditional = read_files(data_location=data_location, filename='validationset', datasize=valsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include)
+
 val_dataset = flow.make_tensor_dataset(val_data, val_conditional, device=device, scale=True)
 
 # -------------------- Test data  ------------------
-with open(os.path.join(flow.data_location, "testset.pkl"), 'rb') as file:
-    dt_test = pkl.load(file)
-test_boxes = dt_test.boxes
-test_data, test_conditional = dt_test.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
+testsize = 10 # THIS needs to be edited to give the overall desired data set size
+num_files = 1 #number of files that needs to be read
+test_data, test_conditional = read_files(data_location=data_location, filename='testset', datasize=testsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include)
+
 test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
 
 # ------------------- Sampling ---------------------------------
