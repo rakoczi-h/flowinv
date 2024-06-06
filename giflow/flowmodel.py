@@ -14,6 +14,7 @@ import pickle as pkl
 from .latent import FlowLatent
 from .plot import make_pp_plot
 from .box import BoxDataset
+from .scaler import Scaler
 
 plt.style.use('seaborn-v0_8-deep')
 
@@ -344,7 +345,10 @@ class FlowModel():
             end_sample = datetime.now()
         print(f"{num} samples drawn. Time taken: \t {end_sample-start_sample}")
         s = s.cpu().numpy()
-        s = self.scalers['data'].inverse_transform(s)
+
+        print(self.scalers['data'])
+        s = self.scalers['data'].inv_scale_data(s)[0]
+        #s = self.scalers['data'].inverse_transform(s)
         l = l.cpu().numpy()
         return s, l
 
@@ -417,10 +421,11 @@ class FlowModel():
                 raise ValueError("The conditional scaler was not given")
             if self.scalers['data'] is None:
                 raise ValueError("The data scaler was not given")
-            data = self.scalers['data'].transform(data)
-            conditional_size = conditional.shape[0]
-            conditional = self.scalers['conditional'].transform(conditional.reshape(-1, conditional.shape[-1]))
-            conditional = conditional.reshape(conditional_size, -1)
+            data = self.scalers['data'].scale_data(data, fit=False)
+            conditional = self.scalers['conditional'].scale_data(conditional, fit=False)
+            #conditional_size = conditional.shape[0]
+            #conditional = self.scalers['conditional'].transform(conditional.reshape(-1, conditional.shape[-1]))
+            #conditional = conditional.reshape(conditional_size, -1)
         x_tensor = torch.from_numpy(data.astype(np.float32)).to(device)
         y_tensor = torch.from_numpy(conditional.astype(np.float32)).to(device)
         dataset = torch.utils.data.TensorDataset(x_tensor, y_tensor)
