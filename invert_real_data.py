@@ -9,7 +9,7 @@ from giflow.box import Box, BoxDataset
 from giflow.survey import GravitySurvey
 from giflow.flowmodel import FlowModel
 from giflow.results import BoxFlowResults
-flow_location = '/data/www.astro/2263373r/giflow/box/parameterised/normalised/run_2024-06-03 10:13:21.656567/'
+flow_location = '/data/www.astro/2263373r/giflow/box/parameterised/normalised/run_2024-06-05 14:23:51.682263/'
 save_location = os.path.join(flow_location, 'qinetiq_data/')
 if not os.path.exists(save_location):
     os.mkdir(save_location)
@@ -29,23 +29,25 @@ data_loc = '/data/wiay/2263373r/giflow/box/qinetiq_data.csv'
 df = pd.read_csv(data_loc)
 
 x = np.array(df['x'])
-print(np.min(x))
-print(np.min(x))
+
 y = np.array(df['y'])
 z = np.zeros(np.shape(x))
-print(df['grav'])
+
 grav = -1*np.array(df['grav'])*1000
 grav = grav - np.min(grav)
+
+noise_scale = 4.7357
 
 width_real = np.max(x)-np.min(x)
 width_train = np.max(dt_val.surveys[0].survey_coordinates[:,0])-np.min(dt_val.surveys[0].survey_coordinates[:,0])
 scale_factor = width_real/width_train
 
 survey_coordinates = np.c_[x/scale_factor, y/scale_factor, z/scale_factor]
-print(np.max(dt_val.surveys[0].survey_coordinates))
-print(np.min(dt_val.surveys[0].survey_coordinates))
+
 survey = GravitySurvey(ranges=dt_val.survey_framework['ranges'], survey_shape=dt_val.survey_framework['survey_shape'], survey_coordinates=survey_coordinates)
 survey.gravity = grav/scale_factor
+survey.noise_scale = noise_scale/scale_factor
+print(survey.noise_scale)
 box = Box()
 
 dt_test = BoxDataset(size=1, priors=priors, survey_framework=dt_val.survey_framework, model_framework=dt_val.model_framework)
@@ -53,11 +55,12 @@ dt_test.surveys = [survey]
 dt_test.boxes = [box]
 
 dt_test.surveys[0].plot_pixels(filename=os.path.join(flow_location, f"qinetiq_data/survey.png"))
-survey_coordinates_to_include = []
-test_data, test_conditional = dt_test.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
-test_conditional_tensor = flow.scalers['conditional'].transform(test_conditional.reshape(-1,test_conditional.shape[-1]))
-test_conditional_tensor = test_conditional_tensor.reshape(1,-1)
+survey_coordinates_to_include = ['noise_scale']
+test_data, test_conditional = dt_test.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include, add_noise=False)
+
+test_conditional_tensor = flow.scalers['conditional'].scale_data(test_conditional)
 test_conditional_tensor = torch.from_numpy(test_conditional_tensor.astype(np.float32)).to(device)
+
 # --------------------- Results --------------------------
 samples, log_probabilities = flow.sample_and_logprob(test_conditional_tensor, num=2000)
 
@@ -78,7 +81,7 @@ samples, log_probabilities = flow.sample_and_logprob(test_conditional_tensor, nu
 #result.directory = save_location
 #result.plot_compare_voxel_slices(filename='compare_voxel_slices.png', plot_truth=False)
 
-result = BoxFlowResults(samples=samples, conditional=test_conditional[0,:], log_probabilities=log_probabilities, parameter_labels=dt_val.parameter_labels, survey_coordinates=dt_test.surveys[0].survey_coordinates)
+result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][0] for j in range(len(test_conditional))], log_probabilities=log_probabilities, parameter_labels=dt_val.parameter_labels, survey_coordinates=dt_test.surveys[0].survey_coordinates)
 
 #result = BoxFlowResults(samples=samples, conditional=test_conditional[0,:], log_probabilities=log_probabilities, parameter_labels=None, survey_coordinates=dt_test.surveys[0].survey_coordinates)
 result.directory = save_location
@@ -89,7 +92,7 @@ result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="c
 
 # Comparing to bilby
 keys = dt_val.parameter_labels
-with open('/data/www.astro/2263373r/giflow/bilby/box/standrews_noise_0.25/inversion_result.json', 'r') as file:
+with open('/data/www.astro/2263373r/giflow/bilby/box/standrews_noise_realistic/inversion_result.json', 'r') as file:
     bilby_results = json.load(file)
     bilby_posterior_dict = bilby_results['posterior']['content']
     bilby_samples = []
