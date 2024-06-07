@@ -59,7 +59,7 @@ class FlowResults:
                     raise ValueError('log_probabilities has to be 1D.')
         if name == 'true_parameters' or name == 'js_divergences':
             if value is not None:
-                if np.shape(value)[0] != self.nparameters:
+                if np.shape(value[0])[0] != self.nparameters:
                     raise ValueError('Same number of of elements in true_parameters is required as nparameters.')
         if name == 'parameter_labels':
             if value is not None:
@@ -146,7 +146,7 @@ class FlowResults:
 
         figure = corner.corner(self.samples, **CORNER_KWARGS, color='#ff7f00')
         if self.true_parameters is not None:
-            values = self.true_parameters
+            values = self.true_parameters[0]
             corner.overplot_lines(figure, values, color="black")
             corner.overplot_points(figure, values[None], marker="s", color="black")
         if self.directory is not None:
@@ -228,7 +228,7 @@ class FlowResults:
                 hist_kwargs={'density' : True}
             )
         if self.true_parameters is not None:
-            values = self.true_parameters
+            values = self.true_parameters[0]
             corner.overplot_lines(fig, values, color="black")
             corner.overplot_points(fig, values[None], marker="s", color="black")
         plt.legend(
@@ -284,8 +284,7 @@ class BoxFlowResults(FlowResults):
 
         #num_survey_points = np.shape(coordinates)[0]
         #num_survey_coordinates = int(np.shape(self.conditional)[0]/num_survey_points)
-        print(np.shape(self.conditional))
-        target_array = self.conditional[:,0]
+        target_array = np.array(self.conditional[0])
         target = target_array
         #target = target_array - np.mean(target_array)
 
@@ -317,11 +316,13 @@ class BoxFlowResults(FlowResults):
         cmap = 'plasma'
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
         for idx, ax in enumerate(axes.flatten()):
+            print(titles[idx])
             ax.plot(coordinates[:,0], coordinates[:,1], 'o', markersize=2, color='black')
             ax.tricontourf(coordinates[:,0], coordinates[:,1], plot_data[idx], levels=levels, cmap=cmap, norm=norm)
             ax.set(xlim=(np.min(coordinates[:,0]), np.max(coordinates[:,0])), ylim=(np.min(coordinates[:,1]), np.max(coordinates[:,1])), aspect='equal', title=titles[idx])
         cax = ax.inset_axes([1.1, 0.0, 0.1, 3.35])
         plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax, label=r'microGal')
+        fig.tight_layout()
         if self.directory is not None:
             plt.savefig(os.path.join(self.directory, filename), transparent=False)
         else:
