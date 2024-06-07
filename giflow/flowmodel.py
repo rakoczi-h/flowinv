@@ -375,7 +375,7 @@ class FlowModel():
             pp plot image saved at saveloc.
         """
         truths = validation_dataset.tensors[0][:int(num_cases)].cpu().numpy()
-        truths = self.scalers['data'].inverse_transform(truths)
+        truths = self.scalers['data'].inv_scale_data(truths)[0]
         if np.shape(truths)[1] > num_params:
             indices = np.random.randint(np.shape(truths)[1], size=num_params)
         else:
