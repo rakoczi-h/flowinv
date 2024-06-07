@@ -12,8 +12,8 @@ from giflow.flowmodel import FlowModel, save_flow
 from giflow.box import BoxDataset
 
 # ------------- Directories ---------------------------------
-data_location = '/data/wiay/2263373r/giflow/box/parameterised/normalised/' # THIS needs to be edited to give the data location
-save_dir = '/data/www.astro/2263373r/giflow/box/parameterised/normalised/' # THIS needs to be edited to give the saving location
+data_location = '/data/wiay/2263373r/giflow/box/voxelised/normalised/' # THIS needs to be edited to give the data location
+save_dir = '/data/www.astro/2263373r/giflow/box/voxelised/normalised/' # THIS needs to be edited to give the saving location
 
 # ------------- Reading the data ----------------------------
 survey_coordinates_to_include = ['noise_scale'] # THIS needs to be edited if we want to include survey coordinates in the conditional
@@ -48,7 +48,7 @@ os.mkdir(save_location)
 
 device = torch.device('cuda')
 # THIS needs to be edited for the hyperparameters of the flow
-hyperparameters={'n_inputs': 7,
+hyperparameters={'n_inputs': 512,
                  'n_conditional_inputs':65,
                  'n_transforms': 12,
                  'n_blocks_per_transform': 2,

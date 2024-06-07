@@ -33,29 +33,33 @@ val_data, val_conditional = read_files(data_location=data_location, filename='va
 val_dataset = flow.make_tensor_dataset(val_data, val_conditional, device=device, scale=True)
 
 # -------------------- Test data  ------------------
+with open(os.path.join(flow.data_location, "testset_0.pkl"), 'rb') as file:
+    dt_test = pkl.load(file)
+keys = dt_test.parameter_labels
+
 testsize = 10 # THIS needs to be edited to give the overall desired data set size
 num_files = 1 #number of files that needs to be read
 test_data, test_conditional = read_files(data_location=data_location, filename='testset', datasize=testsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include)
 
 test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
-
+print(np.array([test_data[j][0] for j in range(len(test_data))]))
 # ------------------- Sampling ---------------------------------
 results = []
 for i in range(num_test_cases):
     samples, log_probabilities = flow.sample_and_logprob(test_dataset.tensors[1][i], num=2000)
-    result = BoxFlowResults(samples=samples, conditional=test_conditional[i,:], log_probabilities=log_probabilities, true_parameters=test_data[i,:], parameter_labels=keys, survey_coordinates=dt_test.surveys[i].survey_coordinates)
+    result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][i] for j in range(len(test_conditional))], log_probabilities=log_probabilities, true_parameters=np.array([test_data[j][i] for j in range(len(test_data))]), parameter_labels=keys, survey_coordinates=dt_test.surveys[i].survey_coordinates)
     result.directory = os.path.join(flow_location, f"testcase_{i}/")
     dt_test.surveys[i].plot_contours(filename=os.path.join(result.directory, "survey.png"), include_noise=True)
     results.append(result)
 #
 # ----------------- Consistency tests --------------------------
 ## P-P TEST
-flow.pp_test(validation_dataset=val_dataset)
+#flow.pp_test(validation_dataset=val_dataset)
 #
 # CORNER PLOTS
-for i, result in enumerate(results):
-    result.corner_plot(filename="corner_plot.png")
-    print(f"Made {i+1}/{num_test_cases} corner plots.")
+#for i, result in enumerate(results):
+#    result.corner_plot(filename="corner_plot.png")
+#    print(f"Made {i+1}/{num_test_cases} corner plots.")
 
 # SURVEY CONSISTENCY
 for i, result in enumerate(results):
@@ -73,8 +77,8 @@ if bilby_location is not None:
 #    js_100_cases = []
 #    for i in range(100):
 #        samples, log_probabilities = flow.sample_and_logprob(val_dataset.tensors[1][i], num=2000)
-#        result = BoxFlowResults(samples=samples, conditional=val_conditional[i,:], log_probabilities=log_probabilities, true_parameters=val_data[i,:], parameter_labels=keys)
-#        with open(os.path.join(bilby_location, f"100_cases/testcase_{i}/box_parameterised_result.json"), 'r') as file:
+#        result = BoxFlowResults(samples=samples, conditional=[val_conditional[j][i] for j in range(len(val_conditional))], log_probabilities=log_probabilities, true_parameters=np.array([val_data[j][i] for j in range(len(val_data))]), parameter_labels=keys)
+#        with open(os.path.join(bilby_location, f"testcase_{i}/inversion_result.json"), 'r') as file:
 #            bilby_results = json.load(file)
 #            bilby_posterior_dict = bilby_results['posterior']['content']
 #            bilby_samples = []

@@ -16,7 +16,7 @@ from giflow.survey import GravitySurvey
 n = int(sys.argv[1])
 
 label = "inversion"
-bilby_outdir = "/data/www.astro/2263373r/giflow/bilby/box/normalised/"
+bilby_outdir = "/data/www.astro/2263373r/giflow/bilby/box/normalised/100_testcases/"
 bilby.utils.check_directory_exists_and_if_not_mkdir(bilby_outdir)
 
 outdir = os.path.join(bilby_outdir, f"testcase_{n}/")
@@ -51,7 +51,7 @@ def prior(keys, distributions):
     return priors
 
 # --------------------- Reading data -----------------------------
-with open(os.path.join(data_loc, "testset.pkl"), 'rb') as file:
+with open(os.path.join(data_loc, "validationset_0.pkl"), 'rb') as file:
     dt_test = pkl.load(file)
 box = dt_test.boxes[n]
 survey = dt_test.surveys[n]
