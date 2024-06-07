@@ -489,7 +489,7 @@ class BoxDataset:
         self.boxes = boxes
         return self.surveys, self.boxes
 
-    def make_data_arrays(self, survey_coordinates_to_include=[]):
+    def make_data_arrays(self, survey_coordinates_to_include=[], add_noise=True):
         """
         Parameters
         ----------
@@ -506,8 +506,9 @@ class BoxDataset:
         data = [data]
         # Making the survey array
         conditional_gz = np.array([self.surveys[i].gravity for i in range(self.size)])
-        noise = np.array([self.surveys[i].noise for i in range(self.size)])
-        conditional_gz = conditional_gz+noise
+        if add_noise:
+            noise = np.array([self.surveys[i].noise for i in range(self.size)])
+            conditional_gz = conditional_gz+noise
         conditional = []
         conditional.append(conditional_gz)
         conditional_coordinates = np.array([self.surveys[i].survey_coordinates for i in range(self.size)])
