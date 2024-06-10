@@ -178,9 +178,9 @@ class GravitySurvey():
             plot_data = self.add_noise()
         else:
             plot_data = self.gravity
-        plt.imshow(np.reshape(plot_data, self.survey_shape), extent=(np.min(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,1]), np.min(self.survey_coordinates[:,1])))
-        plt.xlabel('y')
-        plt.ylabel('x')
+        plt.imshow(np.reshape(plot_data, self.survey_shape).T, extent=(np.min(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,0]), np.min(self.survey_coordinates[:,1]), np.max(self.survey_coordinates[:,1])))
+        plt.xlabel('x')
+        plt.ylabel('y')
         plt.colorbar(label=r'$\mu Gal$')
         plt.savefig(filename)
         plt.close()
