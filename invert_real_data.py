@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import torch
 import json
+import matplotlib.pyplot as plt
 
 from giflow.box import Box, BoxDataset
 from giflow.survey import GravitySurvey
@@ -23,7 +24,8 @@ with open(os.path.join(flow.data_location, "validationset_0.pkl"), 'rb') as file
     dt_val = pkl.load(file)
 priors = dt_val.priors
 model_framework = dt_val.model_framework
-print(dt_val.survey_framework)
+
+#print(dt_val.survey_framework)
 # -------------------- Reading the data --------------------------
 data_loc = '/data/wiay/2263373r/giflow/box/qinetiq_data.csv'
 df = pd.read_csv(data_loc)
@@ -44,11 +46,15 @@ scale_factor = width_real/width_train
 
 survey_coordinates = np.c_[x/scale_factor, y/scale_factor, z/scale_factor]
 
-survey = GravitySurvey(ranges=dt_val.survey_framework['ranges'], survey_shape=dt_val.survey_framework['survey_shape'], survey_coordinates=survey_coordinates)
+survey = GravitySurvey(ranges=dt_val.survey_framework['ranges'], survey_shape=dt_val.survey_framework['survey_shape'], survey_coordinates=dt_val.surveys[0].survey_coordinates)
 survey.gravity = grav/scale_factor
 survey.noise_scale = noise_scale/scale_factor
 print(survey.noise_scale)
+#print(survey.noise_scale)
 box = Box()
+
+
+survey.plot_pixels(filename=os.path.join(flow_location, 'survey.png'), include_noise=False)
 
 dt_test = BoxDataset(size=1, priors=priors, survey_framework=dt_val.survey_framework, model_framework=dt_val.model_framework)
 dt_test.surveys = [survey]
@@ -61,6 +67,7 @@ test_data, test_conditional = dt_test.make_data_arrays(survey_coordinates_to_inc
 test_conditional_tensor = flow.scalers['conditional'].scale_data(test_conditional)
 test_conditional_tensor = torch.from_numpy(test_conditional_tensor.astype(np.float32)).to(device)
 
+#test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
 # --------------------- Results --------------------------
 samples, log_probabilities = flow.sample_and_logprob(test_conditional_tensor, num=2000)
 
@@ -87,16 +94,16 @@ result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][0] for
 result.directory = save_location
 #result.rescale(scaling_factor=scale_factor, parameters_to_rescale=['px', 'py', 'pz', 'lx', 'ly', 'lz'])
 
-result.corner_plot(filename="corner_plot.png")
-result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
+#result.corner_plot(filename="corner_plot.png")
+#result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
 
 # Comparing to bilby
 keys = dt_val.parameter_labels
-with open('/data/www.astro/2263373r/giflow/bilby/box/standrews_noise_realistic/inversion_result.json', 'r') as file:
+with open('/data/www.astro/2263373r/giflow/bilby/box/standrews_noise_realistic_v2/inversion_result.json', 'r') as file:
     bilby_results = json.load(file)
     bilby_posterior_dict = bilby_results['posterior']['content']
     bilby_samples = []
     for key in keys:
         bilby_samples.append(bilby_posterior_dict[key])
     bilby_samples = np.array(bilby_samples).T
-result.overlaid_corner(bilby_samples, ['Flow', 'Dynesty'], filename='overlaid_corner_bilby_high_noise.png')
+result.overlaid_corner(bilby_samples, ['Flow', 'Dynesty'], filename='overlaid_corner_bilby.png')
