@@ -63,7 +63,7 @@ class Box:
                 raise ValueError('The parameters are not defined. Either define the parameters of set from_voxelised to True.')
 
             survey_coordinates[:,:2] = rotate(survey_coordinates[:,:2], origin=(self.px, self.py), angle=-self.alpha)
-            limits = np.expand_dims(np.array([[self.px-self.lx/2,self.px+self.lx/2], [self.py-self.ly/2,self.py+self.ly/2], [self.pz-self.lz/2,self.pz+self.lz/2]]), axis=0)
+            limits = np.expand_dims(np.array([[self.px-self.lx/2,self.px+self.lx/2], [self.py-self.ly/2,self.py+self.ly/2], [self.pz-self.lz,self.pz]]), axis=0)
             gz = self.get_gz(limits=limits, densities=self.density, survey_coordinates=survey_coordinates)
         elif model_type=='voxelised':
             if self.voxel_grid is None:
@@ -170,8 +170,8 @@ class Box:
         # making the 1d rectangle
         rect1 = Polygon([p1, p2, p4, p3])
         # defining the extent of the box in the z direction
-        z_top = self.pz+self.lz/2
-        z_bottom = self.pz-self.lz/2
+        z_top = self.pz
+        z_bottom = self.pz-self.lz
         densities = []
         for i in range(np.shape(self.voxel_grid)[0]): # looping over each ovxel
             q1 = [self.voxel_grid[i,0,0], self.voxel_grid[i,1,0]] # (x1, y1)
@@ -465,11 +465,8 @@ class BoxDataset:
             for key in list(self.parameter_labels):
                 box_parameters[key] = parameters_dict[key][i]
             box = Box(parameters=box_parameters, density=self.model_framework['density'], background_noise_scale=self.model_framework['noise_scale'])
-            noise_prior = Prior(distributions={"noise_scale": self.survey_framework['noise_scale']})
-            noise_scale = noise_prior.sample(size=1, returntype='dict')['noise_scale'][0]
             survey = GravitySurvey(ranges=self.survey_framework['ranges'], survey_shape=self.survey_framework['survey_shape'], noise_on_location_scale=self.survey_framework['noise_on_location_scale'])
             survey.make_survey()
-            survey.noise_scale = noise_scale
             # Computing gravity
             if self.model_framework['type'] == 'voxelised':
                 box.make_voxel_grid(ranges=self.model_framework['ranges'], grid_shape=self.model_framework['grid_shape'])
@@ -478,9 +475,14 @@ class BoxDataset:
             else:
                 raise ValueError('model_framework type can only be voxelised or parameterised')
             survey_coordinates = survey.survey_coordinates.copy()
+            print(survey_coordinates)
             survey.gravity = box.forward_model(survey_coordinates=survey_coordinates, model_type=self.model_framework['type'])
             # Generating random noise
+            noise_prior = Prior(distributions={"noise_scale": self.survey_framework['noise_scale']})
+            noise_scale = noise_prior.sample(size=1, returntype='dict')['noise_scale'][0]
+            survey.noise_scale = noise_scale
             survey.make_noise()
+            # Adding to the list
             boxes.append(box)
             surveys.append(survey)
             if i % 1000 == 0:
