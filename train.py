@@ -12,11 +12,11 @@ from giflow.flowmodel import FlowModel, save_flow
 from giflow.box import BoxDataset
 
 # ------------- Directories ---------------------------------
-data_location = '/data/wiay/2263373r/giflow/box/voxelised/normalised/' # THIS needs to be edited to give the data location
-save_dir = '/data/www.astro/2263373r/giflow/box/voxelised/normalised/' # THIS needs to be edited to give the saving location
+data_location = '/scratch/balta0/2263373r/giflow/box/parameterised/single_noise_level/' # THIS needs to be edited to give the data location
+save_dir = '/data/www.astro/2263373r/giflow/box/parameterised/normalised/' # THIS needs to be edited to give the saving location
 
 # ------------- Reading the data ----------------------------
-survey_coordinates_to_include = ['noise_scale'] # THIS needs to be edited if we want to include survey coordinates in the conditional
+survey_coordinates_to_include = [] # THIS needs to be edited if we want to include survey coordinates in the conditional
 
 datasize = 1000000 # THIS needs to be edited to give the overall desired data set size
 num_files = 2 #number of files that needs to be read
@@ -35,7 +35,7 @@ scalers = [MinMaxScaler()]
 sc_data = Scaler(scalers=scalers)
 sc_data.scale_data(train_data, fit=True)
 
-scalers = [MinMaxScaler(), MinMaxScaler()]
+scalers = [MinMaxScaler()]
 sc_conditional=Scaler(scalers=scalers)
 sc_conditional.scale_data(train_conditional, fit=True)
 
@@ -48,8 +48,8 @@ os.mkdir(save_location)
 
 device = torch.device('cuda')
 # THIS needs to be edited for the hyperparameters of the flow
-hyperparameters={'n_inputs': 512,
-                 'n_conditional_inputs':65,
+hyperparameters={'n_inputs': 7,
+                 'n_conditional_inputs':64,
                  'n_transforms': 12,
                  'n_blocks_per_transform': 2,
                  'n_neurons': 64,

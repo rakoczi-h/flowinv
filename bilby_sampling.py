@@ -16,13 +16,13 @@ from giflow.survey import GravitySurvey
 n = int(sys.argv[1])
 
 label = "inversion"
-bilby_outdir = "/data/www.astro/2263373r/giflow/bilby/box/normalised/100_testcases/"
+bilby_outdir = "/data/www.astro/2263373r/giflow/bilby/box/normalised/single_noise_level/"
 bilby.utils.check_directory_exists_and_if_not_mkdir(bilby_outdir)
 
 outdir = os.path.join(bilby_outdir, f"testcase_{n}/")
 bilby.utils.check_directory_exists_and_if_not_mkdir(outdir)
 
-data_loc = '/data/wiay/2263373r/giflow/box/parameterised/normalised/'
+data_loc = '/scratch/balta0/2263373r/giflow/box/parameterised/single_noise_level/'
 
 # ----------------------- Functions -------------------------------
 def model(survey_coordinates, px, py, pz, lx, ly, lz, alpha):
@@ -51,7 +51,7 @@ def prior(keys, distributions):
     return priors
 
 # --------------------- Reading data -----------------------------
-with open(os.path.join(data_loc, "validationset_0.pkl"), 'rb') as file:
+with open(os.path.join(data_loc, "testset_0.pkl"), 'rb') as file:
     dt_test = pkl.load(file)
 box = dt_test.boxes[n]
 survey = dt_test.surveys[n]
@@ -61,6 +61,7 @@ survey.plot_pixels(filename=os.path.join(outdir, "survey.png"), include_noise=Tr
 
 data = survey.gravity+survey.noise
 sigma = survey.noise_scale
+print(sigma)
 survey_coordinates = survey.survey_coordinates
 
 modelled_gravity = model(survey_coordinates, px=box.px, py=box.py, pz=box.pz, lx=box.lx, ly=box.ly, lz=box.lz, alpha=box.alpha)

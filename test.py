@@ -11,11 +11,11 @@ from giflow.flowmodel import FlowModel
 from giflow.plot import plot_js_hist
 from giflow.read_files import read_files
 
-survey_coordinates_to_include = ['noise_scale']
-num_test_cases = 1
-#bilby_location = '/data/www.astro/2263373r/giflow/bilby/box/normalised/'
-bilby_location = None
-flow_location = '/data/www.astro/2263373r/giflow/box/parameterised/normalised/run_2024-06-05 14:23:51.682263/'
+survey_coordinates_to_include = []
+num_test_cases = 10
+bilby_location = '/data/www.astro/2263373r/giflow/bilby/box/normalised/single_noise_level/'
+#bilby_location = None
+flow_location = '/data/www.astro/2263373r/giflow/box/parameterised/normalised/run_2024-06-25 12:12:39.726637/'
 
 
 # -------------------- Reading the flow --------------------------
@@ -23,39 +23,40 @@ device = torch.device('cuda')
 flow=FlowModel()
 flow.load(flow_location)
 flow.flowmodel.to(device)
+flow.save_location = flow_location
 data_location = flow.data_location
+print(data_location)
 
 # -------------------- Validation data --------------
 valsize = 100000 # THIS needs to be edited to give the overall desired data set size
 num_files = 1 #number of files that needs to be read
-val_data, val_conditional = read_files(data_location=data_location, filename='validationset_0.pkl', datasize=valsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include)
+val_data, val_conditional = read_files(data_location=data_location, filename='validationset', datasize=valsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include)
 
 val_dataset = flow.make_tensor_dataset(val_data, val_conditional, device=device, scale=True)
 
 # -------------------- Test data  ------------------
-#with open(os.path.join(flow.data_location, "testset_0.pkl"), 'rb') as file:
-with open("/data/wiay/2263373r/giflow/box/qinetiq_dummy_set.pkl", 'rb') as file:
+with open(os.path.join(flow.data_location, "testset_0.pkl"), 'rb') as file:
+#with open("/data/wiay/2263373r/giflow/box/qinetiq_dummy_set.pkl", 'rb') as file:
     dt_test = pkl.load(file)
 keys = dt_test.parameter_labels
-testsize = 1 # THIS needs to be edited to give the overall desired data set size
+testsize = 10 # THIS needs to be edited to give the overall desired data set size
 num_files = 1 #number of files that needs to be read
-test_data, test_conditional = read_files(data_location='/data/wiay/2263373r/giflow/box/', filename='qinetiq_dummy_set.pkl', datasize=testsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include)
-print(test_data)
+test_data, test_conditional = read_files(data_location=data_location, filename='testset', datasize=testsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include)
 
 test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
+print(test_dataset.tensors[0])
 # ------------------- Sampling ---------------------------------
 results = []
 for i in range(num_test_cases):
-    print(test_dataset.tensors[1][i].shape)
     samples, log_probabilities = flow.sample_and_logprob(test_dataset.tensors[1][i], num=2000)
     result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][i] for j in range(len(test_conditional))], log_probabilities=log_probabilities, true_parameters=np.array([test_data[j][i] for j in range(len(test_data))]), parameter_labels=keys, survey_coordinates=dt_test.surveys[i].survey_coordinates)
-    result.directory = os.path.join(flow_location, f"qinetiq_dummy_set_{i}/")
+    result.directory = os.path.join(flow_location, f"testcase_{i}/")
     dt_test.surveys[i].plot_contours(filename=os.path.join(result.directory, "survey.png"), include_noise=True)
     results.append(result)
 #
 # ----------------- Consistency tests --------------------------
 ## P-P TEST
-#flow.pp_test(validation_dataset=val_dataset)
+flow.pp_test(validation_dataset=val_dataset)
 #
 # CORNER PLOTS
 for i, result in enumerate(results):
