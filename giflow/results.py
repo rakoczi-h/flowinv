@@ -247,10 +247,11 @@ class FlowResults:
         print("Made corner plot...")
 
 class BoxFlowResults(FlowResults):
-    def rescale(self, scaling_factor, parameters_to_rescale=[]):
+
+    def rescale(self, scale_factor, parameters_to_rescale=[]):
         for i, pl in enumerate(self.parameter_labels):
-            if any([i==c for c in parameters_to_rescale]):
-                self.samples[:,i] = self.samples[:,i]*scaling_factor
+            if pl in parameters_to_rescale:
+                self.samples[:,i] = self.samples[:,i]*scale_factor
 
     def plot_compare_surveys(self, model_framework, survey_framework=None, num=1000, include_examples=False, filename='compare_survey.png'):
         """
