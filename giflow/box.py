@@ -64,13 +64,13 @@ class Box:
 
             survey_coordinates[:,:2] = rotate(survey_coordinates[:,:2], origin=(self.px, self.py), angle=-self.alpha)
             limits = np.expand_dims(np.array([[self.px-self.lx/2,self.px+self.lx/2], [self.py-self.ly/2,self.py+self.ly/2], [self.pz-self.lz,self.pz]]), axis=0)
-            gz = self.get_gz(limits=limits, densities=self.density, survey_coordinates=survey_coordinates)
+            gz = self.get_gz_3(limits=limits, rho=self.density, survey_coordinates=survey_coordinates)
         elif model_type=='voxelised':
             if self.voxel_grid is None:
                 raise ValueError("The voxel_grid is not defined")
             if self.voxelised_model is None:
                 self.translate_to_voxels()
-            gz = self.get_gz(limits=self.voxel_grid, densities=self.voxelised_model, survey_coordinates=survey_coordinates)
+                gz = self.get_gz_3(limits=self.voxel_grid, rho=self.voxelised_model, survey_coordinates=survey_coordinates)
         else:
             raise ValueError('model_type can only be parameterised or voxelised.')
         gz = gz-np.min(gz)
@@ -121,6 +121,71 @@ class Box:
         gz = -G*rho*np.sum(eq, axis=0)*1e8 # in microGal, summing the terms in the equation for a single voxel
         gz = np.sum(gz, axis=0) # summing the contribution from each voxel
         return gz
+
+    def get_gz_3(self, survey_coordinates, limits, rho):
+        shape = (np.shape(limits)[0], np.shape(survey_coordinates)[0])
+
+        x = survey_coordinates[:,0]
+        y = survey_coordinates[:,1]
+        z = survey_coordinates[:,2]
+
+        xi1 = limits[:,0,0]
+        xi2 = limits[:,0,1]
+        eta1 = limits[:,1,0]
+        eta2 = limits[:,1,1]
+        zeta1 = limits[:,2,0]
+        zeta2 = limits[:,2,1]
+
+        G = 6.67408E-11
+        # Vectorize
+        x = np.broadcast_to(x, shape)
+        y = np.broadcast_to(y, shape)
+        xi1 = np.broadcast_to(xi1[:, np.newaxis], shape)
+        xi2 = np.broadcast_to(xi2[:, np.newaxis], shape)
+        eta1 = np.broadcast_to(eta1[:, np.newaxis], shape)
+        eta2 = np.broadcast_to(eta2[:, np.newaxis], shape)
+        zeta1 = np.broadcast_to(zeta1[:, np.newaxis], shape)
+        zeta2 = np.broadcast_to(zeta2[:, np.newaxis], shape)
+        if isinstance(rho, np.ndarray):
+            rho = np.broadcast_to(rho[:, np.newaxis], shape)
+
+        x1 = x - xi1
+        x2 = x - xi2
+        y1 = y - eta1
+        y2 = y - eta2
+        z1 = z - zeta1
+        z2 = z - zeta2
+
+        r111 = np.sqrt(x1 * x1 + y1 * y1 + z1 * z1)
+        r211 = np.sqrt(x2 * x2 + y1 * y1 + z1 * z1)
+        r121 = np.sqrt(x1 * x1 + y2 * y2 + z1 * z1)
+        r112 = np.sqrt(x1 * x1 + y1 * y1 + z2 * z2)
+        r212 = np.sqrt(x2 * x2 + y1 * y1 + z2 * z2)
+        r221 = np.sqrt(x2 * x2 + y2 * y2 + z1 * z1)
+        r122 = np.sqrt(x1 * x1 + y2 * y2 + z2 * z2)
+        r222 = np.sqrt(x2 * x2 + y2 * y2 + z2 * z2)
+
+        u111 = -1
+        u211 = 1
+        u121 = 1
+        u112 = 1
+        u212 = -1
+        u221 = -1
+        u122 = -1
+        u222 = 1
+
+        t111 = u111 * (x1 * np.log(y1 + r111) + y1 * np.log(x1 + r111) - z1 * np.arctan((x1 * y1) / (z1 * r111)))
+        t211 = u211 * (x2 * np.log(y1 + r211) + y1 * np.log(x2 + r211) - z1 * np.arctan((x2 * y1) / (z1 * r211)))
+        t121 = u121 * (x1 * np.log(y2 + r121) + y2 * np.log(x1 + r121) - z1 * np.arctan((x1 * y2) / (z1 * r121)))
+        t112 = u112 * (x1 * np.log(y1 + r112) + y1 * np.log(x1 + r112) - z2 * np.arctan((x1 * y1) / (z2 * r112)))
+        t212 = u212 * (x2 * np.log(y1 + r212) + y1 * np.log(x2 + r212) - z2 * np.arctan((x2 * y1) / (z2 * r212)))
+        t221 = u221 * (x2 * np.log(y2 + r221) + y2 * np.log(x2 + r221) - z1 * np.arctan((x2 * y2) / (z1 * r221)))
+        t122 = u122 * (x1 * np.log(y2 + r122) + y2 * np.log(x1 + r122) - z2 * np.arctan((x1 * y2) / (z2 * r122)))
+        t222 = u222 * (x2 * np.log(y2 + r222) + y2 * np.log(x2 + r222) - z2 * np.arctan((x2 * y2) / (z2 * r222)))
+
+        # Sum contributions over the voxel dimensions
+        return 1E8*-G*np.sum(rho * (t111 + t211 + t121 + t112 + t212 + t221 + t122 + t222), axis=0)
+
 
     def translate_to_voxels(self, voxel_grid=None, background_noise_scale=None, density=None):
         """Makes a rotated box with the given parameters [px, py, pz, lx, ly, lz, alpha_x, alpha_y] translated
@@ -475,7 +540,6 @@ class BoxDataset:
             else:
                 raise ValueError('model_framework type can only be voxelised or parameterised')
             survey_coordinates = survey.survey_coordinates.copy()
-            print(survey_coordinates)
             survey.gravity = box.forward_model(survey_coordinates=survey_coordinates, model_type=self.model_framework['type'])
             # Generating random noise
             noise_prior = Prior(distributions={"noise_scale": self.survey_framework['noise_scale']})
