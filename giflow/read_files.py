@@ -8,7 +8,7 @@ def read_files(data_location, filename, datasize, num_files, survey_coordinates_
     for n in range(num_files):
         print('file read')
         #with open(os.path.join(data_location, filename+f"_{n}.pkl"), 'rb') as file:
-        with open(os.path.join(data_location, filename), 'rb') as file:
+        with open(os.path.join(data_location, filename+f"_{n}.pkl"), 'rb') as file:
             dt = pkl.load(file)
             td, tc = dt.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include)
             train_data.append(td)
