@@ -187,6 +187,8 @@ def plot_js_hist(js_divs, keys, filename='js_hist.png'):
     plt.close()
     return counts, bins, median
 
+def make_gif():
+
 # ----------------- PLOT-4-PAPER -------------------------------------
 def compare_method_surveys(results_list, model_frameworks_list, survey_frameworks_list, num=1000, filename='compare_survey.png'):
     """
