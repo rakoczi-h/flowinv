@@ -113,7 +113,7 @@ class GravitySurvey():
             self.survey_coordinates = survey_coordinates
         else:
             raise ValueError('The given survey_shape cannot be interpreted')
-        return self.survey_coordinates
+        return survey_coordinates
 
     def make_noise(self, noise_scale=None):
         if noise_scale is not None:
@@ -178,9 +178,10 @@ class GravitySurvey():
             plot_data = self.add_noise()
         else:
             plot_data = self.gravity
-        plt.imshow(np.reshape(plot_data, self.survey_shape).T, extent=(np.min(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,0]), np.min(self.survey_coordinates[:,1]), np.max(self.survey_coordinates[:,1])))
-        plt.xlabel('x')
-        plt.ylabel('y')
+        plt.imshow(np.reshape(plot_data, self.survey_shape), extent=(np.min(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,1]), np.min(self.survey_coordinates[:,1])))
+        plt.xlabel('y')
+        plt.ylabel('x')
+        # the extent and order of coordinates has been validated
         plt.colorbar(label=r'$\mu Gal$')
         plt.savefig(filename)
         plt.close()
@@ -197,13 +198,15 @@ class GravitySurvey():
             plot_data = self.add_noise()
         else:
             plot_data = self.gravity
-        levels = np.linspace(self.gravity.min(), self.gravity.max(), 7)
+        levels = np.linspace(self.gravity.min(), self.gravity.max(), 20)
         cmap = 'plasma'
         norm = matplotlib.colors.Normalize(vmin=self.gravity.min(), vmax=self.gravity.max())
         fig, ax = plt.subplots()
         ax.plot(self.survey_coordinates[:,0], self.survey_coordinates[:,1], 'o', markersize=2, color='black')
         ax.tricontourf(self.survey_coordinates[:,0], self.survey_coordinates[:,1], plot_data, levels=levels, cmap=cmap, norm=norm)
         ax.set(xlim=(np.min(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,0])), ylim=(np.min(self.survey_coordinates[:,1]), np.max(self.survey_coordinates[:,1])))
+        ax.set(ylabel='y')
+        ax.set(xlabel='x')
         plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=r'microGal')
         plt.savefig(filename)
         plt.close()
