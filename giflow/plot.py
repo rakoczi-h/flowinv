@@ -5,6 +5,8 @@ import matplotlib
 import numpy as np
 from itertools import product
 from collections import namedtuple
+import imageio
+import os
 
 from .box import Box
 plt.style.use('seaborn-v0_8-deep')
@@ -187,7 +189,11 @@ def plot_js_hist(js_divs, keys, filename='js_hist.png'):
     plt.close()
     return counts, bins, median
 
-def make_gif():
+def make_gif(image_names, image_location='', filename='gif.gif'):
+    images = []
+    for image_name in image_names:
+        images.append(imageio.imread(os.path.join(image_location, image_name)))
+    imageio.mimsave(filename, images, fps=1)
 
 # ----------------- PLOT-4-PAPER -------------------------------------
 def compare_method_surveys(results_list, model_frameworks_list, survey_frameworks_list, num=1000, filename='compare_survey.png'):
