@@ -70,7 +70,7 @@ class Box:
                 raise ValueError("The voxel_grid is not defined")
             if self.voxelised_model is None:
                 self.translate_to_voxels()
-                gz = self.get_gz_3(limits=self.voxel_grid, rho=self.voxelised_model, survey_coordinates=survey_coordinates)
+            gz = self.get_gz_3(limits=self.voxel_grid, rho=self.voxelised_model, survey_coordinates=survey_coordinates)
         else:
             raise ValueError('model_type can only be parameterised or voxelised.')
         gz = gz-np.min(gz)
@@ -123,6 +123,7 @@ class Box:
         return gz
 
     def get_gz_3(self, survey_coordinates, limits, rho):
+
         shape = (np.shape(limits)[0], np.shape(survey_coordinates)[0])
 
         x = survey_coordinates[:,0]
@@ -148,6 +149,7 @@ class Box:
         zeta2 = np.broadcast_to(zeta2[:, np.newaxis], shape)
         if isinstance(rho, np.ndarray):
             rho = np.broadcast_to(rho[:, np.newaxis], shape)
+
 
         x1 = x - xi1
         x2 = x - xi2
@@ -227,6 +229,7 @@ class Box:
         bg = np.zeros(num_voxels)
         if self.background_noise_scale != 0.0:
             bg = bg + np.random.normal(loc=0.0, scale=self.background_noise_scale, size=np.shape(bg)[0])
+
         # calculating the locations of the vertices of the rectangle, which is the box when viwed from above
         p1 = tuple(rotate(np.array([self.px-self.lx/2, self.py+self.ly/2]), origin=(self.px,self.py), angle=self.alpha))
         p2 = tuple(rotate(np.array([self.px+self.lx/2, self.py+self.ly/2]), origin=(self.px,self.py), angle=self.alpha))
@@ -381,7 +384,7 @@ class Box:
         plt.savefig(filename)
         plt.close()
 
-    def intact_plot_3D_mesh(self, axis_limits=None, filename='3D_mesh.html'):
+    def plot_3D_mesh(self, axis_limits=None, filename='3D_mesh.html'):
         """
         Makes a 3D image of the box from its parameters.
         Parameters:
@@ -394,8 +397,8 @@ class Box:
         x2 = self.px + self.lx/2
         y1 = self.py - self.ly/2
         y2 = self.py + self.ly/2
-        z1 = self.pz - self.lz/2
-        z2 = self.pz + self.lz/2
+        z1 = self.pz - self.lz
+        z2 = self.pz
         x_arr = np.arange(x1, x2, (x2-x1)/10) # 10 points in each grid
         y_arr = np.arange(y1, y2, (y2-y1)/10) # 10 points in each grid
         z_arr = np.arange(z1, z2, (z2-z1)/10) # 10 points in each grid
@@ -424,6 +427,8 @@ class Box:
                 xmax = np.max(np.mean(self.voxel_grid[:,0,:], axis=1))
                 ymin = np.min(np.mean(self.voxel_grid[:,1,:], axis=1))
                 ymax = np.max(np.mean(self.voxel_grid[:,1,:], axis=1))
+                zmin = np.min(np.mean(self.voxel_grid[:,2,:], axis=1))
+                zmax = np.max(np.mean(self.voxel_grid[:,2,:], axis=1))
                 axis_limits = np.array([[xmin, xmax],[ymin, ymax],[zmin, zmax]])
         else:
             axis_limits = axis_limits
@@ -468,6 +473,33 @@ class Box:
                         y=0.7,
                         bordercolor='black',
                         borderwidth=1)
+        if filename[-5:] == '.html':
+            fig.write_html(filename)
+        elif filename[-4:] == '.png':
+            fig.write_image(filename)
+        else:
+            raise ValueError("Only .html and .png file extensions are allowed")
+        plt.close()
+
+    def plot_3D_volume(self, filename='3D_volume.html'):
+
+        x = np.mean(self.voxel_grid[:,0,:], axis=1)
+        y = np.mean(self.voxel_grid[:,1,:], axis=1)
+        z = np.mean(self.voxel_grid[:,2,:], axis=1)
+
+        fig = go.Figure(data=go.Volume(x=x, y=y, z=z, value=self.voxelised_model,
+                    opacity = 0.4,
+                    surface_count = 17))
+        fig.update_layout(height = 800,
+                          width = 1000,
+                          font = dict(size=12),
+                          coloraxis_colorbar={"title": r'$\rho [kg/m^3$]'},
+                          scene = dict(
+                               xaxis_title='x [m]',
+                               yaxis_title='y [m]',
+                               zaxis_title='z [m]',
+                               aspectmode='manual'))
+
         if filename[-5:] == '.html':
             fig.write_html(filename)
         elif filename[-4:] == '.png':
@@ -525,11 +557,15 @@ class BoxDataset:
         # Unless the survey is randomised, we can just generate the grid once
         boxes = []
         surveys = []
-        for i in range(self.size):
+        i = 0
+        while i < self.size:
             box_parameters = dict.fromkeys(self.priors.keys)
             for key in list(self.parameter_labels):
                 box_parameters[key] = parameters_dict[key][i]
-            box = Box(parameters=box_parameters, density=self.model_framework['density'], background_noise_scale=self.model_framework['noise_scale'])
+            # Generating random background noise
+            bg_noise_prior = Prior(distributions={"bg_noise_scale": self.model_framework['noise_scale']})
+            bg_noise_scale = bg_noise_prior.sample(size=1, returntype='dict')['bg_noise_scale'][0]
+            box = Box(parameters=box_parameters, density=self.model_framework['density'], background_noise_scale=bg_noise_scale)
             survey = GravitySurvey(ranges=self.survey_framework['ranges'], survey_shape=self.survey_framework['survey_shape'], noise_on_location_scale=self.survey_framework['noise_on_location_scale'])
             survey.make_survey()
             # Computing gravity
@@ -541,6 +577,12 @@ class BoxDataset:
                 raise ValueError('model_framework type can only be voxelised or parameterised')
             survey_coordinates = survey.survey_coordinates.copy()
             survey.gravity = box.forward_model(survey_coordinates=survey_coordinates, model_type=self.model_framework['type'])
+            if np.isinf(np.max(survey.gravity)):
+                print("Found inf gravity")
+                continue
+            if np.isnan(np.min(survey.gravity)):
+                print("Found nan gravity")
+                continue
             # Generating random noise
             noise_prior = Prior(distributions={"noise_scale": self.survey_framework['noise_scale']})
             noise_scale = noise_prior.sample(size=1, returntype='dict')['noise_scale'][0]
@@ -551,11 +593,12 @@ class BoxDataset:
             surveys.append(survey)
             if i % 1000 == 0:
                 print(f"{i}/{self.size} data points made")
+            i = i+1
         self.surveys = surveys
         self.boxes = boxes
         return self.surveys, self.boxes
 
-    def make_data_arrays(self, survey_coordinates_to_include=[], add_noise=True):
+    def make_data_arrays(self, survey_coordinates_to_include=[], model_info_to_include=[], add_noise=True, mix_survey_order=False):
         """
         Parameters
         ----------
@@ -570,14 +613,27 @@ class BoxDataset:
         elif self.model_framework['type'] == 'voxelised':
             data = np.array([self.boxes[i].voxelised_model for i in range(self.size)])
         data = [data]
-        # Making the survey array
+        if any([l=='noise_scale' for l in model_info_to_include]):
+            data.append(np.expand_dims(np.array([self.boxes[i].background_noise_scale for i in range(self.size)]), axis=1))
+
+
         conditional_gz = np.array([self.surveys[i].gravity for i in range(self.size)])
+        conditional_coordinates = np.array([self.surveys[i].survey_coordinates for i in range(self.size)])
+
         if add_noise:
             noise = np.array([self.surveys[i].noise for i in range(self.size)])
             conditional_gz = conditional_gz+noise
-        conditional = []
-        conditional.append(conditional_gz)
-        conditional_coordinates = np.array([self.surveys[i].survey_coordinates for i in range(self.size)])
+
+        if mix_survey_order:
+            i_arr = np.arange(np.shape(conditional_gz)[1])
+            for i in range(self.size):
+                np.random.shuffle(i_arr)
+                conditional_gz[i,:] = conditional_gz[i,:][i_arr]
+                for x in range(np.shape(conditional_coordinates)[2]):
+                    conditional_coordinates[i,:,x] = conditional_coordinates[i,:,x][i_arr]
+
+        conditional = [conditional_gz]
+
         labels = ['x', 'y', 'z']
         for idx, label in enumerate(labels):
             if any([l==label for l in survey_coordinates_to_include]):
