@@ -21,9 +21,9 @@ def rescale_bilby_samples(bilby_parameter_dict, parameters_to_rescale, scale_fac
 
 
 
-flow_location = '/data/www.astro/2263373r/giflow/box/parameterised/normalised/run_2024-06-25 12:12:39.726637/'
+flow_location = '/data/www.astro/2263373r/giflow/box/voxelised/noisy_grid/run_2024-07-02 15:03:03.268250/'
 
-save_location = os.path.join(flow_location, 'qinetiq_data/')
+save_location = os.path.join(flow_location, 'qinetiq_data_v2/')
 if not os.path.exists(save_location):
     os.mkdir(save_location)
 # -------------------- Reading the flow --------------------------
@@ -39,7 +39,7 @@ model_framework = dt_val.model_framework
 
 #print(dt_val.survey_framework)
 # -------------------- Reading the data --------------------------
-data_loc = '/data/wiay/2263373r/giflow/box/qinetiq_data.csv'
+data_loc = '/scratch/balta0/2263373r/giflow/box/qinetiq_data_v8.csv'
 df = pd.read_csv(data_loc)
 
 x = np.array(df['x'])
@@ -49,10 +49,10 @@ z = np.zeros(np.shape(x))
 grav = -1*np.array(df['grav'])
 grav = grav - np.min(grav)
 
-noise_scale = 4.7357
+noise_scale = 4.7357/np.sqrt(4)
 
-width_real = np.max(x)-np.min(x)
-width_train = np.max(dt_val.surveys[0].survey_coordinates[:,0])-np.min(dt_val.surveys[0].survey_coordinates[:,0])
+width_real = 70.0
+width_train = np.max(dt_val.survey_framework['ranges'][0][1]-dt_val.survey_framework['ranges'][0][0])
 scale_factor = width_real/width_train
 
 print("Scale factor:", scale_factor)
@@ -61,11 +61,11 @@ print("Priors:", priors.distributions)
 
 survey_coordinates = np.c_[x/scale_factor, y/scale_factor, z/scale_factor]
 
-survey = GravitySurvey(ranges=dt_val.survey_framework['ranges'], survey_shape=dt_val.survey_framework['survey_shape'], survey_coordinates=dt_val.surveys[0].survey_coordinates)
+survey = GravitySurvey(ranges=dt_val.survey_framework['ranges'], survey_shape=dt_val.survey_framework['survey_shape'], survey_coordinates=survey_coordinates)
 survey.gravity = grav/scale_factor
 survey.noise_scale = noise_scale/scale_factor
 
-survey.plot_contours(filename=os.path.join(flow_location, 'qinetiq_data/survey.png'), include_noise=False)
+survey.plot_contours(filename=os.path.join(save_location, 'survey.png'), include_noise=False)
 
 dt_test = BoxDataset(size=1, priors=priors, survey_framework=dt_val.survey_framework, model_framework=dt_val.model_framework)
 dt_test.surveys = [survey]
@@ -73,7 +73,7 @@ dt_test.surveys = [survey]
 box = Box()
 dt_test.boxes = [box]
 
-survey_coordinates_to_include = []
+survey_coordinates_to_include = ['x', 'y', 'noise_scale']
 test_data, test_conditional = dt_test.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include, add_noise=False)
 
 test_conditional_tensor = flow.scalers['conditional'].scale_data(test_conditional)
@@ -107,28 +107,39 @@ result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][0] for
 result.directory = save_location
 #result.rescale(scaling_factor=scale_factor, parameters_to_rescale=['px', 'py', 'pz', 'lx', 'ly', 'lz'])
 
-result.corner_plot(filename="corner_plot.png")
-result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
+#result.corner_plot(filename="corner_plot.png")
+#result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
 
 
-rescale = False
-parameters_to_rescale = ['px', 'py', 'pz', 'lx', 'ly', 'lz']
-if rescale:
-    result.rescale(scale_factor=scale_factor, parameters_to_rescale=parameters_to_rescale)
-# Comparing to bilby
-keys = dt_val.parameter_labels
-with open('/data/www.astro/2263373r/giflow/bilby/box/standrews_noise_realistic_v6/inversion_result.json', 'r') as file:
-    bilby_results = json.load(file)
-    bilby_posterior_dict = bilby_results['posterior']['content']
-    if rescale:
-        bilby_posterior_dict = rescale_bilby_samples(bilby_posterior_dict, parameters_to_rescale, scale_factor=scale_factor)
-    bilby_samples = []
-    for key in keys:
-        bilby_samples.append(bilby_posterior_dict[key])
-    bilby_samples = np.array(bilby_samples).T
+result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png", normalisation=[dt_val.boxes[0].density, 0.0])
 
 
-if rescale:
-    result.overlaid_corner(bilby_samples, ['Flow', 'Dynesty'], filename='overlaid_corner_bilby_rescaled.png')
-else:
-    result.overlaid_corner(bilby_samples, ['Flow', 'Dynesty'], filename='overlaid_corner_bilby.png')
+result.plot_3D_statistics(model_framework=dt_test.model_framework, axis_scale=scale_factor)
+
+
+result.plot_3D_samples(model_framework=dt_test.model_framework, num_to_plot=2000, mode='cumulativemean', filename='3D_cumulativemean.gif', axis_scale=scale_factor)
+result.plot_3D_samples(model_framework=dt_test.model_framework, num_to_plot=50, mode='maxlikelihood', filename='3D_samples.gif', axis_scale=scale_factor)
+
+
+
+#rescale = False
+#parameters_to_rescale = ['px', 'py', 'pz', 'lx', 'ly', 'lz']
+#if rescale:
+#    result.rescale(scale_factor=scale_factor, parameters_to_rescale=parameters_to_rescale)
+## Comparing to bilby
+#keys = dt_val.parameter_labels
+#with open('/data/www.astro/2263373r/giflow/bilby/box/standrews_noise_realistic_v6/inversion_result.json', 'r') as file:
+#    bilby_results = json.load(file)
+#    bilby_posterior_dict = bilby_results['posterior']['content']
+#    if rescale:
+#        bilby_posterior_dict = rescale_bilby_samples(bilby_posterior_dict, parameters_to_rescale, scale_factor=scale_factor)
+#    bilby_samples = []
+#    for key in keys:
+#        bilby_samples.append(bilby_posterior_dict[key])
+#    bilby_samples = np.array(bilby_samples).T
+#
+#
+#if rescale:
+#    result.overlaid_corner(bilby_samples, ['Flow', 'Dynesty'], filename='overlaid_corner_bilby_rescaled.png')
+#else:
+#    result.overlaid_corner(bilby_samples, ['Flow', 'Dynesty'], filename='overlaid_corner_bilby.png')

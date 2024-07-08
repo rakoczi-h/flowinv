@@ -11,11 +11,13 @@ from giflow.flowmodel import FlowModel
 from giflow.plot import plot_js_hist
 from giflow.read_files import read_files
 
-survey_coordinates_to_include = []
+survey_coordinates_to_include = ['x', 'y', 'noise_scale']
+model_info_to_include= ['noise_scale']
+mix_survey_order = True
 num_test_cases = 10
-bilby_location = '/data/www.astro/2263373r/giflow/bilby/box/normalised/single_noise_level/'
-#bilby_location = None
-flow_location = '/data/www.astro/2263373r/giflow/box/parameterised/normalised/run_2024-06-25 12:12:39.726637/'
+#bilby_location = '/data/www.astro/2263373r/giflow/bilby/box/normalised/single_noise_level/'
+bilby_location = None
+flow_location = '/data/www.astro/2263373r/giflow/box/voxelised/noisy_grid/variable_bg_noise/run_2024-07-06 20:10:02.287401'
 
 
 # -------------------- Reading the flow --------------------------
@@ -25,12 +27,12 @@ flow.load(flow_location)
 flow.flowmodel.to(device)
 flow.save_location = flow_location
 data_location = flow.data_location
-print(data_location)
+
 
 # -------------------- Validation data --------------
 valsize = 100000 # THIS needs to be edited to give the overall desired data set size
 num_files = 1 #number of files that needs to be read
-val_data, val_conditional = read_files(data_location=data_location, filename='validationset', datasize=valsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include)
+val_data, val_conditional = read_files(data_location=data_location, filename='validationset', datasize=valsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
 
 val_dataset = flow.make_tensor_dataset(val_data, val_conditional, device=device, scale=True)
 
@@ -41,15 +43,15 @@ with open(os.path.join(flow.data_location, "testset_0.pkl"), 'rb') as file:
 keys = dt_test.parameter_labels
 testsize = 10 # THIS needs to be edited to give the overall desired data set size
 num_files = 1 #number of files that needs to be read
-test_data, test_conditional = read_files(data_location=data_location, filename='testset', datasize=testsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include)
+test_data, test_conditional = read_files(data_location=data_location, filename='testset', datasize=testsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
 
 test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
-print(test_dataset.tensors[0])
+
 # ------------------- Sampling ---------------------------------
 results = []
 for i in range(num_test_cases):
     samples, log_probabilities = flow.sample_and_logprob(test_dataset.tensors[1][i], num=2000)
-    result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][i] for j in range(len(test_conditional))], log_probabilities=log_probabilities, true_parameters=np.array([test_data[j][i] for j in range(len(test_data))]), parameter_labels=keys, survey_coordinates=dt_test.surveys[i].survey_coordinates)
+    result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][i] for j in range(len(test_conditional))], log_probabilities=log_probabilities, true_parameters=np.array([test_data[0][i]]), parameter_labels=keys, survey_coordinates=dt_test.surveys[i].survey_coordinates)
     result.directory = os.path.join(flow_location, f"testcase_{i}/")
     dt_test.surveys[i].plot_contours(filename=os.path.join(result.directory, "survey.png"), include_noise=True)
     results.append(result)
@@ -59,9 +61,9 @@ for i in range(num_test_cases):
 flow.pp_test(validation_dataset=val_dataset)
 #
 # CORNER PLOTS
-for i, result in enumerate(results):
-    result.corner_plot(filename="corner_plot.png")
-    print(f"Made {i+1}/{num_test_cases} corner plots.")
+#for i, result in enumerate(results):
+#    result.corner_plot(filename="corner_plot.png")
+#    print(f"Made {i+1}/{num_test_cases} corner plots.")
 
 # SURVEY CONSISTENCY
 for i, result in enumerate(results):
@@ -69,9 +71,15 @@ for i, result in enumerate(results):
     print(f"Made {i+1}/{num_test_cases} survey comparison plots.")
 
 # VOXELISED MODEL COMPARISON
-#for i, result in enumerate(results):
-#    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png")
-#    print(f"Made {i+1}/{num_test_cases} voxel slice comparison plots.")
+for i, result in enumerate(results):
+    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png", plot_truth=True, normalisation=[dt_test.boxes[i].density, 0.0])
+    print(f"Made {i+1}/{num_test_cases} voxel slice comparison plots.")
+
+# 3D PLOT COMPARISON PLOT
+for i, result in enumerate(results):
+    result.plot_3D_statistics(dt_test.model_framework)
+    result.plot_3D_samples(dt_test.model_framework, mode='cumulativemean', num_to_plot=2000, filename='cumulative_mean_animation.gif')
+
 
 # ------------------------ Comparison with Bilby --------------------------------
 if bilby_location is not None:

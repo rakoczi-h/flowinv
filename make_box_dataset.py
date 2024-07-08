@@ -10,7 +10,7 @@ from giflow.prior import Prior
 from giflow.box import BoxDataset
 
 n = int(sys.argv[1])
-save_loc = '/scratch/balta0/2263373r/giflow/box/voxelised/noisy_grid/'
+save_loc = '/scratch/balta0/2263373r/giflow/box/voxelised/noisy_grid/high_res/200_bg_noise/'
 if not os.path.exists(save_loc):
     os.mkdir(save_loc)
 
@@ -22,7 +22,7 @@ priors = Prior(distributions=distributions)
 
 # FRAMEWORKS
 survey_framework = {'noise_scale' : ['Uniform', 0.0, 0.25], 'survey_shape' : [8,8], 'ranges': [[-0.5,0.5],[-0.5, 0.5],[0]], 'noise_on_location_scale' : 0.05}
-model_framework = {'type': 'voxelised', 'density': -2670.0, 'noise_scale': 500.0, 'grid_shape': [8,8,8], 'ranges': [[-0.75,0.75],[-0.75,0.75],[-1.5,0]]}
+model_framework = {'type': 'voxelised', 'density': -2670.0, 'noise_scale': 200.0, 'grid_shape': [10,10,10], 'ranges': [[-0.75,0.75],[-0.75,0.75],[-1.5,0.0]]}
 
 
 # Make train data:
@@ -35,15 +35,26 @@ with open(file_name, 'wb') as file:
 print(f"Data set of size {size} made and saved as {file_name}.")
 
 
-# Make validaton data:
-size = 100000
-dt_val = BoxDataset(priors=priors, size=size, survey_framework=survey_framework, model_framework=model_framework)
-dt_val.make_dataset()
-file_name = os.path.join(save_loc, 'validationset_0.pkl')
-with open(file_name, 'wb') as file:
-    pkl.dump(dt_val, file)
-print(f"Data set of size {size} made and saved as {file_name}.")
-
+## Make validaton data:
+#size = 100000
+#dt_val = BoxDataset(priors=priors, size=size, survey_framework=survey_framework, model_framework=model_framework)
+#dt_val.make_dataset()
+#file_name = os.path.join(save_loc, 'validationset_0.pkl')
+#with open(file_name, 'wb') as file:
+#    pkl.dump(dt_val, file)
+#print(f"Data set of size {size} made and saved as {file_name}.")
+#
+#
+#
+### Make train data:
+#size = 10
+#dt_train = BoxDataset(priors=priors, size=size, survey_framework=survey_framework, model_framework=model_framework)
+#dt_train.make_dataset()
+#file_name = os.path.join(save_loc, f"testset_0.pkl")
+#with open(file_name, 'wb') as file:
+#    pkl.dump(dt_train, file)
+#print(f"Data set of size {size} made and saved as {file_name}.")
+#
 
 ## Make test data:
 #size = 10
@@ -61,7 +72,7 @@ print(f"Data set of size {size} made and saved as {file_name}.")
 #with open(file_name, 'wb') as file:
 #    pkl.dump(dt_test, file)
 #print(f"Data set of size {size} made and saved as {file_name}.")
-
+#
 #size = 9
 #dt_test = BoxDataset(priors=priors, size=size, survey_framework=survey_framework, model_framework=model_framework)
 #parameters_dict = dict.fromkeys(priors.keys)
