@@ -346,7 +346,6 @@ class FlowModel():
         print(f"{num} samples drawn. Time taken: \t {end_sample-start_sample}")
         s = s.cpu().numpy()
 
-        print(np.shape(s))
         s = self.scalers['data'].inv_scale_data(s)[0]
         #s = self.scalers['data'].inverse_transform(s)
         l = l.cpu().numpy()
