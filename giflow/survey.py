@@ -207,6 +207,7 @@ class GravitySurvey():
         ax.set(xlim=(np.min(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,0])), ylim=(np.min(self.survey_coordinates[:,1]), np.max(self.survey_coordinates[:,1])))
         ax.set(ylabel='y')
         ax.set(xlabel='x')
+        ax.set_aspect(aspect='equal')
         plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=r'microGal')
         plt.savefig(filename)
         plt.close()
