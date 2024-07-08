@@ -9,10 +9,16 @@ import matplotlib.lines as mlines
 import os
 import matplotlib.gridspec as gridspec
 import torch
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
 
 from .box import Box
 from .prior import Prior
 from .survey import GravitySurvey
+from .plot import make_gif
+
+import plotly.io as pio
+pio.templates.default = "plotly_white"
 
 
 class FlowResults:
@@ -64,7 +70,8 @@ class FlowResults:
         if name == 'parameter_labels':
             if value is not None:
                 if len(value) != self.nparameters:
-                    raise ValueError('Same number of labels are required are nparameters.')
+                    print('Same number of labels are required are nparameters. Ignoring labels.')
+                    value = None
         if name == 'directory':
             if value is not None:
                 if not isinstance(value, str):
@@ -300,6 +307,12 @@ class BoxFlowResults(FlowResults):
                 box.make_voxel_grid(ranges=model_framework['ranges'], grid_shape=model_framework['grid_shape'])
             #gz = box.forward_model(survey_coordinates=coordinates.copy(), model_type=mode)-np.mean(target_array)
             gz = box.forward_model(survey_coordinates=coordinates.copy(), model_type=mode)
+            if any(np.isnan(gz)):
+                print("Found NaN in simualted gravity from sample. Removing sample")
+                continue
+            if any(np.isinf(gz)):
+                print("Found inf in simualted gravity from sample. Removing sample")
+                continue
             gzs.append(gz)
         gzs = np.array(gzs)
         mean = np.mean(gzs, axis=0)
@@ -313,7 +326,7 @@ class BoxFlowResults(FlowResults):
             fig, axes = plt.subplots(nrows=1, ncols=3)
         vmin = np.array([target.min(), mean.min()]).min()
         vmax = np.array([target.max(), mean.max()]).max()
-        levels = np.linspace(vmin, vmax, 7)
+        levels = np.linspace(vmin, vmax, 15)
         cmap = 'plasma'
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
         for idx, ax in enumerate(axes.flatten()):
@@ -330,7 +343,7 @@ class BoxFlowResults(FlowResults):
             plt.savefig(filename, transparent=False)
         plt.close()
 
-    def plot_compare_voxel_slices(self, slice_coords=[1,3,5], filename='sliced_voxels.png', plot_truth=False):
+    def plot_compare_voxel_slices(self, slice_coords=[1,3,5], filename='sliced_voxels.png', plot_truth=False, normalisation=None):
         """Makes a comparison plot consisting of slices of the voxelspace.
         Each column is slices along a different direction (x, y, z).
         Each row is a different slice, with increasing coordinates.
@@ -346,7 +359,7 @@ class BoxFlowResults(FlowResults):
             if self.true_parameters is None:
                 raise ValueError("Give the model as the true_parameters attribute to the class")
             true_model = self.true_parameters
-            d = round(np.power(np.shape(true_model)[0], 1/3))
+            d = round(np.power(np.shape(true_model)[1], 1/3))
         else:
             d = round(np.power(np.shape(self.samples[0])[0], 1/3))
         s1, s2, s3 = slice_coords
@@ -415,7 +428,10 @@ class BoxFlowResults(FlowResults):
         plot_data[5, 3-shift_idx, :, :] = std_model[:, :, s2]
         plot_data[8, 3-shift_idx, :, :] = std_model[:, :, s3]
 
-        norm = plt.cm.colors.Normalize(-1500.0, 0.0)
+        if normalisation is None:
+            norm = plt.cm.colors.Normalize(np.min(mean_model), np.max(mean_model))
+        else:
+            norm = plt.cm.colors.Normalize(normalisation[0], normalisation[1])
         cmap = 'plasma'
 
         fig = plt.figure(figsize=(16, 14))
@@ -472,4 +488,132 @@ class BoxFlowResults(FlowResults):
 
         plt.savefig(os.path.join(self.directory, filename), bbox_inches='tight', transparent=True)
         plt.close()
+
+    def plot_3D_statistics(self, model_framework, filename='3D_statistics.html', axis_limits=None, axis_scale=None):
+        """
+        Creates a 3D plot. Either can plot statistics, or can plot an animated gif of samples.
+        Parameters
+        ----------
+            model_framework: dict
+                Dictionary containing information about the box model setup.
+            mode: str
+                Can be 'mean', 'mode', 'str', 'samples'
+
+        """
+        box = Box()
+        box.make_voxel_grid(model_framework['grid_shape'], model_framework['ranges'])
+        x = np.mean(box.voxel_grid[:,0,:], axis=1)
+        y = np.mean(box.voxel_grid[:,1,:], axis=1)
+        z = np.mean(box.voxel_grid[:,2,:], axis=1)
+
+        if axis_scale is not None:
+            x, y, z= x*axis_scale, y*axis_scale, z*axis_scale
+
+        titles = ["Mean", "Mode", "Std", "Fractional Std"]
+        mean = np.mean(self.samples, axis=0)
+        mean = mean - model_framework['density']
+        mode = self.samples[np.argmax(self.log_probabilities), :]
+        mode = mode - model_framework['density']
+        std = np.std(self.samples, axis=0)
+        std_frac = std/mean
+        models = [mean, mode, std, std_frac]
+
+        if self.true_parameters is not None:
+            titles.append("Truth")
+            truth = self.true_parameters.flatten() - model_framework['density']
+            models.append(truth)
+
+        for i, m in enumerate(models):
+            title = titles[i]
+            fig = go.Figure(data=go.Volume(x=x, y=y, z=z, value=m, colorscale='Plasma', opacity=0.7, opacityscale='min', surface_count=17))
+            fig.update_layout(height = 800,
+                            width = 1000,
+                            font = dict(size=12),
+                            scene = dict(
+                               xaxis_title='x [m]',
+                               yaxis_title='y [m]',
+                               zaxis_title='z [m]',
+                               aspectmode='manual'),
+                            title_text=title)
+            if filename[-5:] == '.html':
+                fig.write_html(os.path.join(self.directory, title+'_'+filename))
+            elif filename[-4:] == '.png':
+                fig.write_image(os.path.join(self.directory, title+'_'+filename))
+            else:
+                raise ValueError("Only .html and .png file extensions are allowed")
+            plt.close()
+
+    def plot_3D_samples(self, model_framework, num_to_plot=100, mode='cumulativemean', filename='3D_animation.gif', axis_scale=None):
+        """
+        Creates an animation of 3D plots of samples.
+        Parameters:
+        ----------
+            model_framework: dict
+                Dictionary defining the model configuration. Has to have density.
+            num_to_plot: int
+                if mode='cumulativemean', then this is the maximum number of samples that are averaged.
+                if mode='maxlikelihood', then this is the number of samples plotted in total.
+            mode: str
+                if 'cumulativemean': increasing number of samples are averaged up to num_to_plot
+                if 'maxlikelihood': samples are arranged by decreasing likelihood and plotted
+            filename: str
+                has to be .gif
+            axis_scale: float
+                if None, then limits are inferred from voxel_grid
+                else the voxel_grid is multiplied by this factor
+        """
+        if filename[-4:] != '.gif':
+            print("Filename overwritten to .gif format")
+            filename = filename[-4:]+'.gif'
+
+        box = Box()
+        box.make_voxel_grid(model_framework['grid_shape'], model_framework['ranges'])
+
+        x = np.mean(box.voxel_grid[:,0,:], axis=1)
+        y = np.mean(box.voxel_grid[:,1,:], axis=1)
+        z = np.mean(box.voxel_grid[:,2,:], axis=1)
+
+        if axis_scale is not None:
+            x, y, z= x*axis_scale, y*axis_scale, z*axis_scale
+
+        if mode == 'cumulativemean':
+            models = []
+            titles = []
+            num = np.concatenate((np.arange(0, 100, 10), np.arange(0, num_to_plot+100, 100)[1:]
+), axis=0)
+            num[0] = num[0]+1
+            print(num)
+            for n in num:
+                model = np.mean(self.samples[:n,:], axis=0)
+                titles.append(f"Mean of {n} Random Samples")
+                models.append(model)
+            models = np.vstack(models)
+        elif mode == 'maxlikelihood':
+            indices = np.flip(np.argsort(self.log_probabilities)) #sorted by decresing probability
+            models = self.samples[indices][:num_to_plot]
+            titles = [f"Samples Arranged by Likelihood"]*num_to_plot
+        else:
+            raise ValueError('Set mode to maxlikelihood or cumulativemean.')
+
+        image_names = []
+        for i, s in enumerate(models):
+            s = s - model_framework['density']
+            fig = go.Figure(data=go.Volume(x=x, y=y, z=z, value=s, colorscale='Plasma', opacityscale='min', opacity=0.7, surface_count=17))
+            fig.update_layout(height = 800,
+                            width = 1000,
+                            font = dict(size=12),
+                            scene = dict(
+                               xaxis_title='x [m]',
+                               yaxis_title='y [m]',
+                               zaxis_title='z [m]',
+                               aspectmode='manual'),
+                            title_text=titles[i])
+            image_name = f"3D_sample_{i}.png"
+            image_names.append(image_name)
+            fig.write_image(os.path.join(self.directory, image_name))
+            plt.close()
+        
+        make_gif(image_names, image_location=self.directory, filename=os.path.join(self.directory, filename))
+        for im in image_names:
+            os.remove(os.path.join(self.directory, im))
 
