@@ -5,9 +5,12 @@ import matplotlib
 import numpy as np
 from itertools import product
 from collections import namedtuple
+import imageio
+import os
 
 from .box import Box
 plt.style.use('seaborn-v0_8-deep')
+matplotlib.rcParams['axes.titlesize'] = 10
 
 def make_pp_plot(posterior_samples_list, truths, filename=None, confidence_interval=[0.68, 0.95, 0.997],
                  lines=None, legend_fontsize='x-small', title=True,
@@ -22,11 +25,11 @@ def make_pp_plot(posterior_samples_list, truths, filename=None, confidence_inter
     truths : list
         list of dictionaries containing the true (injected) values for each observation corresponding to `posteror_samples_list`.
     filename : str, optional
-        Filename to save pp_plot in, by default None (the plot is returned)
+        Filename to save pp_plot in, by default None (the plot is returned) (Default: None)
     confidence_interval : list, optional
-        List of shaded confidence intervals to plot, by default [0.68, 0.95, 0.997]
+        List of shaded confidence intervals to plot, (Default: [0.68, 0.95, 0.997])
     lines : list, optional
-        linestyles to use, by default None (a default bank of linestyles is used)
+        linestyles to use, (Default: None (a default bank of linestyles is used))
     legend_fontsize : str, optional
         legend font size descriptor, by default 'x-small'
     title : bool, optional
@@ -163,6 +166,8 @@ def plot_js_hist(js_divs, keys, filename='js_hist.png'):
              An array containing the js divergence values [no. of parameters, no. of js divergence values]
         keys: list
              List of strings containing the prameter names
+        filename: str
+             The name under which the file is saved. (Default: 'js_hist.png')
     Outputs
     -------
         counts: list of array
@@ -172,6 +177,9 @@ def plot_js_hist(js_divs, keys, filename='js_hist.png'):
         median: float
             The median of the overall distribution
     """
+    if filename[-4:] =! '.png':
+        raise ValueError('The filetype for filename has to be .png')
+
     js_divs_list = []
     for i in range(np.shape(js_divs)[0]):
         js_divs_list.append(js_divs[i,:])
@@ -186,6 +194,26 @@ def plot_js_hist(js_divs, keys, filename='js_hist.png'):
     plt.close()
     return counts, bins, median
 
+def make_gif(image_names, image_location='', filename='gif.gif'):
+    """
+    Makes a gif out of input images.
+    Parameters
+    ----------
+        image_names: list
+            The list of the names of the image files to read.
+        image_location: str
+            The directory where the images are located. (Default: '')
+        filename: str
+            The file under which the resulting gif is saved. (Default: 'gif.gif')
+    """
+    if filename[-4:] =! '.gif':
+        raise ValueError('The filetype for filename has to be .gif')
+
+    images = []
+    for image_name in image_names:
+        images.append(imageio.imread(os.path.join(image_location, image_name)))
+    imageio.mimsave(filename, images, fps=1)
+
 # ----------------- PLOT-4-PAPER -------------------------------------
 def compare_method_surveys(results_list, model_frameworks_list, survey_frameworks_list, num=1000, filename='compare_survey.png'):
     """
@@ -199,9 +227,9 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
             The BoxDataSet attribute can be passed to this
             Has to have keys 'noise_scale': float, 'ranges': [[],[],[]], 'survey_shape': float or list
         num: int
-            Number of samples to use
+            Number of samples to use. (Default: 1000)
         include_examples: bool
-            Whether to plot a few individual samples.
+            Whether to plot a few individual samples. (Default: 'compare_survey.png')
     """
     plot_data = []
     coordinates = []
@@ -229,24 +257,58 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
         std = np.std(gzs, axis=0)
         plot_data.append(std)
 
-    titles = ['Target', 'Mean', 'Std']
+    titles = ['Target', 'Sample Mean', 'Sample Std']
+    ylabels = ['(a)', '(b)', '(c)']
     fig, axes = plt.subplots(nrows=3, ncols=3)
-    vmin = np.array([target.min(), mean.min()]).min()
-    #vmax = np.array([target.max(), mean.max()]).max()
-    vmax = 210
-    levels = np.linspace(vmin, vmax, 15)
-    cmap = 'plasma'
-    norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    plt.subplots_adjust(wspace=-0.5, hspace=0.15)
+    #vmin1 = np.array([target.min(), mean.min()]).min()
+    #vmin2 = std.min()
+    #vmax1 = np.array([target.max(), mean.max()]).max()
+    #vmax2 = std.max()
+    vmin1 = 0
+    vmin2 = 0
+    vmax1 = 220
+    vmax2 = 10
+    levels1 = np.linspace(vmin1, vmax1, 256)
+    levels2 = np.linspace(vmin2, vmax2, 256)
+    cmap = 'rainbow'
+    norm1 = matplotlib.colors.Normalize(vmin=vmin1, vmax=vmax1)
+    norm2 = matplotlib.colors.Normalize(vmin=vmin2, vmax=vmax2)
     #norm = matplotlib.colors.BoundaryNorm(boundaries=levels, ncolors=15)
     for idx, ax in enumerate(axes.flatten()):
+        if any([idx==i for i in [0,1,2]]):
+            ax.set_title(titles[idx])
+            ax.tick_params(axis='x', top=True, labeltop=True, bottom=False, labelbottom=False, labelsize=8)
+        else:
+            ax.tick_params(axis='x', top=False, labeltop=False, bottom=False, labelbottom=False)
         if idx==0 or idx==3 or idx==6:
-            ax.plot(coordinates[idx][:,0], coordinates[idx][:,1], 'o', markersize=2, color='black')
-        ax.tricontourf(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels, cmap=cmap, norm=norm)
-        ax.set(xlim=(np.min(coordinates[idx][:,0]), np.max(coordinates[idx][:,0])), ylim=(np.min(coordinates[idx][:,1]), np.max(coordinates[idx][:,1])), aspect='equal')
+            ax.plot(coordinates[idx][:,0], coordinates[idx][:,1], 'o', markersize=1, color='black')
+            ax.tick_params(axis='y', left=True, labelleft=True, right=False, labelright=False, labelsize=8)
+            ax.set_ylabel(ylabels[int(idx/3)], rotation=0, fontsize=10)
+        else:
+            ax.tick_params(axis='y', left=False, labelleft=False, right=False, labelright=False)
+        if any([idx==i for i in [6,7,8]]):
+            ax.set_xlabel('x[m]', fontsize=8)
+        if any([idx==i for i in [2,5,8]]):
+            ax.set_ylabel('y[m]', fontsize=8)
+            ax.yaxis.set_label_position("right")
+        if idx==2 or idx==5 or idx==8:
+            ax.tricontourf(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels2, cmap=cmap, norm=norm2)
+            #ax.tricontour(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=10, colors='k', linewidths=0.2)
+        else:
+            ax.tricontourf(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels1, cmap=cmap, norm=norm1)
+            #ax.tricontour(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=10, colors='k', linewidths=0.2)
+        ax.set(xlim=(np.min(coordinates[0][:,0]), np.max(coordinates[0][:,0])), ylim=(np.min(coordinates[0][:,1]), np.max(coordinates[0][:,1])), aspect='equal')
         if any([idx==i for i in [0,1,2]]):
             ax.set(title=titles[idx])
-    cax = ax.inset_axes([1.1, 0.0, 0.1, 3.35])
-    plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ticks=levels, boundaries=levels, cax=cax, label=r'microGal')
-    plt.savefig(filename, transparent=False)
+    cax1 = ax.inset_axes([-2.15, -0.3, 2.0, 0.1])
+    cbar = fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm1, cmap=cmap), orientation='horizontal', ticks=[0.0, 27.5, 55.0, 82.5, 110.0, 137.5, 165.0, 192.5, 220.0], boundaries=levels1, cax=cax1)
+    cbar.set_label(r'$\Delta$g [$\mu$Gal]', size=8)
+    cbar.ax.tick_params(rotation=45, labelsize=8)
+    cax2 = ax.inset_axes([0.05, -0.3, 0.9, 0.1])
+    cbar=fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', ticks=[0.0, 2.5, 5.0, 7.5, 10.0], boundaries=levels2, cax=cax2)
+    cbar.set_label(r'$\Delta$g [$\mu$Gal]', size=8)
+    cbar.ax.tick_params(rotation=45, labelsize=8)
+    plt.savefig(filename, transparent=False, bbox_inches='tight')
     plt.close()
 
