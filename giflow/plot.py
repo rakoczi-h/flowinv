@@ -261,10 +261,7 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
     ylabels = ['(a)', '(b)', '(c)']
     fig, axes = plt.subplots(nrows=3, ncols=3)
     plt.subplots_adjust(wspace=-0.5, hspace=0.15)
-    #vmin1 = np.array([target.min(), mean.min()]).min()
-    #vmin2 = std.min()
-    #vmax1 = np.array([target.max(), mean.max()]).max()
-    #vmax2 = std.max()
+
     vmin1 = 0
     vmin2 = 0
     vmax1 = 220
@@ -274,7 +271,7 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
     cmap = 'rainbow'
     norm1 = matplotlib.colors.Normalize(vmin=vmin1, vmax=vmax1)
     norm2 = matplotlib.colors.Normalize(vmin=vmin2, vmax=vmax2)
-    #norm = matplotlib.colors.BoundaryNorm(boundaries=levels, ncolors=15)
+
     for idx, ax in enumerate(axes.flatten()):
         if any([idx==i for i in [0,1,2]]):
             ax.set_title(titles[idx])
