@@ -12,12 +12,12 @@ from giflow.plot import plot_js_hist
 from giflow.read_files import read_files
 
 survey_coordinates_to_include = ['x', 'y', 'noise_scale']
-model_info_to_include= ['noise_scale']
+model_info_to_include= []
 mix_survey_order = True
 num_test_cases = 10
 #bilby_location = '/data/www.astro/2263373r/giflow/bilby/box/normalised/single_noise_level/'
 bilby_location = None
-flow_location = '/data/www.astro/2263373r/giflow/box/voxelised/noisy_grid/variable_bg_noise/run_2024-07-06 20:10:02.287401'
+flow_location = '/data/www.astro/2263373r/giflow/box/voxelised/noisy_grid/run_2024-07-09 10:56:14.929649/'
 
 
 # -------------------- Reading the flow --------------------------
@@ -45,13 +45,18 @@ testsize = 10 # THIS needs to be edited to give the overall desired data set siz
 num_files = 1 #number of files that needs to be read
 test_data, test_conditional = read_files(data_location=data_location, filename='testset', datasize=testsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
 
+z = np.zeros(np.shape(test_conditional[2]))
+survey_coordinates = np.c_[test_conditional[1][:,:,None], test_conditional[2][:,:,None], z[:,:,None]]
+print(np.shape(survey_coordinates))
+
+
 test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
 
 # ------------------- Sampling ---------------------------------
 results = []
 for i in range(num_test_cases):
     samples, log_probabilities = flow.sample_and_logprob(test_dataset.tensors[1][i], num=2000)
-    result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][i] for j in range(len(test_conditional))], log_probabilities=log_probabilities, true_parameters=np.array([test_data[0][i]]), parameter_labels=keys, survey_coordinates=dt_test.surveys[i].survey_coordinates)
+    result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][i] for j in range(len(test_conditional))], log_probabilities=log_probabilities, true_parameters=np.array([test_data[0][i]]), parameter_labels=keys, survey_coordinates=survey_coordinates[i,:])
     result.directory = os.path.join(flow_location, f"testcase_{i}/")
     dt_test.surveys[i].plot_contours(filename=os.path.join(result.directory, "survey.png"), include_noise=True)
     results.append(result)
