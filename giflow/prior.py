@@ -74,7 +74,10 @@ class Prior():
         elif returntype == 'dict':
             return samples
 
-    def plot_distributions(self, filename=Nonr):
+    def plot_distributions(self, filename=None):
+        """
+        Function plotting histograms of the distributions.
+        """
         num = len(keys)
         cols = 2
         rows = int(num/2)
