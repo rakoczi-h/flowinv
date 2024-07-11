@@ -29,6 +29,9 @@ def rotate(p, origin=(0, 0), angle=0):
     return np.squeeze((R @ (p.T-o.T) + o.T).T)
 
 def moving_average(a, n=3):
+    """
+    Computes the moving average of a with a window size of n.
+    """
     ret = np.cumsum(a, dtype=float)
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n-1:] / n
