@@ -78,14 +78,14 @@ class Prior():
         """
         Function plotting histograms of the distributions.
         """
-        num = len(keys)
+        num = len(self.keys)
         cols = 2
         rows = int(num/2)
 
         samples = self.sample(size=2000, returntype='dict')
 
         fig, axs = plt.subplots(rows, cols)
-        for i, k in enumerate(keys):
+        for i, k in enumerate(self.keys):
             axs[i].hist(samples[k], bins=100, density=True, histtype='step')
             axs[i].set_title(k)
         if filename is not None:
