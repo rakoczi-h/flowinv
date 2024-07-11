@@ -7,14 +7,22 @@ class GravitySurvey():
     Parameters
     ----------
         ranges: list[list] [[x_min, x_max], [y_min, y_max], [z_min, z_max]]
-            defines the range of the survey in the 3 different directions
-            if only a single value is given for the z values, that dimension is assumed to be a constant value (no elevation changes)
+            Defines the range of the survey in the 3 different directions
+            If only a single value is given for the z values, that dimension is assumed to be a constant value (no elevation changes) (default:None)
         survey_coordinates: np.array
-            expected shape is [num_points, 3]
+            Expected shape is [num_points, 3] (default:None)
         noise_scale : float
-            the standard deviation of gaussian noise
+            The standard deviation of gaussian noise (default: None)
         survey_shape: list
-            the number of survey points on a grid, if a grid is used, or the number of survay points in total if a random arrangement is used.
+            The number of survey points on a grid, if a grid is used, or the number of survay points in total if a random arrangement is used. (default: None)
+        noise_on_location_scale: float
+            The standard deviation of the noise added to the survey locations
+        noise: array
+            Array survey noise. Can be made from noise_scale
+        noise_on_location: array
+            Array of noise to be added to the survey_coordinates. 
+        gravity: array
+            Array of gravity measurements.
     """
     def __init__(self, ranges=None, survey_coordinates=None, noise_scale=None, noise_on_location_scale=0.0, survey_shape=None):
         self.ranges = ranges
@@ -58,7 +66,7 @@ class GravitySurvey():
         ----------
             survey_shape: list
                 the type of survey configuration is inferred from the lenght of the list
-                len = 1 --> randomised surve
+                len = 1 --> randomised survey locations
                 len = 2 --> 2D grid, [number of points in the x dimension, y dimension]
                 len = 3 --> 3D grid, [x, y, z]
         """
@@ -116,6 +124,9 @@ class GravitySurvey():
         return survey_coordinates
 
     def make_noise(self, noise_scale=None):
+        """
+        Generates an array of gaussian noise based on the given noise_scale. The noise_scale is the std of the noise, and the mean is assumed to be 0.0.
+        """
         if noise_scale is not None:
             self.noise_scale = noise_scale
         else:
@@ -126,8 +137,11 @@ class GravitySurvey():
         return self.noise
 
     def make_noise_on_location(self, noise_on_location_scale=None):
+        """
+        Generates noise for the location of the survey points, returns an array of the shape [num survey points, 3]. The input is the std of the noise.
+        """
         if noise_on_location_scale is not None:
-            self.noise_on_location_scale = noise_scale
+            self.noise_on_location_scale = noise_on_location_scale
         else:
             if self.noise_on_location_scale is None:
                 raise ValueError("noise scale was not added as an input or attribute to the class.")
@@ -136,6 +150,9 @@ class GravitySurvey():
         return self.noise_on_location
 
     def get_number_of_surveypoints(self):
+        """
+        Calculates the number of survey points from the survey_shape or survey_coordinates.
+        """
         if self.survey_coordinates is not None:
             num_points = np.shape(self.survey_coordinates)[0]
         elif self.survey_shape is not None:
@@ -153,7 +170,7 @@ class GravitySurvey():
 
     def snr(self, noise_scale=None):
         """
-        Compute the SNR as RMS(signal)/RMS(noise)
+        Compute the SNR as RMS(signal)/RMS(noise). The input is the std of the noise.
         """
         if noise_scale is None:
             noise_scale = self.noise_scale
@@ -167,6 +184,12 @@ class GravitySurvey():
     def plot_pixels(self, filename='survey.png', include_noise=False):
         """
         Creates a simple pixelised image of the survey. Can only be done for gridded data.
+        Parameters
+        ----------
+            filename: str
+                The location where the image is saved.
+            include_noise: bool
+                If True, the noise is added to the survey before plotting.
         """
         if len(self.survey_shape) == 1:
             raise ValueError("This function is only available for gridded data points.")
@@ -189,6 +212,12 @@ class GravitySurvey():
     def plot_contours(self, filename='survey.png', include_noise=False):
         """
         Creates a contour plot of the survey.
+        Parameters
+        ----------
+            filename: str
+                The location where the image is saved.
+            include_noise: bool
+                If True, the noise is added to the survey before plotting.
         """
         if self.gravity is None:
             raise ValueError("Compute the gravity first.")

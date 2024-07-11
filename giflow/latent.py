@@ -10,8 +10,14 @@ class FlowLatent():
     Class containing samples and statistics about the latent space of the flow.
     Parameters
     ----------
-        samples: np.array of shape [no. samples, no. parameters]
+        samples: array
+            Shape [no. samples, no. parameters]
             The samples drawn from the latent space
+        log_probabilites: array
+            The vector containing the log_probabilities corresponding to each sample (Default: None)
+        kl_divergence: dict
+            keys: 'mean': the mean of the kl divergence across all the dimensions. The kl-divergence here refers to the distance between a normal distribution and the latent space.
+                  'std'" the standard deviation. (Default: {'mean': None, 'std': None}
     """
     def __init__(self, samples, log_probabilities=None, kl_divergence={'mean':None, 'std':None}):
         if (log_probabilities is not None):
@@ -31,7 +37,7 @@ class FlowLatent():
         Parameters
         ----------
             n: int
-                The number of grid points we are calculating in the comparison.
+                The number of grid points we are calculating in the comparison. (Default: 500)
         Output
         ------
             kl_divergence: dict
@@ -64,10 +70,12 @@ class FlowLatent():
         Parameters
         ----------
             bins: int
-                The number of bins to use in the histogram
+                The number of bins to use in the histogram. (Default:100)
             filename: str
-                Contains the path to the png file
+                Contains the path to the png file. (Default: 'latent_samples_histogram.png')
         """
+        if filename[-4:] =! '.png':
+            raise ValueError('The filetype for filename has to be .png')
         plt.style.use('seaborn-v0_8-darkgrid')
         for col in self.samples.T:
             print(np.shape(col))
@@ -84,7 +92,16 @@ class FlowLatent():
         plt.savefig(filename)
         plt.close()
 
-    def plot_latent_logprob(self, filename='latent_logprobabilitiess.png'):
+    def plot_latent_logprob(self, filename='latent_logprobabilities.png'):
+        """
+        Plot a histogram of the latent space sample log probabilities.
+        Parameters
+        ----------
+            filename: str
+                The location where the image is saved. (Default: 'latent_logprobabilities.png')
+        """
+        if filename[-4:] =! '.png':
+            raise ValueError('The filetype for filename has to be .png')
         if self.log_probabilities is None:
             raise ValueError('log_probabilities has to be not None.')
         plt.style.use('seaborn-v0_8-darkgrid')
@@ -95,6 +112,16 @@ class FlowLatent():
         plt.close()
 
     def plot_latent_corr(self, filename='latent_correlation.png'):
+        """
+        Plot a image of the correlation matrix in the latent space.
+        Parameters
+        ----------
+            filename: str
+                The location where the image is saved. (Default: 'latent_correlation.png')
+        """
+        if filename[-4:] =! '.png':
+            raise ValueError('The filetype for filename has to be .png')
+
         plt.style.use('seaborn-v0_8-darkgrid')
         sigma = np.corrcoef(self.samples.T)
         plt.figure(figsize=(7,7))

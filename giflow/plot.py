@@ -25,11 +25,11 @@ def make_pp_plot(posterior_samples_list, truths, filename=None, confidence_inter
     truths : list
         list of dictionaries containing the true (injected) values for each observation corresponding to `posteror_samples_list`.
     filename : str, optional
-        Filename to save pp_plot in, by default None (the plot is returned)
+        Filename to save pp_plot in, by default None (the plot is returned) (Default: None)
     confidence_interval : list, optional
-        List of shaded confidence intervals to plot, by default [0.68, 0.95, 0.997]
+        List of shaded confidence intervals to plot, (Default: [0.68, 0.95, 0.997])
     lines : list, optional
-        linestyles to use, by default None (a default bank of linestyles is used)
+        linestyles to use, (Default: None (a default bank of linestyles is used))
     legend_fontsize : str, optional
         legend font size descriptor, by default 'x-small'
     title : bool, optional
@@ -166,6 +166,8 @@ def plot_js_hist(js_divs, keys, filename='js_hist.png'):
              An array containing the js divergence values [no. of parameters, no. of js divergence values]
         keys: list
              List of strings containing the prameter names
+        filename: str
+             The name under which the file is saved. (Default: 'js_hist.png')
     Outputs
     -------
         counts: list of array
@@ -175,6 +177,9 @@ def plot_js_hist(js_divs, keys, filename='js_hist.png'):
         median: float
             The median of the overall distribution
     """
+    if filename[-4:] =! '.png':
+        raise ValueError('The filetype for filename has to be .png')
+
     js_divs_list = []
     for i in range(np.shape(js_divs)[0]):
         js_divs_list.append(js_divs[i,:])
@@ -190,6 +195,20 @@ def plot_js_hist(js_divs, keys, filename='js_hist.png'):
     return counts, bins, median
 
 def make_gif(image_names, image_location='', filename='gif.gif'):
+    """
+    Makes a gif out of input images.
+    Parameters
+    ----------
+        image_names: list
+            The list of the names of the image files to read.
+        image_location: str
+            The directory where the images are located. (Default: '')
+        filename: str
+            The file under which the resulting gif is saved. (Default: 'gif.gif')
+    """
+    if filename[-4:] =! '.gif':
+        raise ValueError('The filetype for filename has to be .gif')
+
     images = []
     for image_name in image_names:
         images.append(imageio.imread(os.path.join(image_location, image_name)))
@@ -208,9 +227,9 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
             The BoxDataSet attribute can be passed to this
             Has to have keys 'noise_scale': float, 'ranges': [[],[],[]], 'survey_shape': float or list
         num: int
-            Number of samples to use
+            Number of samples to use. (Default: 1000)
         include_examples: bool
-            Whether to plot a few individual samples.
+            Whether to plot a few individual samples. (Default: 'compare_survey.png')
     """
     plot_data = []
     coordinates = []

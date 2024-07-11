@@ -1,6 +1,7 @@
 import numpy as np
 import sklearn.preprocessing
 import sklearn.decomposition
+from sklearn.utils.validation import check_is_fitted
 
 class Scaler:
     """
@@ -9,9 +10,9 @@ class Scaler:
         scalers: list
             The scalers that are to be used for each data array that is given to the class. Each need to be a class from sklearn.preprocessing. The length of this list will be compared to the length of the data list when trying to scale.
         compressors: list
-            The compressors to be used. These each need to be of type sklearn.decomposition
+            The compressors to be used. These each need to be of type sklearn.decomposition (Default: None)
         labels: list
-            The name of each data array that is to be scaled.
+            The name of each data array that is to be scaled. (Default: None)
     """
     def __init__(self, scalers: list, compressors=None, labels=None):
         self.scalers = scalers
@@ -37,12 +38,32 @@ class Scaler:
 
 
     def scale_data(self, data, fit=False):
+        """
+        Scales the given data using the scalers and compressors given in this class.
+        Parameters
+        ----------
+            data: list
+                List of data arrays to be scaled. This has to have the smae length as the self.scalers list, and self.compressors if given. 
+                These list elements are scaled separately and then concatenated into an array ready to be used for training a neural network.
+            fit: bool
+                If True, the scaler and compressor are fitted to the data before scaling and the fitted scalers are saved in this class. If False, the data is scaled based on previously fitted scalers.
+        Output
+        ------
+            np.ndarray
+        """
         if not isinstance(data, list):
             raise ValueError("data has to be a list")
         if len(data) != len(self.scalers):
             raise ValueError("The number of scalers and data arrays are not the same.")
+
         if fit:
             print("Fitting scaler and compressor to data set...")
+        else:
+            for s in self.scalers:
+                check_is_fitted(s)
+            if self.compressors is not None:
+                for c in self.compressors:
+                    check_is_fitted(c)
 
         self.data_sizes = [np.shape(d) for d in data]
         data_rescaled = []
@@ -71,10 +92,25 @@ class Scaler:
         return data_rescaled
 
     def inv_scale_data(self, data):
+        """
+        Inverse scales the fiven data using the calers and compressors given in this class.
+        Parameters
+        ----------
+            data: array
+                This data is split up based on the expected output. The input to this function is assumed to have the same shape and arrangement of data as the output of scale_data.
+        Outputs
+        -------
+            list of unscaled data arrays
+        """
         desired_shape = np.sum([self.scaled_data_sizes[i][1] for i in range(len(self.scaled_data_sizes))])
 
         if np.shape(data)[1] != desired_shape:
             raise ValueError('The input data is not the right shape.')
+        for s in self.scalers:
+            check_is_fitted(s)
+        if self.compressors is not None:
+            for c in self.compressors:
+                check_is_fitted(c)
         data_list = []
         for sds in self.scaled_data_sizes:
             data_list.append(data[:,:sds[1]])

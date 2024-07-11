@@ -254,7 +254,9 @@ class FlowResults:
         print("Made corner plot...")
 
 class BoxFlowResults(FlowResults):
-
+    """
+    Child class of FlowResults for specifically handling visualisation and processing of results from inversion concerning boxes. 
+    """
     def rescale(self, scale_factor, parameters_to_rescale=[]):
         for i, pl in enumerate(self.parameter_labels):
             if pl in parameters_to_rescale:
@@ -351,10 +353,20 @@ class BoxFlowResults(FlowResults):
         Parameters
         ----------
             slice_coords: list
-                The coordinate of voxels along which to slice the volume.
+                The coordinate of voxels along which to slice the volume. Has to have length 3.
             filename: str
                 The name of the file under which it will be saved.
+            plot_truth: bool
+                Defines whether the true voxelised model is added to the plot.
+            normalisation: list
+                If not None, the list has to be two elements long, and it defines the color normalisation. [minimum value of color scaler, maximum value]
         """
+        if normalisation is not None:
+            if len(normalisation)=! 2:
+                raise ValueError('The normalisation input needs to be a list with 2 elements, defining the minimum and maximum of the color scale')
+        if len(slice_coords)=! 3:
+                raise ValueError('Only three slices can be defined')
+
         if plot_truth:
             if self.true_parameters is None:
                 raise ValueError("Give the model as the true_parameters attribute to the class")
@@ -489,15 +501,17 @@ class BoxFlowResults(FlowResults):
         plt.savefig(os.path.join(self.directory, filename), bbox_inches='tight', transparent=True)
         plt.close()
 
-    def plot_3D_statistics(self, model_framework, filename='3D_statistics.html', axis_limits=None, axis_scale=None):
+    def plot_3D_statistics(self, model_framework, filename='3D_statistics.html', axis_scale=None):
         """
         Creates a 3D plot. Either can plot statistics, or can plot an animated gif of samples.
         Parameters
         ----------
             model_framework: dict
                 Dictionary containing information about the box model setup.
-            mode: str
-                Can be 'mean', 'mode', 'str', 'samples'
+            filename: str
+                The location where the image is saved.
+            axis_scale: float
+                The coordinates of the voxel grid are scaled based on this value.
 
         """
         box = Box()

@@ -74,12 +74,18 @@ class FlowModel():
         super().__setattr__(name, value)
 
     def to_json(self):
+        """
+        Turns the flowmodel parameters into json file. The hyperparameters and the data size are incldued.
+        """
         data = {"hyperparameters": self.hyperparameters,
                 "datasize": self.datasize}
         with open(os.path.join(self.save_location, 'flow_info.json'), 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
     def getAttributes(self):
+        """
+        Helper function that returns only the useful attributes of the class.
+        """
         return {name: attr for name, attr in self.__dict__.items()
                 if not name.startswith("__") 
                 and not callable(attr)
@@ -91,7 +97,9 @@ class FlowModel():
         Parameters
         ----------
             location: str
-                directory where the FlowModel.pkl and the flow.pt files are located.
+                Directory where the FlowModel.pkl and the flow.pt files are located.
+            device: torch.device (defaul: 'cuda')
+                The device to send the network to.
         """
         print(location)
         with open(os.path.join(location, 'FlowModel.pkl'), 'rb') as file:
@@ -114,9 +122,9 @@ class FlowModel():
             train_dataset: torch.utils.data.TensorDataset
                 The validation dataset
             scheduler: torch.optim.lr_scheduler
-                If provided, it is used to schedule the learning rate decay
+                If provided, it is used to schedule the learning rate decay. Defaults to None.
             device: torch.device
-                The device to send the flow to. Has to match that of the datasets
+                The device to send the flow to. Has to match that of the datasets. Defaults to cuda.
         """
         # Creating the flow
         if self.flowmodel is None:
@@ -152,7 +160,7 @@ class FlowModel():
         start_train = datetime.now()
         for i in range(self.hyperparameters['epochs']):
             start_epoch = datetime.now()
-            train_loss, val_loss = self.train_iter(optimiser, validation_loader, train_loader, device)
+            train_loss, val_loss = self.train_iter(optimiser, validation_loader, train_loader)
             self.loss['train'].append(train_loss)
             self.loss['val'].append(val_loss)
             if scheduler is not None:
@@ -204,9 +212,15 @@ class FlowModel():
 
         print(f"Run time: \t {end_train-start_train}")
 
-    def train_iter(self, optimiser: torch.optim, validation_loader, train_loader, device):
+    def train_iter(self, optimiser: torch.optim, validation_loader, train_loader):
         """
-        The training iteration function. A completion of one of these iteration is considered one epoch.
+        The training iteration function. A completion of one of these iteration is considered one epoch. Called in train function.
+            optimiser: torch.optim
+                The optimiser to use.
+            validation_loader: torch.data.DataLoader
+                The dataloader containing the validation data
+            train_loader: torch.data.DataLoader
+                The dataloader containing the training data
         """
         self.flowmodel.train()
         train_loss = 0.0
@@ -230,6 +244,9 @@ class FlowModel():
         return train_loss, val_loss
 
     def construct(self):
+        """
+        Makes the RealNVP flow from the hyperparameters.
+        """
         flow = RealNVP(
             n_inputs=self.hyperparameters['n_inputs'],
             n_transforms=self.hyperparameters['n_transforms'],
@@ -243,6 +260,9 @@ class FlowModel():
 
     # --------------------- Plotting Methods -------------------------------------
     def plot_loss(self):
+        """
+        Makes a plot of the training and validation loss wrt. number of epochs.
+        """
         plt.plot(self.loss['train'], label='Train')
         plt.plot(self.loss['val'], label='Val.')
         plt.xlabel('Epoch')
@@ -254,6 +274,11 @@ class FlowModel():
     def plot_flow_diagnostics(self, latent: FlowLatent, timestamp=None):
         """
         Plots diagnostics during training.
+        Parameters:
+            latent: FlowLatent
+                Used to generate plots relating to the latent space
+            timestamp:
+                Any value we want to pass to be printed as an indication of timestamp. Defaults to None.
         """
 
         plt.figure(figsize=(20,30))
@@ -310,12 +335,14 @@ class FlowModel():
 
     # ------------------------ Drawing samples ------------------------------------
     def forward_and_logprob(self, dataset: torch.utils.data.TensorDataset, num=None):
-        """Drawing samples from the latent space and returning their corresponding log probabilties too
+        """
+        Drawing samples from the latent space and returning their corresponding log probabilties too
         Parameters
         ----------
             dataset: tensor dataset
+                The data set containg the samples which we want to forward model to the latent space.
             num: int
-                the number of samples to draw
+                the number of samples to draw (Defaults to None)
         Output
         ------
             z_: array
@@ -335,6 +362,15 @@ class FlowModel():
         return z_, log_prob
 
     def sample_and_logprob(self, conditional: torch.Tensor, num=1):
+        """
+        Drawing samples from the posterior and return their corresponding log probabilites.
+        Parameters
+        ----------
+            conditional: torch.Tensor
+                The conditional based on which we want to sample. [num_conditionals, lenght of conditional]. Can pass multiple conditionals.
+            num: int
+                Number of samples to draw per conditional. (Default: 1)
+        """
         self.flowmodel.eval()
         if conditional.dim() == 1:
             conditional = torch.unsqueeze(conditional, dim=0)
@@ -347,31 +383,28 @@ class FlowModel():
         s = s.cpu().numpy()
 
         s = self.scalers['data'].inv_scale_data(s)[0]
-        #s = self.scalers['data'].inverse_transform(s)
         l = l.cpu().numpy()
         return s, l
 
 
     # --------------------------- Testing --------------------------------------
     def pp_test(self, validation_dataset: torch.utils.data.TensorDataset, num_samples=2000, num_cases=100, num_params=10, parameter_labels=None, filename='pp_plot.png'):
-        """Draws samples from the flow and constructs a p-p plot.
+        """
+        Draws samples from the flow and constructs a p-p plot.
         Parameters
         ----------
             validation_dataset: torch.utils.data.TensorDataset
                 The data set for which we want to compute the pp values
             num_samples: int
-                Number of samples to draw for each test case
+                Number of samples to draw for each test case (Default: 2000)
             num_cases: int
-                The number of test cases to consider
+                The number of test cases to consider (Default: 100)
             num_params: int
-                The number of parameters to plot
+                The number of parameters to plot (Default: 10)
             parameter_labels: list of str
-                The name of the parameters. If not given, then the names will be automatically generated to be ['q1', 'q2', ...]
-            n_cases: int
-                The number of parameters to plot. Only used if keys is not given.
-        Output
-        ------
-            pp plot image saved at saveloc.
+                The name of the parameters. If not given, then the names will be automatically generated to be ['q1', 'q2', ...] (Default: None)
+            filename: str
+                The location where the image is saved. (Default: 'pp_plot.png')
         """
         truths = validation_dataset.tensors[0][:int(num_cases)].cpu().numpy()
         truths = self.scalers['data'].inv_scale_data(truths)[0]
@@ -411,9 +444,9 @@ class FlowModel():
             conditional: np.array
                 The array containing the conditionals.
             device: torch.device
-                Has to match with the one provided to train()
+                Has to match with the one provided to train() (Default: 'cuda')
             scale: bool
-                If true, the data given to the function will be scaled before it is turned into a datalaoder.
+                If true, the data given to the function will be scaled before it is turned into a datalaoder. (default: True)
         """
         if scale:
             if self.scalers['conditional'] is None:
@@ -431,6 +464,9 @@ class FlowModel():
         return dataset
 
 def save_flow(flow : FlowModel):
+    """
+    Function to save flowmodel as a pkl file and info about it in a json.
+    """
     flow.to_json()
     with open(os.path.join(flow.save_location, 'FlowModel.pkl'), 'wb') as file:
         pkl.dump(flow.getAttributes(), file)
