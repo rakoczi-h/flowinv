@@ -21,9 +21,9 @@ def rescale_bilby_samples(bilby_parameter_dict, parameters_to_rescale, scale_fac
 
 
 
-flow_location = '/data/www.astro/2263373r/giflow/box/voxelised/noisy_grid/run_2024-07-02 15:03:03.268250/'
+flow_location = '/data/www.astro/2263373r/giflow/box/voxelised/noisy_grid/run_2024-07-09 10:56:14.929649/'
 
-save_location = os.path.join(flow_location, 'qinetiq_data_v2/')
+save_location = os.path.join(flow_location, 'qinetiq_data/')
 if not os.path.exists(save_location):
     os.mkdir(save_location)
 # -------------------- Reading the flow --------------------------
@@ -39,7 +39,7 @@ model_framework = dt_val.model_framework
 
 #print(dt_val.survey_framework)
 # -------------------- Reading the data --------------------------
-data_loc = '/scratch/balta0/2263373r/giflow/box/qinetiq_data_v8.csv'
+data_loc = '/scratch/balta0/2263373r/giflow/qinetiq_data.csv'
 df = pd.read_csv(data_loc)
 
 x = np.array(df['x'])
@@ -48,6 +48,14 @@ z = np.zeros(np.shape(x))
 
 grav = -1*np.array(df['grav'])
 grav = grav - np.min(grav)
+
+#shuffling the points
+i_arr = np.arange(grav.size)
+np.random.shuffle(i_arr)
+grav = grav[i_arr]
+x = x[i_arr]
+y = y[i_arr]
+z = z[i_arr]
 
 noise_scale = 4.7357/np.sqrt(4)
 
@@ -111,14 +119,14 @@ result.directory = save_location
 #result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
 
 
-result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png", normalisation=[dt_val.boxes[0].density, 0.0])
+result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png", normalisation=[dt_val.boxes[0].density, 0.0], slice_coords=[2,5,8])
 
 
 result.plot_3D_statistics(model_framework=dt_test.model_framework, axis_scale=scale_factor)
 
 
-result.plot_3D_samples(model_framework=dt_test.model_framework, num_to_plot=2000, mode='cumulativemean', filename='3D_cumulativemean.gif', axis_scale=scale_factor)
-result.plot_3D_samples(model_framework=dt_test.model_framework, num_to_plot=50, mode='maxlikelihood', filename='3D_samples.gif', axis_scale=scale_factor)
+#result.plot_3D_samples(model_framework=dt_test.model_framework, num_to_plot=2000, mode='cumulativemean', filename='3D_cumulativemean.gif', axis_scale=scale_factor)
+#result.plot_3D_samples(model_framework=dt_test.model_framework, num_to_plot=50, mode='maxlikelihood', filename='3D_samples.gif', axis_scale=scale_factor)
 
 
 
