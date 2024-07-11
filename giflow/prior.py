@@ -86,7 +86,7 @@ class Prior():
 
         fig, axs = plt.subplots(rows, cols, gridspec_kw={"wspace": 0.1, "hspace": 0.9})
         axs = axs.flatten()
-        print(axs)
+
         for i, k in enumerate(self.keys):
             axs[i].hist(samples[k], bins=100, density=True, histtype='step')
             axs[i].set_title(k)
