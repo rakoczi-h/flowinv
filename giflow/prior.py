@@ -1,4 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
+
+plt.style.use('seaborn-v0_8-deep')
 
 class Prior():
     """
@@ -71,4 +74,19 @@ class Prior():
         elif returntype == 'dict':
             return samples
 
+    def plot_distributions(self, filename=Nonr):
+        num = len(keys)
+        cols = 2
+        rows = int(num/2)
 
+        samples = self.sample(size=2000, returntype='dict')
+
+        fig, axs = plt.subplots(rows, cols)
+        for i, k in enumerate(keys):
+            axs[i].hist(samples[k], bins=100, density=True, histtype='step')
+            axs[i].set_title(k)
+        if filename is not None:
+            plt.savefig(filename)
+            plt.close()
+        else:
+            plt.show()
