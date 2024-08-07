@@ -69,6 +69,10 @@ class GravitySurvey():
                 len = 1 --> randomised survey locations
                 len = 2 --> 2D grid, [number of points in the x dimension, y dimension]
                 len = 3 --> 3D grid, [x, y, z]
+        Output
+        ------
+            survey_coordinates: np.ndarray
+                Shape: [number of survey locations, (x,y,z) coordinates]
         """
         if self.ranges is None:
             raise ValueError('The ranges of the survey coordinates are not defined.')
@@ -125,7 +129,15 @@ class GravitySurvey():
 
     def make_noise(self, noise_scale=None):
         """
-        Generates an array of gaussian noise based on the given noise_scale. The noise_scale is the std of the noise, and the mean is assumed to be 0.0.
+        Generates an array of gaussian noise based on the given noise_scale.
+        Parameters
+        ----------
+            noise_scale: float
+                The standard deviation of the gaussian noise. If None, then taken from the class attributes.
+        Output
+        ------
+            noise: np.ndarray
+                Same number of elements ad survey points in the class. Contains simulated noise with the desired standard deviation.
         """
         if noise_scale is not None:
             self.noise_scale = noise_scale
@@ -138,7 +150,15 @@ class GravitySurvey():
 
     def make_noise_on_location(self, noise_on_location_scale=None):
         """
-        Generates noise for the location of the survey points, returns an array of the shape [num survey points, 3]. The input is the std of the noise.
+        Generates noise for the location of the survey points.
+        Parameters
+        ----------
+            noise_on_location_scale: float
+                If none, taken from the class. Otherwise defines the standard deviation of the noise added to the survey locations.
+        Output
+        ------
+            noise_on_location: np.ndarray
+                Returns an array of the shape [num survey points, 3] with simulated noise. Can be added to the survey_coordinates.
         """
         if noise_on_location_scale is not None:
             self.noise_on_location_scale = noise_on_location_scale
@@ -152,6 +172,10 @@ class GravitySurvey():
     def get_number_of_surveypoints(self):
         """
         Calculates the number of survey points from the survey_shape or survey_coordinates.
+        Output
+        -----
+            num_points: int
+                the number of survey points
         """
         if self.survey_coordinates is not None:
             num_points = np.shape(self.survey_coordinates)[0]
@@ -164,13 +188,28 @@ class GravitySurvey():
         return num_points
 
     def add_noise(self):
+        """
+        Adds simulated noise to the gravity measurements.
+        Output
+        ------
+            np.ndarray
+                gravity+noise
+        """
         if self.noise is None:
             raise ValueError("Noise has not been defined.")
         return self.gravity + self.noise
 
     def snr(self, noise_scale=None):
         """
-        Compute the SNR as RMS(signal)/RMS(noise). The input is the std of the noise.
+        Compute the SNR. NOT USED!
+        Parameters
+        ----------
+            noise_scale: float
+                The standard deviation of the survey noise. If None, then taken from the class attributes.
+        Output
+        ------
+            snr: float
+                std of the survey data/ std of the noise
         """
         if noise_scale is None:
             noise_scale = self.noise_scale
@@ -255,4 +294,4 @@ class GravitySurvey():
         self.survey_coordinates[:,1] = self.survey_coordinates[:,1] - y
         self.ranges[0][0], self.ranges[0][1] = self.ranges[0][0]-x, self.ranges[0][1]-x
         self.ranges[1][0], self.ranges[1][1] = self.ranges[1][0]-y, self.ranges[1][1]-y
-        return
+

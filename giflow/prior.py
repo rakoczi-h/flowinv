@@ -44,6 +44,10 @@ class Prior():
                 The number of samples to draw
             returntype: str
                 can be 'array' or 'dict'
+        Output
+        ------
+            samples: np.ndarray or dict
+                Output type based on returntype. Contains samples of the prior distributions.
         """
         if returntype == 'array':
             samples = []

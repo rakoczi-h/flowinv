@@ -112,7 +112,7 @@ class FlowModel():
 
     def train(self, optimiser: torch.optim, validation_dataset: torch.utils.data.TensorDataset, train_dataset: torch.utils.data.TensorDataset, scheduler=None, device=torch.device('cuda')):
         """
-        The main training function, which trains, validates and plots diagnostics.
+        The main training function, which trains, validates and plots diagnostics. Changes the state of the flowmodel attribute of the class.
         Parameters
         ----------
             optimiser: torch.optim
@@ -124,7 +124,7 @@ class FlowModel():
             scheduler: torch.optim.lr_scheduler
                 If provided, it is used to schedule the learning rate decay. Defaults to None.
             device: torch.device
-                The device to send the flow to. Has to match that of the datasets. Defaults to cuda.
+                The device to send the flow to. Has to match that of the datasets. Defaults to cuda..
         """
         # Creating the flow
         if self.flowmodel is None:
@@ -215,12 +215,20 @@ class FlowModel():
     def train_iter(self, optimiser: torch.optim, validation_loader, train_loader):
         """
         The training iteration function. A completion of one of these iteration is considered one epoch. Called in train function.
+        Parameters
+        ----------
             optimiser: torch.optim
                 The optimiser to use.
             validation_loader: torch.data.DataLoader
                 The dataloader containing the validation data
             train_loader: torch.data.DataLoader
                 The dataloader containing the training data
+        Output
+        ------
+            train_loss: float
+                The value of the training loss at the end of the epoch.
+            val_loss: float
+                The value of the validation loss at the end of the epoch.
         """
         self.flowmodel.train()
         train_loss = 0.0
@@ -246,6 +254,10 @@ class FlowModel():
     def construct(self):
         """
         Makes the RealNVP flow from the hyperparameters.
+        Output
+        ------
+            flow: glasflow.flows.RealNVP
+                The flow model.
         """
         flow = RealNVP(
             n_inputs=self.hyperparameters['n_inputs'],
@@ -345,9 +357,9 @@ class FlowModel():
                 the number of samples to draw (Defaults to None)
         Output
         ------
-            z_: array
+            z_: np.ndarray
                 Laten space samples. Same shape as data.
-            log_prob: array
+            log_prob: np.ndarray
                 The log probabilties of each sample. [no. of samples]
         """
         self.flowmodel.eval()
@@ -370,6 +382,12 @@ class FlowModel():
                 The conditional based on which we want to sample. [num_conditionals, lenght of conditional]. Can pass multiple conditionals.
             num: int
                 Number of samples to draw per conditional. (Default: 1)
+        Output
+        ------
+            s: np.ndarray
+                Posterior samples.
+            l: np.ndarray
+                Log probabilities.
         """
         self.flowmodel.eval()
         if conditional.dim() == 1:
@@ -405,6 +423,12 @@ class FlowModel():
                 The name of the parameters. If not given, then the names will be automatically generated to be ['q1', 'q2', ...] (Default: None)
             filename: str
                 The location where the image is saved. (Default: 'pp_plot.png')
+        Output
+        ------
+            pvals: list
+                Same length as the parameters of the box, maximum 10 (then the rest is ignored)
+            combined_pvals: float
+                The combined p values.
         """
         truths = validation_dataset.tensors[0][:int(num_cases)].cpu().numpy()
         truths = self.scalers['data'].inv_scale_data(truths)[0]
@@ -447,6 +471,10 @@ class FlowModel():
                 Has to match with the one provided to train() (Default: 'cuda')
             scale: bool
                 If true, the data given to the function will be scaled before it is turned into a datalaoder. (default: True)
+        Output
+        ------
+            dataset: torch.utils.data.Tensordataset
+                Dataset suitable for training the network.
         """
         if scale:
             if self.scalers['conditional'] is None:

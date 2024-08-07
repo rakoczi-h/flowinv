@@ -60,6 +60,10 @@ class Box:
                 has to contain the coordinates of the x y z survey locations [number of survey points, 3]
             model_type: str
                 Define which model type to compute the forward model from. Can be parameterised or voxelised. (Default: 'parameterised')
+        Output
+        ------
+            gz: 1D np.array
+                The gravity anomaly corresponding to the box. The size is the number of survey coordinates. 
         """
         if model_type=='parameterised':
             if self.parameters is None:
@@ -258,6 +262,10 @@ class Box:
         ----------
             keys: list
                 The parameter labels to use in the parameterised model. Useful to give when eg. we want to marginalise over some box parameters. If not given, parameter_labels is used. (Default: None)
+        Output
+        ------
+            parameterised_model: np.array
+                The array of parameters of the box.
         """
         if keys is None:
             keys = self.parameter_labels
@@ -267,6 +275,10 @@ class Box:
     def translate_to_parameters(self):
         """
         Takes the parameterised_model and the parameter_labels and translated it into a dictionary.
+        Output
+        ------
+            parameters: dict
+                Dictionary of the parameters of the box.
         """
         if self.parameterised_model is None:
             raise ValueError("Need to define parameterised model")
@@ -276,6 +288,7 @@ class Box:
         for idx, key in enumerate(self.parameter_labels):
             parameters[key] = self.parameterised_model[idx]
         self.parameters = parameters
+        return self.parameters
 
     def make_voxel_grid(self, grid_shape, ranges):
         """Creates a grid of voxel locations for a rectangular volume

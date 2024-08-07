@@ -181,9 +181,6 @@ class FlowResults:
             Location where the image is saved
         filename: str
             The name under which it is saved
-        Output
-        ------
-        image file
         """
         _, ndim = other_samples.shape
         colors = ['#377eb8', '#ff7f00']
