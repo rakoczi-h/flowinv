@@ -1,32 +1,36 @@
-#!/scratch/wiay/2263373r/masters/conda_envs/flowenv/bin/python
+#!/scratch/balta0/2263373r/conda_envs/giflow/bin/python
 import os
 import pickle as pkl
 import torch
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 from datetime import datetime
+import sys
 
 from giflow.scaler import Scaler
 from giflow.read_files import read_files
 from giflow.flowmodel import FlowModel, save_flow
 from giflow.box import BoxDataset
 
+n = int(sys.argv[1])
+
+train_sizes = [100, 1000, 10000, 50000, 100000, 500000, 1000000]
 # ------------- Directories ---------------------------------
-data_location = '/scratch/balta0/2263373r/giflow/box/voxelised/noisy_grid/high_res/' # THIS needs to be edited to give the data location
-save_dir = '/data/www.astro/2263373r/giflow/box/voxelised/noisy_grid/' # THIS needs to be edited to give the saving location
+data_location = '/scratch/balta0/2263373r/giflow/4_paper/parameterised/' # THIS needs to be edited to give the data location
+save_dir = '/data/www.astro/2263373r/giflow/4_paper/parameterised/different_data_sizes/' # THIS needs to be edited to give the saving location
 if not os.path.exists(save_dir):
     os.mkdir(save_dir)
 # ------------- Reading the data ----------------------------
-survey_coordinates_to_include = ['x', 'y', 'noise_scale'] # THIS needs to be edited if we want to include survey coordinates in the conditional
+survey_coordinates_to_include = [] # THIS needs to be edited if we want to include survey coordinates in the conditional
 model_info_to_include=[]
-mix_survey_order = True
+mix_survey_order = False
 
-datasize = 1000000 # THIS needs to be edited to give the overall desired data set size
+datasize = int(train_sizes[n]) # THIS needs to be edited to give the overall desired data set size
 num_files = 2 #number of files that needs to be read
 train_data, train_conditional = read_files(data_location=data_location, filename='trainset', datasize=datasize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
 
 
-valsize = 100000 # THIS needs to be edited to give the overall desired data set size
+valsize = int(train_sizes[n]/10) # THIS needs to be edited to give the overall desired data set size
 num_files = 1 #number of files that needs to be read
 val_data, val_conditional = read_files(data_location=data_location, filename='validationset', datasize=valsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
 
@@ -38,9 +42,9 @@ scalers = [MinMaxScaler()]
 sc_data = Scaler(scalers=scalers)
 sc_data.scale_data(train_data, fit=True)
 
-scalers = [MinMaxScaler(),MinMaxScaler(),MinMaxScaler(),MinMaxScaler()]
+scalers = [MinMaxScaler()]
+#scalers = [MinMaxScaler()]
 sc_conditional=Scaler(scalers=scalers)
-print(np.max(train_conditional[1]))
 sc_conditional.scale_data(train_conditional, fit=True)
 
 scalers = {'conditional': sc_conditional, 'data': sc_data}
@@ -52,8 +56,8 @@ os.mkdir(save_location)
 
 device = torch.device('cuda')
 # THIS needs to be edited for the hyperparameters of the flow
-hyperparameters={'n_inputs': 1000,
-                 'n_conditional_inputs':193,
+hyperparameters={'n_inputs': 7,
+                 'n_conditional_inputs': 64,
                  'n_transforms': 12,
                  'n_blocks_per_transform': 2,
                  'n_neurons': 64,
