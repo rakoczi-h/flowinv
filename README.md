@@ -8,7 +8,7 @@ _G.I.Flow_ contains a machine learning tool applying normalising flows to Bayesi
 ## Installation
 
 ```bash
-git clone https://github.com/rakoczi-h/giflow.git
+git clone https://github.com/rakoczi-hf/flowinv.git
 cd giflow
 ```
 
