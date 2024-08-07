@@ -20,30 +20,24 @@ pip install -r requirements.txt
 ```
 
 ## Usage
+Jupyter notebooks are included that showcase the software tools available.
+
+
 **Data generation:**
-To generate an example data set, with parameterised data representation, run
-```bash
-python make_box_dataset.py
-```
-The data will be saved in */data* in the root folder.
+To generate example data sets, follow the steps in `generate_data.ipynb`. This is a walktrough of defining prior distributions for the source parameters and using the built-in classes to create data sets of rectangular prism voids.
 
 **Gravity inversion:**
-A neural network can be trained with the generated data set from above, or any other data set we desire to use. The example script can be ran as:
+To train a Normalising Flow on the generated data, follow the steps in `train.ipynb`. This is a walktrough of reading in the training and validation data, defining normalisation methods, setting the hyperparameters and the training procedures, and training the neural network.
 
-```bash
-python train.py
-```
-The output is saved in */results* in the root folder.
+**Test:**
+After training, the trained flow model is saved, which then can be used to test the performance of the method or simply use it for inversion. For a walktrough of the available testing procedures, follow the steps in `test.ipynb`. This is a walktrough of generating pp-plots, survey consistency plots, and various visualisations of the inversion results.
 
-During training, diagnostics can be plotted and saved.
-![Alt text](/fig/diagnostics.png "Diagnostics")
-
-After training, the trained flow model is saved, which then can be used to test the performance of the method or simply use it for inversion. As long as the problem we are trying to solve is consistent with the training data set, the network does not need to be retrained.
-To run a test with the example set of data and a pre-trained network model:
-
-```bash
-python test.py
-```
+## Authors
+Henrietta Rakoczi (corresponding author)
+Dr Abhinav Prasad
+Dr Karl Toland
+Dr Christopher Messenger
+Prof Giles Hammond
 
 ## Acknowledgements
 The author acknowledges the use of the [_nflows_](https://github.com/uofgravity/nflows#citing-nflows) (C. Durkan et al. (2019)) package to construct implement the normalising flow elements and the [_glasflow_](https://github.com/uofgravity/glasflow) (Williams et al. (2023)) package to construct the neural network. 
