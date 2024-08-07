@@ -12,7 +12,7 @@ from .box import Box
 plt.style.use('seaborn-v0_8-deep')
 matplotlib.rcParams['axes.titlesize'] = 10
 
-def make_pp_plot(posterior_samples_list, truths, filename=None, confidence_interval=[0.68, 0.95, 0.997],
+def make_pp_plot(posterior_samples_list, truths, labels=None, filename=None, confidence_interval=[0.68, 0.95, 0.997],
                  lines=None, legend_fontsize='x-small', title=True,
                  confidence_interval_alpha=0.1, fig=None, ax=None,
                  **kwargs):
@@ -92,10 +92,13 @@ def make_pp_plot(posterior_samples_list, truths, filename=None, confidence_inter
                        len(credible_levels) for xx in x_values])
         pvalue = scipy.stats.kstest(credible_levels[key], 'uniform').pvalue
         pvalues.append(pvalue)
-        try:
-            name = posterior_samples_list[0].priors[key].latex_label
-        except AttributeError:
-            name = key
+        if labels == None:
+            try:
+                name = posterior_samples_list[0].priors[key].latex_label
+            except AttributeError:
+                name = key
+        else:
+            name = labels[ii]
         label = "{} ({:2.3f})".format(name, pvalue)
         ax.plot(x_values, pp, lines[ii], label=label, **kwargs)
     Pvals = namedtuple('pvals', ['combined_pvalue', 'pvalues', 'names'])
@@ -177,7 +180,7 @@ def plot_js_hist(js_divs, keys, filename='js_hist.png'):
         median: float
             The median of the overall distribution
     """
-    if filename[-4:] =! '.png':
+    if filename[-4:] != '.png':
         raise ValueError('The filetype for filename has to be .png')
 
     js_divs_list = []
@@ -206,7 +209,7 @@ def make_gif(image_names, image_location='', filename='gif.gif'):
         filename: str
             The file under which the resulting gif is saved. (Default: 'gif.gif')
     """
-    if filename[-4:] =! '.gif':
+    if filename[-4:] != '.gif':
         raise ValueError('The filetype for filename has to be .gif')
 
     images = []
@@ -231,13 +234,14 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
         include_examples: bool
             Whether to plot a few individual samples. (Default: 'compare_survey.png')
     """
+    num_cases = int(len(results_list))
     plot_data = []
     coordinates = []
     for idx, result in enumerate(results_list):
         coordinates.append(result.survey_coordinates.copy())
         coordinates.append(result.survey_coordinates.copy())
         coordinates.append(result.survey_coordinates.copy())
-        target_array = result.conditional[:,0]
+        target_array = np.array(result.conditional[0])
         target = target_array - np.min(target_array)
         plot_data.append(target)
         mode = model_frameworks_list[idx]['type']
@@ -257,21 +261,23 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
         std = np.std(gzs, axis=0)
         plot_data.append(std)
 
-    titles = ['Target', 'Sample Mean', 'Sample Std']
+    titles = ['Target', 'Mean', 'SD']
     ylabels = ['(a)', '(b)', '(c)']
-    fig, axes = plt.subplots(nrows=3, ncols=3)
-    plt.subplots_adjust(wspace=-0.5, hspace=0.15)
+    fig, axes = plt.subplots(nrows=num_cases, ncols=3)
+    plt.subplots_adjust(wspace=0.15, hspace=0.15)
+    axis_min = -0.4375
+    axis_max = 0.4375
     #vmin1 = np.array([target.min(), mean.min()]).min()
     #vmin2 = std.min()
     #vmax1 = np.array([target.max(), mean.max()]).max()
     #vmax2 = std.max()
     vmin1 = 0
     vmin2 = 0
-    vmax1 = 220
-    vmax2 = 10
+    vmax1 = 4.0
+    vmax2 = 0.08
     levels1 = np.linspace(vmin1, vmax1, 256)
     levels2 = np.linspace(vmin2, vmax2, 256)
-    cmap = 'rainbow'
+    cmap = 'plasma'
     norm1 = matplotlib.colors.Normalize(vmin=vmin1, vmax=vmax1)
     norm2 = matplotlib.colors.Normalize(vmin=vmin2, vmax=vmax2)
     #norm = matplotlib.colors.BoundaryNorm(boundaries=levels, ncolors=15)
@@ -284,29 +290,35 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
         if idx==0 or idx==3 or idx==6:
             ax.plot(coordinates[idx][:,0], coordinates[idx][:,1], 'o', markersize=1, color='black')
             ax.tick_params(axis='y', left=True, labelleft=True, right=False, labelright=False, labelsize=8)
-            ax.set_ylabel(ylabels[int(idx/3)], rotation=0, fontsize=10)
+            #ax.set_ylabel(ylabels[int(idx/3)], rotation=0, fontsize=10)
         else:
             ax.tick_params(axis='y', left=False, labelleft=False, right=False, labelright=False)
-        if any([idx==i for i in [6,7,8]]):
+        if any([idx==i for i in [0,1,2]]):
             ax.set_xlabel('x[m]', fontsize=8)
         if any([idx==i for i in [2,5,8]]):
             ax.set_ylabel('y[m]', fontsize=8)
             ax.yaxis.set_label_position("right")
         if idx==2 or idx==5 or idx==8:
             ax.tricontourf(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels2, cmap=cmap, norm=norm2)
+            ax.tricontour(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=4, colors='k', linewidths=0.2)
             #ax.tricontour(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=10, colors='k', linewidths=0.2)
         else:
             ax.tricontourf(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels1, cmap=cmap, norm=norm1)
-            #ax.tricontour(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=10, colors='k', linewidths=0.2)
-        ax.set(xlim=(np.min(coordinates[0][:,0]), np.max(coordinates[0][:,0])), ylim=(np.min(coordinates[0][:,1]), np.max(coordinates[0][:,1])), aspect='equal')
+            ax.tricontour(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=4, colors='k', linewidths=0.2)
+        ax.set(xlim=(axis_min, axis_max), ylim=(axis_min, axis_max), aspect='equal')
+
+        ax.set_xticks(np.array([-0.25, 0.0, 0.25]))
+        ax.set_yticks(np.array([-0.25, 0.0, 0.25]))
         if any([idx==i for i in [0,1,2]]):
             ax.set(title=titles[idx])
-    cax1 = ax.inset_axes([-2.15, -0.3, 2.0, 0.1])
-    cbar = fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm1, cmap=cmap), orientation='horizontal', ticks=[0.0, 27.5, 55.0, 82.5, 110.0, 137.5, 165.0, 192.5, 220.0], boundaries=levels1, cax=cax1)
+    cax1 = ax.inset_axes([-2.3, -0.3, 2.15, 0.1])
+    cbar = fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm1, cmap=cmap), orientation='horizontal', ticks=[0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0], boundaries=levels1, cax=cax1)
+    #cbar = fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm1, cmap=cmap), orientation='horizontal', boundaries=levels1, cax=cax1)
     cbar.set_label(r'$\Delta$g [$\mu$Gal]', size=8)
     cbar.ax.tick_params(rotation=45, labelsize=8)
-    cax2 = ax.inset_axes([0.05, -0.3, 0.9, 0.1])
-    cbar=fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', ticks=[0.0, 2.5, 5.0, 7.5, 10.0], boundaries=levels2, cax=cax2)
+    cax2 = ax.inset_axes([0.0, -0.3, 1.0, 0.1])
+    cbar=fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', ticks=[0.0, 0.02, 0.04, 0.06, 0.08], boundaries=levels2, cax=cax2)
+    #cbar=fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', boundaries=levels2, cax=cax2)
     cbar.set_label(r'$\Delta$g [$\mu$Gal]', size=8)
     cbar.ax.tick_params(rotation=45, labelsize=8)
     plt.savefig(filename, transparent=False, bbox_inches='tight')
