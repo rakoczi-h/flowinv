@@ -56,7 +56,7 @@ class Box:
         Computes the forward model for the box.
         Parameters
         ----------
-            survey: np.array
+            survey_coordinates: np.array
                 has to contain the coordinates of the x y z survey locations [number of survey points, 3]
             model_type: str
                 Define which model type to compute the forward model from. Can be parameterised or voxelised. (Default: 'parameterised')
