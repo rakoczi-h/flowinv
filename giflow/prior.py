@@ -1,4 +1,6 @@
 import numpy as np
+import scipy.stats
+from scipy.spatial.distance import jensenshannon
 import matplotlib.pyplot as plt
 
 plt.style.use('seaborn-v0_8-deep')
@@ -74,15 +76,16 @@ class Prior():
         elif returntype == 'dict':
             return samples
 
-    def plot_distributions(self, filename=Nonr):
-        num = len(keys)
+    def plot_distributions(self, filename=None):
+        num = len(self.keys)
         cols = 2
         rows = int(num/2)
 
-        samples = self.sample(size=2000, returntype='dict')
+        samples = self.sample(size=3000, returntype='dict')
 
         fig, axs = plt.subplots(rows, cols)
-        for i, k in enumerate(keys):
+        axs = axs.flatten()
+        for i, k in enumerate(self.keys):
             axs[i].hist(samples[k], bins=100, density=True, histtype='step')
             axs[i].set_title(k)
         if filename is not None:
@@ -90,3 +93,39 @@ class Prior():
             plt.close()
         else:
             plt.show()
+
+    def get_js_divergence(self, samples_to_compare, n=500, num_samples=2000):
+        """Function calculating the Jensen-Shannon divergence between the distribution of the samples of this class and another set of samples.
+        The p(x) and q(x) functions are calculated using a KDE of the input samples.
+        This is done for each dimension seperately.
+        Parameters
+        ----------
+            samples_to_compare: array
+                Samples from the other sampler. [no. of samples, no. of dimensions]. Assumed to be in the original data space (not normalised)
+            n: int
+                The number of gridpoints to consider when computing the kdes
+            num_samples: int
+                The number of samples to draw from the prior.
+        Output
+        ------
+            js: array of floats
+                The list of JS-divergence values with length of the no. of parameters/dimensions.
+        """
+        samples = self.sample(size=2000)
+        print(np.shape(samples))
+        print(np.shape(samples_to_compare))
+        js = []
+        for i, dim in enumerate(samples.T):
+            xmin = min([np.min(dim), np.min(samples_to_compare[:num_samples,i])])
+            xmax = max([np.max(dim), np.max(samples_to_compare[:num_samples,i])])
+            # calculate the minimum and maximum from both
+            x_grid = np.arange(xmin, xmax+((xmax-xmin)/n), (xmax-xmin)/n) # the grid values we are using
+            p = scipy.stats.gaussian_kde(dim)
+            p_x = p.evaluate(x_grid)
+            q = scipy.stats.gaussian_kde(samples_to_compare[:,i])
+            q_x = q.evaluate(x_grid)
+            js_pq = np.nan_to_num(np.power(jensenshannon(p_x, q_x), 2))
+            js.append(js_pq)
+        js = np.array(js)
+        return js
+

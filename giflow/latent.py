@@ -74,7 +74,7 @@ class FlowLatent():
             filename: str
                 Contains the path to the png file. (Default: 'latent_samples_histogram.png')
         """
-        if filename[-4:] =! '.png':
+        if filename[-4:] != '.png':
             raise ValueError('The filetype for filename has to be .png')
         plt.style.use('seaborn-v0_8-darkgrid')
         for col in self.samples.T:
@@ -100,7 +100,7 @@ class FlowLatent():
             filename: str
                 The location where the image is saved. (Default: 'latent_logprobabilities.png')
         """
-        if filename[-4:] =! '.png':
+        if filename[-4:] != '.png':
             raise ValueError('The filetype for filename has to be .png')
         if self.log_probabilities is None:
             raise ValueError('log_probabilities has to be not None.')
@@ -119,7 +119,7 @@ class FlowLatent():
             filename: str
                 The location where the image is saved. (Default: 'latent_correlation.png')
         """
-        if filename[-4:] =! '.png':
+        if filename[-4:] != '.png':
             raise ValueError('The filetype for filename has to be .png')
 
         plt.style.use('seaborn-v0_8-darkgrid')

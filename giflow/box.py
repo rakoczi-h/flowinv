@@ -312,6 +312,7 @@ class Box:
         coords_max = np.c_[X_max, Y_max, Z_max]
         coords_max = np.expand_dims(coords_max, axis=2)
         self.voxel_grid = np.concatenate((coords_min, coords_max), axis=2)
+
         return self.voxel_grid
 
     #Plotting
