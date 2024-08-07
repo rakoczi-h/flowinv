@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import pandas as pd
 from glasflow.flows import RealNVP
 from sklearn.model_selection import train_test_split
 from datetime import datetime
@@ -171,6 +172,9 @@ class FlowModel():
             # Plotting the loss
             if not i % loss_plot_freq:
                 self.plot_loss()
+                data = {'train': self.loss['train'], 'val': self.loss['val']}
+                df_loss = pd.DataFrame(data)
+                df_loss.to_csv(os.path.join(self.save_location, 'loss.csv'))
             # Testing
             if not i % test_freq and i != 0:
                 torch.save(self.flowmodel.state_dict(), os.path.join(self.save_location, 'flow.pt'))
@@ -429,7 +433,7 @@ class FlowModel():
                 posteriors.append(posterior)
                 injections.append(injection)
         print("Calculated results for p-p...")
-        _, pvals, combined_pvals = make_pp_plot(posteriors, injections, filename=os.path.join(self.save_location, filename))
+        _, pvals, combined_pvals = make_pp_plot(posteriors, injections, filename=os.path.join(self.save_location, filename), labels=parameter_labels)
         print("Made p-p plot...")
         return pvals, combined_pvals
 
