@@ -177,7 +177,7 @@ def plot_js_hist(js_divs, keys, filename='js_hist.png'):
         median: float
             The median of the overall distribution
     """
-    if filename[-4:] =! '.png':
+    if filename[-4:] != '.png':
         raise ValueError('The filetype for filename has to be .png')
 
     js_divs_list = []
@@ -206,7 +206,7 @@ def make_gif(image_names, image_location='', filename='gif.gif'):
         filename: str
             The file under which the resulting gif is saved. (Default: 'gif.gif')
     """
-    if filename[-4:] =! '.gif':
+    if filename[-4:] != '.gif':
         raise ValueError('The filetype for filename has to be .gif')
 
     images = []

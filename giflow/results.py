@@ -359,9 +359,9 @@ class BoxFlowResults(FlowResults):
                 If not None, the list has to be two elements long, and it defines the color normalisation. [minimum value of color scaler, maximum value]
         """
         if normalisation is not None:
-            if len(normalisation)=! 2:
+            if len(normalisation) != 2:
                 raise ValueError('The normalisation input needs to be a list with 2 elements, defining the minimum and maximum of the color scale')
-        if len(slice_coords)=! 3:
+        if len(slice_coords) != 3:
                 raise ValueError('Only three slices can be defined')
 
         if plot_truth:
