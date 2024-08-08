@@ -29,8 +29,6 @@ To generate example data sets, follow the steps in `generate_data.ipynb`. This i
 **Gravity inversion:**
 To train a Normalising Flow on the generated data, follow the steps in `train.ipynb`. This is a walktrough of reading in the training and validation data, defining normalisation methods, setting the hyperparameters and the training procedures, and training the neural network.
 
-**Test:**
-After training, the trained flow model is saved, which then can be used to test the performance of the method or simply use it for inversion. For a walktrough of the available testing procedures, follow the steps in `test.ipynb`. This is a walktrough of generating pp-plots, survey consistency plots, and various visualisations of the inversion results.
 
 ## Authors
 Henrietta Rakoczi (corresponding author)
