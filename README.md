@@ -1,6 +1,6 @@
 # G.I.Flow
 _G.I.Flow_ contains a machine learning tool applying normalising flows to Bayesian gravity inversion. This project has two aspects to it:
-1. Generate a data set consisting of rectangular prism (box) void. Two different representations can be chosen.
+1. Generate a data set consisting of rectangular prism (box) voids. Two different representations can be chosen.
    - The box can be described by 7 parameters and the forward model described in [Li et al. (1998)](https://link.springer.com/article/10.1023/A:1006554408567) is applied to compute the gravitational signal at the given gravimetry survey locations.
    - The box can also be described as an array of density values corresponding to a grid of voxels, and the forward model can be computed for each voxel seperately, and the results are summed for all survey locations.
 2. Using the generated data set a neural network can be trained which uses a normalising flow method to infer the parameters of the box. Tools to test the network and plot the results are also available.
