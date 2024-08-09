@@ -68,13 +68,6 @@ for i in range(testsize):
 for i, result in enumerate(results):
     result.corner_plot(filename="corner_plot.png")
 
-# VOXELISED MODEL COMPARISON
-for i, result in enumerate(results):
-    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png",
-                                     plot_truth=True,
-                                     normalisation=[-2500.0, 500.0],
-                                     model_framework=dt_test.model_framework,
-                                     slice_coords=[1, 4, 8])
 ## 3D PLOT COMPARISON PLOT
 #for i, result in enumerate(results):
 #    #result.plot_3D_statistics(dt_test.model_framework)
