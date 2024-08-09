@@ -101,7 +101,6 @@ class FlowModel():
             device: torch.device (defaul: 'cuda')
                 The device to send the network to.
         """
-        print(location)
         with open(os.path.join(location, 'FlowModel.pkl'), 'rb') as file:
             attr = pkl.load(file)
         for key in list(attr.keys()):
