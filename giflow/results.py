@@ -408,8 +408,9 @@ class BoxFlowResults(FlowResults):
                 samples = self.samples
         else:
             samples = self.samples
+        print(np.shape(samples))
 
-        d = round(np.power(np.shape(samples[0])[0], 1/3))
+        d = round(np.power(np.shape(samples[0,:])[0], 1/3))
         s1, s2, s3 = slice_coords
         if plot_truth:
             shift_idx = 0

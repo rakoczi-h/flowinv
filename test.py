@@ -13,13 +13,14 @@ from giflow.plot import plot_js_hist
 from giflow.read_files import read_files
 from giflow.latent import FlowLatent
 
-survey_coordinates_to_include = []
-#survey_coordinates_to_include = ['x', 'y', 'noise_scale']
+#survey_coordinates_to_include = []
+survey_coordinates_to_include = ['x', 'y', 'noise_scale']
 model_info_to_include= []
 mix_survey_order = False
-bilby_location = '/data/www.astro/2263373r/giflow/4_paper/bilby/'
-#bilby_location = None
-flow_location = '/data/www.astro/2263373r/giflow/4_paper/parameterised/different_data_sizes/run_2024-08-04 11:17:38.751940/'
+#bilby_location = '/data/www.astro/2263373r/giflow/4_paper/bilby/'
+bilby_location = None
+flow_location = '/data/www.astro/2263373r/giflow/4_paper/voxelised_noisy/run_2024-07-30 20:56:45.690508'
+
 # -------------------- Reading the flow --------------------------
 device = torch.device('cuda')
 flow=FlowModel()
@@ -36,87 +37,72 @@ val_data, val_conditional = read_files(data_location=data_location, filename='va
 
 val_dataset = flow.make_tensor_dataset(val_data, val_conditional, device=device, scale=True)
 
-latent_samples, latent_logprobs = flow.forward_and_logprob(val_dataset)
-latent_state = FlowLatent(latent_samples, log_probabilities=latent_logprobs)
-kl = latent_state.get_kl_divergence_statistics()
-mean_kl = np.nan_to_num(kl['mean'], nan=2.0, posinf=2.0, neginf=2.0)
+# -------------------- Test data  ------------------
+with open(os.path.join(flow.data_location, "testset_to_present_0.pkl"), 'rb') as file:
+#with open("/data/wiay/2263373r/giflow/box/qinetiq_dummy_set.pkl", 'rb') as file:
+    dt_test = pkl.load(file)
+keys = dt_test.parameter_labels
+labels = [r'$c_x$', r'$c_y$', r'$c_z$', r'$l_x$', r'$l_y$', r'$l_z$', r'$\alpha$']
+priors = dt_test.priors
 
-df = pd.DataFrame(data={'mean': mean_kl}, index=[0])
-df.to_csv(os.path.join(flow_location, 'kl.csv'))
+prior_bounds = []
+for k in keys:
+    p = priors.distributions[k]
+    prior_bounds.append([p[1], p[2]])
 
-## -------------------- Test data  ------------------
-#with open(os.path.join(flow.data_location, "testset_to_present_0.pkl"), 'rb') as file:
-##with open("/data/wiay/2263373r/giflow/box/qinetiq_dummy_set.pkl", 'rb') as file:
-#    dt_test = pkl.load(file)
-#keys = dt_test.parameter_labels
-#labels = [r'$c_x$', r'$c_y$', r'$c_z$', r'$l_x$', r'$l_y$', r'$l_z$', r'$\alpha$']
-#priors = dt_test.priors
-#
-#prior_bounds = []
-#for k in keys:
-#    p = priors.distributions[k]
-#    prior_bounds.append([p[1], p[2]])
-#
-#
-#
-#testsize = 4 # THIS needs to be edited to give the overall desired data set size
-#num_files = 1 #number of files that needs to be read
-#test_data, test_conditional = read_files(data_location=data_location, filename='testset_to_present', datasize=testsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
-#
-#
-##z = np.zeros(np.shape(test_conditional[2]))
-##survey_coordinates = np.c_[test_conditional[1][:,:,None], test_conditional[2][:,:,None], z[:,:,None]]
-##print(np.shape(survey_coordinates))
-#
-#
-#test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
-#print(test_dataset.tensors[1].shape)
-## -------------------- PP data -----------------------
-#
-#with open(os.path.join(flow.data_location, "testset_deep_0.pkl"), 'rb') as file:
-#    dt_pp = pkl.load(file)
-#
-#ppsize = 100 # THIS needs to be edited to give the overall desired data set size
-#num_files = 1 #number of files that needs to be read
-#pp_data, pp_conditional = read_files(data_location=data_location, filename='testset_deep', datasize=ppsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
-#if np.isinf(pp_conditional[0]).any():
-#    print('found inf')
-#
-#pp_dataset = flow.make_tensor_dataset(pp_data, pp_conditional, device=device, scale=True)
-## ------------------- Sampling ---------------------------------
-#results = []
-#for i in range(testsize):
-#    samples, log_probabilities = flow.sample_and_logprob(test_dataset.tensors[1][i], num=2000)
-#    result = BoxFlowResults(samples=samples[:,3:5], conditional=[test_conditional[j][i] for j in range(len(test_conditional))], log_probabilities=log_probabilities, true_parameters=np.array([test_data[0][i]]), parameter_labels=keys, survey_coordinates=dt_test.surveys[0].survey_coordinates)
-#    result.directory = os.path.join(flow_location, f"testcase_to_present_{i}/")
-#    dt_test.surveys[i].plot_contours(filename=os.path.join(result.directory, "survey.png"), include_noise=True)
-#    results.append(result)                   #
-##                                            #
-## ----------------- Consistency tests -------#-------------------
-### P-P TEST                                  #
-##flow.pp_test(validation_dataset=pp_dataset, #parameter_labels=[r'$q_1$', r'$q_2$', r'$q_3$', r'$q_4$', r'$q_5$', r'$q_6$', r'$q_7$', r'$q_8$', r'$q_9$', r'$q_10$'])
-##                                            #
-### CORNER PLOTS                              #
-##for i, result in enumerate(results):        #
-##    result.corner_plot(filename="corner_plot#.png")
-#    #result.corner_plot(filename="corner_plot#_with_prior_bounds.png", prior_bounds=prior_bounds)
-##    print(f"Made {i+1}/{num_test_cases} corn#er plots.")
-#                                             #
-### SURVEY CONSISTENCY
-##for i, result in enumerate(results):
-##    result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=False)
-##    print(f"Made {i+1}/{testsize} survey comparison plots.")
-##
-### VOXELISED MODEL COMPARISON
-##for i,i result in enumerate(results):
-##    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png", plot_truth=True, normalisation=[-2500.0, 500.0], model_framework=dt_test.model_framework, slice_coords=[1, 4, 8])
-##    print(f"Made {i+1}/{testsize} voxel slice comparison plots.")
-##
-### 3D PLOT COMPARISON PLOT
-##for i, result in enumerate(results):
-##    result.plot_3D_statistics(dt_test.model_framework)
-###    result.plot_3D_samples(dt_test.model_framework, mode='cumulativemean', num_to_plot=2000, filename='cumulative_mean_animation.gif')
-#
+testsize = 4 # THIS needs to be edited to give the overall desired data set size
+num_files = 1 #number of files that needs to be read
+test_data, test_conditional = read_files(data_location=data_location, filename='testset_to_present', datasize=testsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
+
+
+test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
+print(test_dataset.tensors[1].shape)
+# -------------------- PP data -----------------------
+
+with open(os.path.join(flow.data_location, "ppset_0.pkl"), 'rb') as file:
+    dt_pp = pkl.load(file)
+
+ppsize = 100 # THIS needs to be edited to give the overall desired data set size
+num_files = 1 #number of files that needs to be read
+pp_data, pp_conditional = read_files(data_location=data_location, filename='ppset', datasize=ppsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
+if np.isinf(pp_conditional[0]).any():
+    print('found inf')
+
+pp_dataset = flow.make_tensor_dataset(pp_data, pp_conditional, device=device, scale=True)
+# ------------------- Sampling ---------------------------------
+results = []
+for i in range(testsize):
+    samples, log_probabilities = flow.sample_and_logprob(test_dataset.tensors[1][i], num=2000)
+    result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][i] for j in range(len(test_conditional))], log_probabilities=log_probabilities, true_parameters=np.array([test_data[0][i]]), parameter_labels=keys, survey_coordinates=dt_test.surveys[0].survey_coordinates)
+    result.directory = os.path.join(flow_location, f"testcase_to_present_{i}/")
+    dt_test.surveys[i].plot_contours(filename=os.path.join(result.directory, "survey.png"), include_noise=True)
+    results.append(result)
+
+# ----------------- Consistency tests --------------------------
+## P-P TEST
+#flow.pp_test(validation_dataset=pp_dataset, parameter_labels=[r'$q_1$', r'$q_2$', r'$q_3$', r'$q_4$', r'$q_5$', r'$q_6$', r'$q_7$', r'$q_8$', r'$q_9$', r'$q_10$'])
+
+## CORNER PLOTS                              
+#for i, result in enumerate(results):
+#    result.corner_plot(filename="corner_plot.png")
+#   #result.corner_plot(filename="corner_plot_with_prior_bounds.png", prior_bounds=prior_bounds)
+#    print(f"Made {i+1}/{num_test_cases} corner plots.")
+
+## SURVEY CONSISTENCY
+#for i, result in enumerate(results):
+#    result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=False)
+#    print(f"Made {i+1}/{testsize} survey comparison plots.")
+
+## VOXELISED MODEL COMPARISON
+#for i, result in enumerate(results):
+#    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png", plot_truth=True, normalisation=[-2500.0, 500.0], model_framework=dt_test.model_framework, slice_coords=[1, 4, 8])
+#    print(f"Made {i+1}/{testsize} voxel slice comparison plots.")
+
+# 3D PLOT COMPARISON PLOT
+for i, result in enumerate(results):
+    #result.plot_3D_statistics(dt_test.model_framework)
+    result.plot_3D_samples(dt_test.model_framework, mode='maxlikelihood', num_to_plot=100, filename='cumulative_mean_animation.gif')
+
 #
 ## ------------------------ Comparison with Bilby --------------------------------
 #if bilby_location is not None:
