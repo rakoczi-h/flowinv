@@ -1,14 +1,13 @@
-name: giflow
+name: flowenv
 channels:
   - defaults
 dependencies:
   - pytorch
-  #- pytorch-cuda=12.1
-  - torchaudio
+  - pytorch-cuda=12.1
   - pandas
   - matplotlib
   - shapely
   - plotly
   - scikit-learn
   - imageio
-prefix: /scratch/balta0/2263373r/conda_envs/giflow
+

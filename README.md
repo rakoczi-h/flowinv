@@ -8,15 +8,13 @@ _G.I.Flow_ contains a machine learning tool applying normalising flows to Bayesi
 ## Installation
 
 ```bash
-git clone https://github.com/rakoczi-hf/flowinv.git
-cd giflow
+git clone https://github.com/rakoczi-h/flowinv.git
+cd flowinv
 ```
 
 ```bash
-python3.10 -m venv venv
-source venv/bin/activate
-pip install nvidia-pyindex
-pip install -r requirements.txt
+conda env create -f environment.yml
+conda activate flowenv
 ```
 
 ## Usage
