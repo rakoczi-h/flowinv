@@ -1,5 +1,6 @@
 import os
 import pickle as pkl
+import numpy as np
 
 from giflow.box import BoxDataset
 from giflow.prior import Prior
@@ -64,3 +65,25 @@ dt_train.make_dataset()
 filename = os.path.join(save, 'valset.pkl')
 with open(filename, 'wb') as file:
     pkl.dump(dt_train, file)
+
+size = 2
+dt_test = BoxDataset(
+    priors = priors,
+    size = size,
+    survey_framework = survey_framework,
+    model_framework = model_framework
+)
+parameters_dict = dict.fromkeys(priors.keys)
+parameters_dict['px'] = np.array([0.0, 0.5])
+parameters_dict['py'] = np.array([0.5, -0.5])
+parameters_dict['pz'] = np.array([-0.25, -0.5])
+parameters_dict['lx'] = np.array([0.5, 1.0])
+parameters_dict['ly'] = np.array([0.5, 1.0])
+parameters_dict['lz'] = np.array([0.1, 0.5])
+parameters_dict['alpha'] = np.array([0.0, 1.0])
+
+dt_test.make_dataset(parameters_dict = parameters_dict)
+
+filename = os.path.join(save, 'testset.pkl')
+with open(filename, 'wb') as file:
+    pkl.dump(dt_test, file)

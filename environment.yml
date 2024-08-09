@@ -10,4 +10,5 @@ dependencies:
   - plotly
   - scikit-learn
   - imageio
+  - glasflow
 
