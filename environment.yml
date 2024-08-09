@@ -3,9 +3,8 @@ channels:
   - defaults
 dependencies:
   - pytorch
-  - pytorch-cuda=12.1
+  #- pytorch-cuda=12.1
   - torchaudio
-  - torchvision
   - pandas
   - matplotlib
   - shapely
