@@ -27,6 +27,8 @@ To generate example data sets, follow the steps in `generate_data.ipynb`. This i
 **Gravity inversion:**
 To train a Normalising Flow on the generated data, follow the steps in `train.ipynb`. This is a walktrough of reading in the training and validation data, defining normalisation methods, setting the hyperparameters and the training procedures, and training the neural network.
 
+**Testing on simulations:**
+To test the Normalising Flow on simulated data, follow the steps in `test.ipynb`. This is a walkthrough of how to do a P-P test, generate results from surveys and create posterior probability distribution and source model plots.
 
 ## Authors
 Henrietta Rakoczi (corresponding author)
