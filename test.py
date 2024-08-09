@@ -68,7 +68,13 @@ for i in range(testsize):
 for i, result in enumerate(results):
     result.corner_plot(filename="corner_plot.png")
 
-## 3D PLOT COMPARISON PLOT
-#for i, result in enumerate(results):
-#    #result.plot_3D_statistics(dt_test.model_framework)
-#    result.plot_3D_samples(dt_test.model_framework, mode='maxlikelihood', num_to_plot=100, filename='cumulative_mean_animation.gif')
+# VOXELISED MODEL COMPARISON
+dt_test.model_framework['ranges'] = [[-0.75, 0.75], [-0.75, 0.75], [-1.5, 0.0]]
+dt_test.model_framework['grid_shape'] = [10, 10, 10]
+
+for i, result in enumerate(results):
+    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png",
+                                     plot_truth=True,
+                                     normalisation=[-2500.0, 500.0],
+                                     model_framework=dt_test.model_framework,
+                                     slice_coords=[1, 4, 8])
