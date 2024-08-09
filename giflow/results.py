@@ -63,10 +63,6 @@ class FlowResults:
                     raise ValueError('The same number of samples and log_probabilities are required.')
                 elif value.ndim != 1:
                     raise ValueError('log_probabilities has to be 1D.')
-        if name == 'true_parameters' or name == 'js_divergences':
-            if value is not None:
-                if np.shape(value[0])[0] != self.nparameters:
-                    raise ValueError('Same number of of elements in true_parameters is required as nparameters.')
         if name == 'parameter_labels':
             if value is not None:
                 if len(value) != self.nparameters:
@@ -122,7 +118,7 @@ class FlowResults:
         return js
 
 
-    def corner_plot(self, filename='corner.png'):
+    def corner_plot(self, filename='corner.png', prior_bounds=None):
         """Makes a simple corner plot with a single set of posterior samples.
         Parameter
         ---------
@@ -130,10 +126,15 @@ class FlowResults:
             The name under which it is saved
         scaler: sklearn.preprocessing scaler object
             Only used if self.samples does not exist.
+        priors_bounds: list
+            The length of the list is the same as the dimensions, and each element in the list is [minimum, maximum] bounds.
         """
         plot_range = []
-        for dim in self.samples.T:
-            plot_range.append([min(dim), max(dim)])
+        if prior_bounds is None:
+            for dim in self.samples.T:
+                plot_range.append([min(dim), max(dim)])
+        else:
+            plot_range = prior_bounds
         if self.parameter_labels is None:
             labels = [f"q{x}" for x in range(self.nparameters)]
         else:
@@ -164,42 +165,53 @@ class FlowResults:
         print("Made corner plot...")
 
     # fix overlaid corners method !!
-    def overlaid_corner(self, other_samples, dataset_labels, filename='corner_plot_compare'):
+    def overlaid_corner(self, other_samples, dataset_labels, parameter_labels = None, filename='corner_plot_compare',  prior_bounds=None):
         """
         Plots multiple corners on top of each other
         Parameters
         ----------
-        samples_list: list of arrays
-            Contains samples from different inference algorithms
-        parameter_labels: list
-            The labels of the parameters over which the posterior is defined
-        dataset_labels: list
-            The name of the different methods the samples come from
-        values: list
-            The values of the true parameters, if not None then it is plotted over the posterior
-        saveloc: str
-            Location where the image is saved
-        filename: str
-            The name under which it is saved
+            samples_list: list of arrays
+                Contains samples from different inference algorithms
+            parameter_labels: list
+                The labels of the parameters over which the posterior is defined
+            dataset_labels: list
+                The name of the different methods the samples come from
+            values: list
+                The values of the true parameters, if not None then it is plotted over the posterior
+            saveloc: str
+                Location where the image is saved
+            filename: str
+                The name under which it is saved
+            priors_bounds: list
+                The length of the list is the same as the dimensions, and each element in the list is [minimum, maximum] bounds.
+        Output
+        ------
+        image file
         """
         _, ndim = other_samples.shape
         colors = ['#377eb8', '#ff7f00']
 
         n = 2
-        samples_list = [self.samples, other_samples]
+        samples_list = [other_samples, self.samples]
         max_len = max([len(s) for s in samples_list])
         plot_range = []
-        for dim in range(ndim):
-            plot_range.append(
-                [
-                    min([min(samples_list[i].T[dim]) for i in range(n)]),
-                    max([max(samples_list[i].T[dim]) for i in range(n)]),
-                ]
-            )
-        if self.parameter_labels is None:
-            labels = [f"q{x}" for x in range(self.nparameters)]
+        if prior_bounds is None:
+            for dim in range(ndim):
+                plot_range.append(
+                    [
+                        min([min(samples_list[i].T[dim]) for i in range(n)]),
+                        max([max(samples_list[i].T[dim]) for i in range(n)]),
+                    ]
+                )
         else:
-            labels = self.parameter_labels
+            plot_range = prior_bounds
+        if parameter_labels is None:
+            if self.parameter_labels is None:
+                labels = [f"q{x}" for x in range(self.nparameters)]
+            else:
+                labels = self.parameter_labels
+        else:
+            labels = parameter_labels
 
         CORNER_KWARGS = dict(
         smooth=0.9,
@@ -342,7 +354,7 @@ class BoxFlowResults(FlowResults):
             plt.savefig(filename, transparent=False)
         plt.close()
 
-    def plot_compare_voxel_slices(self, slice_coords=[1,3,5], filename='sliced_voxels.png', plot_truth=False, normalisation=None):
+    def plot_compare_voxel_slices(self, slice_coords=[1,3,5], filename='sliced_voxels.png', plot_truth=False, normalisation=None, model_framework=None):
         """Makes a comparison plot consisting of slices of the voxelspace.
         Each column is slices along a different direction (x, y, z).
         Each row is a different slice, with increasing coordinates.
@@ -357,85 +369,114 @@ class BoxFlowResults(FlowResults):
                 Defines whether the true voxelised model is added to the plot.
             normalisation: list
                 If not None, the list has to be two elements long, and it defines the color normalisation. [minimum value of color scaler, maximum value]
+            model_framework: dict
+                If None, then the samples are directly plotted and assumed that each value is a density of a voxel on a grid. If it is given, then the dictionary is assumed to contain values that can be passed to the Box class model_framework attribute.
         """
+        print(np.shape(self.samples))
         if normalisation is not None:
             if len(normalisation) != 2:
                 raise ValueError('The normalisation input needs to be a list with 2 elements, defining the minimum and maximum of the color scale')
         if len(slice_coords) != 3:
                 raise ValueError('Only three slices can be defined')
-
         if plot_truth:
             if self.true_parameters is None:
                 raise ValueError("Give the model as the true_parameters attribute to the class")
-            true_model = self.true_parameters
-            d = round(np.power(np.shape(true_model)[1], 1/3))
+            true_model = self.true_parameters[0,:]
+
+        if model_framework is not None:
+            if model_framework['type'] == 'parameterised':
+                print("Translating samples to voxelised model...")
+                if self.parameter_labels is None:
+                    raise ValueError('Provide the parameter labels as an attribute to the Results class.')
+                samples = []
+                for s in self.samples:
+                    box = Box(parameterised_model=s, parameter_labels=self.parameter_labels)
+                    box.translate_to_parameters()
+                    box.make_voxel_grid(model_framework['grid_shape'], model_framework['ranges'])
+                    box.translate_to_voxels(density=model_framework['density'])
+                    samples.append(box.voxelised_model)
+                samples = np.vstack(samples)
+                print(np.shape(samples))
+                if plot_truth:
+                    box = Box(parameterised_model=true_model, parameter_labels=self.parameter_labels)
+                    box.translate_to_parameters()
+                    box.make_voxel_grid(model_framework['grid_shape'], model_framework['ranges'])
+                    box.translate_to_voxels(density=model_framework['density'])
+                    true_model = box.voxelised_model
+            if model_framework['type'] == 'voxelised':
+                samples = self.samples
         else:
-            d = round(np.power(np.shape(self.samples[0])[0], 1/3))
+            samples = self.samples
+        print(np.shape(samples))
+
+        d = round(np.power(np.shape(samples[0,:])[0], 1/3))
         s1, s2, s3 = slice_coords
         if plot_truth:
             shift_idx = 0
             plot_data = np.zeros((9, len(slice_coords)+1, d, d)) # [number of subfigures, number of subplots, dim1, dim2]
             # Plotting the true slices
-            true_model = np.reshape(true_model, (d,d,d))
-            plot_data[0, 0, :, :] = true_model[s1, :, :]
-            plot_data[3, 0, :, :] = true_model[s2, :, :]
-            plot_data[6, 0, :, :] = true_model[s3, :, :]
+            true_model = np.flip(np.reshape(true_model, (d,d,d), order='F'))
+            #true_model = np.reshape(true_model, (d,d,d)
+            plot_data[0, 0, :, :] = np.rot90(true_model[s1, :, :], axes=(0,1), k=3)
+            plot_data[3, 0, :, :] = np.rot90(true_model[s2, :, :], axes=(0,1), k=3)
+            plot_data[6, 0, :, :] = np.rot90(true_model[s3, :, :], axes=(0,1), k=3)
 
-            plot_data[1, 0, :, :] = true_model[:, s1, :]
-            plot_data[4, 0, :, :] = true_model[:, s2, :]
-            plot_data[7, 0, :, :] = true_model[:, s3, :]
+            plot_data[1, 0, :, :] = np.flip(true_model[:, s3, :], axis=1)
+            plot_data[4, 0, :, :] = np.flip(true_model[:, s2, :], axis=1)
+            plot_data[7, 0, :, :] = np.flip(true_model[:, s1, :], axis=1)
 
-            plot_data[2, 0, :, :] = true_model[:, :, s1]
-            plot_data[5, 0, :, :] = true_model[:, :, s2]
-            plot_data[8, 0, :, :] = true_model[:, :, s3]
+            plot_data[2, 0, :, :] = np.flip(true_model[:, :, s3], axis=1)
+            plot_data[5, 0, :, :] = np.flip(true_model[:, :, s2], axis=1)
+            plot_data[8, 0, :, :] = np.flip(true_model[:, :, s1], axis=1)
         else:
             shift_idx = 1
             plot_data = np.zeros((9, len(slice_coords), d, d))
 
         # Mean
-        mean_model = np.mean(self.samples, axis=0)
-        mean_model = np.reshape(mean_model, (d,d,d))
-        plot_data[0, 1-shift_idx, :, :] = mean_model[s1, :, :]
-        plot_data[3, 1-shift_idx, :, :] = mean_model[s2, :, :]
-        plot_data[6, 1-shift_idx, :, :] = mean_model[s3, :, :]
+        mean_model = np.mean(samples, axis=0)
+        mean_model = np.flip(np.reshape(mean_model, (d,d,d), order='F'))
+        plot_data[0, 1-shift_idx, :, :] = np.rot90(mean_model[s1, :, :], axes=(0,1), k=3)
+        plot_data[3, 1-shift_idx, :, :] = np.rot90(mean_model[s2, :, :], axes=(0,1), k=3)
+        plot_data[6, 1-shift_idx, :, :] = np.rot90(mean_model[s3, :, :], axes=(0,1), k=3)
 
-        plot_data[1, 1-shift_idx, :, :] = mean_model[:, s1, :]
-        plot_data[4, 1-shift_idx, :, :] = mean_model[:, s2, :]
-        plot_data[7, 1-shift_idx, :, :] = mean_model[:, s3, :]
+        plot_data[1, 1-shift_idx, :, :] = np.flip(mean_model[:, s3, :], axis=1)
+        plot_data[4, 1-shift_idx, :, :] = np.flip(mean_model[:, s2, :], axis=1)
+        plot_data[7, 1-shift_idx, :, :] = np.flip(mean_model[:, s1, :], axis=1)
 
-        plot_data[2, 1-shift_idx, :, :] = mean_model[:, :, s1]
-        plot_data[5, 1-shift_idx, :, :] = mean_model[:, :, s2]
-        plot_data[8, 1-shift_idx, :, :] = mean_model[:, :, s3]
+        plot_data[2, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s3], axis=1)
+        plot_data[5, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s2], axis=1)
+        plot_data[8, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s1], axis=1)
 
         # Mode
-        mode_model = self.samples[np.argmax(self.log_probabilities), :]
-        mode_model = np.reshape(mode_model, (d,d,d))
-        plot_data[0, 2-shift_idx, :, :] = mode_model[s1, :, :]
-        plot_data[3, 2-shift_idx, :, :] = mode_model[s2, :, :]
-        plot_data[6, 2-shift_idx, :, :] = mode_model[s3, :, :]
+        mode_model = samples[np.argmax(self.log_probabilities), :]
+        mode_model = np.flip(np.reshape(mode_model, (d,d,d), order='F'))
+        plot_data[0, 2-shift_idx, :, :] = np.rot90(mode_model[s1, :, :], axes=(0,1), k=3)
+        plot_data[3, 2-shift_idx, :, :] = np.rot90(mode_model[s2, :, :], axes=(0,1), k=3)
+        plot_data[6, 2-shift_idx, :, :] = np.rot90(mode_model[s3, :, :], axes=(0,1), k=3)
 
-        plot_data[1, 2-shift_idx, :, :] = mode_model[:, s1, :]
-        plot_data[4, 2-shift_idx, :, :] = mode_model[:, s2, :]
-        plot_data[7, 2-shift_idx, :, :] = mode_model[:, s3, :]
+        plot_data[1, 2-shift_idx, :, :] = np.flip(mode_model[:, s3, :], axis=1)
+        plot_data[4, 2-shift_idx, :, :] = np.flip(mode_model[:, s2, :], axis=1)
+        plot_data[7, 2-shift_idx, :, :] = np.flip(mode_model[:, s1, :], axis=1)
 
-        plot_data[2, 2-shift_idx, :, :] = mode_model[:, :, s1]
-        plot_data[5, 2-shift_idx, :, :] = mode_model[:, :, s2]
-        plot_data[8, 2-shift_idx, :, :] = mode_model[:, :, s3]
+        plot_data[2, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s3], axis=1)
+        plot_data[5, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s2], axis=1)
+        plot_data[8, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s1], axis=1)
 
         # Std
-        std_model = -np.std(self.samples, axis=0)
-        std_model = np.reshape(std_model, (d,d,d))
-        plot_data[0, 3-shift_idx, :, :] = std_model[s1, :, :]
-        plot_data[3, 3-shift_idx, :, :] = std_model[s2, :, :]
-        plot_data[6, 3-shift_idx, :, :] = std_model[s3, :, :]
+        std_model = -np.std(samples, axis=0)
+        std_model = np.nan_to_num(std_model)
+        std_model = np.flip(np.reshape(std_model, (d,d,d), order='F'))
+        plot_data[0, 3-shift_idx, :, :] = np.rot90(std_model[s1, :, :], axes=(0,1), k=3)
+        plot_data[3, 3-shift_idx, :, :] = np.rot90(std_model[s2, :, :], axes=(0,1), k=3)
+        plot_data[6, 3-shift_idx, :, :] = np.rot90(std_model[s3, :, :], axes=(0,1), k=3)
 
-        plot_data[1, 3-shift_idx, :, :] = std_model[:, s1, :]
-        plot_data[4, 3-shift_idx, :, :] = std_model[:, s2, :]
-        plot_data[7, 3-shift_idx, :, :] = std_model[:, s3, :]
+        plot_data[1, 3-shift_idx, :, :] = np.flip(std_model[:, s3, :], axis=1)
+        plot_data[4, 3-shift_idx, :, :] = np.flip(std_model[:, s2, :], axis=1)
+        plot_data[7, 3-shift_idx, :, :] = np.flip(std_model[:, s1, :], axis=1)
 
-        plot_data[2, 3-shift_idx, :, :] = std_model[:, :, s1]
-        plot_data[5, 3-shift_idx, :, :] = std_model[:, :, s2]
-        plot_data[8, 3-shift_idx, :, :] = std_model[:, :, s3]
+        plot_data[2, 3-shift_idx, :, :] = np.flip(std_model[:, :, s3], axis=1)
+        plot_data[5, 3-shift_idx, :, :] = np.flip(std_model[:, :, s2], axis=1)
+        plot_data[8, 3-shift_idx, :, :] = np.flip(std_model[:, :, s1], axis=1)
 
         if normalisation is None:
             norm = plt.cm.colors.Normalize(np.min(mean_model), np.max(mean_model))
@@ -445,12 +486,12 @@ class BoxFlowResults(FlowResults):
 
         fig = plt.figure(figsize=(16, 14))
         outer = gridspec.GridSpec(3, len(slice_coords), wspace=0.2, hspace=-0.79)
-        ylabels = ['y', 'x', 'x',
-                   'y', 'x', 'x',
-                   'y', 'x', 'x']
-        xlabels = ['z', 'z', 'y',
-                   'z', 'z', 'y',
-                   'z', 'z', 'y']
+        ylabels = ['y', 'z', 'z',
+                   'y', 'z', 'z',
+                   'y', 'z', 'z']
+        xlabels = ['x', 'y', 'x',
+                   'x', 'y', 'x',
+                   'x', 'y', 'x']
         for i in range(int(3*len(slice_coords))):
             if plot_truth:
                 r = len(slice_coords)+1
@@ -483,7 +524,7 @@ class BoxFlowResults(FlowResults):
                     if j == 2-shift_idx:
                         ax.set_title('Mode', fontsize=14)
                     if j == 3-shift_idx:
-                        ax.set_title('Std', fontsize=14)
+                        ax.set_title('SD', fontsize=14)
                 else:
                     if j == 0:
                         ax.set_ylabel(ylabels[i], fontsize=14)
@@ -593,7 +634,6 @@ class BoxFlowResults(FlowResults):
             num = np.concatenate((np.arange(0, 100, 10), np.arange(0, num_to_plot+100, 100)[1:]
 ), axis=0)
             num[0] = num[0]+1
-            print(num)
             for n in num:
                 model = np.mean(self.samples[:n,:], axis=0)
                 titles.append(f"Mean of {n} Random Samples")
@@ -628,3 +668,161 @@ class BoxFlowResults(FlowResults):
         for im in image_names:
             os.remove(os.path.join(self.directory, im))
 
+#    def plot_compare_voxel_slices_pygimli(self, slice_coords=[1,3,5], filename='sliced_voxels.png', plot_truth=False, normalisation=None):
+#        """Makes a comparison plot consisting of slices of the voxelspace.
+#        Each column is slices along a different direction (x, y, z).
+#        Each row is a different slice, with increasing coordinates.
+#        The method is made for 3 slices.
+#        Parameters
+#        ----------
+#            slice_coords: list
+#                The coordinate of voxels along which to slice the volume. Has to have length 3.
+#            filename: str
+#                The name of the file under which it will be saved.
+#            plot_truth: bool
+#                Defines whether the true voxelised model is added to the plot.
+#            normalisation: list
+#                If not None, the list has to be two elements long, and it defines the color normalisation. [minimum value of color scaler, maximum value]
+#        """
+#        if normalisation is not None:
+#            if len(normalisation) != 2:
+#                raise ValueError('The normalisation input needs to be a list with 2 elements, defining the minimum and maximum of the color scale')
+#        if len(slice_coords) != 3:
+#                raise ValueError('Only three slices can be defined')
+#
+#        if plot_truth:
+#            if self.true_parameters is None:
+#                raise ValueError("Give the model as the true_parameters attribute to the class")
+#            true_model = self.true_parameters
+#        d = round(np.power(np.shape(self.samples[0])[0], 1/3))
+#        s1, s2, s3 = slice_coords
+#        if plot_truth:
+#            shift_idx = 0
+#            plot_data = np.zeros((9, len(slice_coords)+1, d, d)) # [number of subfigures, number of subplots, dim1, dim2]
+#            # Plotting the true slices
+#            #true_model = np.flip(np.reshape(true_model, (d,d,d), order='F'))
+#            true_model = np.flip(np.reshape(true_model, (d,d,d)))
+#
+#            plot_data[0, 0, :, :] = np.flip(np.rot90(true_model[s1, :, :], axes=(0,1), k=2), axis=0)
+#            plot_data[3, 0, :, :] = np.flip(np.rot90(true_model[s2, :, :], axes=(0,1), k=2), axis=0)
+#            plot_data[6, 0, :, :] = np.flip(np.rot90(true_model[s3, :, :], axes=(0,1), k=2), axis=0)
+#
+#            plot_data[1, 0, :, :] = np.flip(np.flip(true_model[:, :, s3], axis=0), axis=1)
+#            plot_data[4, 0, :, :] = np.flip(np.flip(true_model[:, :, s2], axis=0), axis=1)
+#            plot_data[7, 0, :, :] = np.flip(np.flip(true_model[:, :, s1], axis=0), axis=1)
+#
+#            plot_data[2, 0, :, :] = np.flip(np.flip(true_model[:, s3, :], axis=0), axis=1)
+#            plot_data[5, 0, :, :] = np.flip(np.flip(true_model[:, s2, :], axis=0), axis=1)
+#            plot_data[8, 0, :, :] = np.flip(np.flip(true_model[:, s1, :], axis=0), axis=1)
+#        else:
+#            shift_idx = 1
+#            plot_data = np.zeros((9, len(slice_coords), d, d))
+#
+#        # Mean
+#        mean_model = np.mean(self.samples, axis=0)
+#        mean_model = np.flip(np.reshape(mean_model, (d,d,d), order='F'))
+#        plot_data[0, 1-shift_idx, :, :] = np.rot90(mean_model[s1, :, :], axes=(0,1), k=3)
+#        plot_data[3, 1-shift_idx, :, :] = np.rot90(mean_model[s2, :, :], axes=(0,1), k=3)
+#        plot_data[6, 1-shift_idx, :, :] = np.rot90(mean_model[s3, :, :], axes=(0,1), k=3)
+#
+#        plot_data[1, 1-shift_idx, :, :] = np.flip(mean_model[:, s3, :], axis=1)
+#        plot_data[4, 1-shift_idx, :, :] = np.flip(mean_model[:, s2, :], axis=1)
+#        plot_data[7, 1-shift_idx, :, :] = np.flip(mean_model[:, s1, :], axis=1)
+#
+#        plot_data[2, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s3], axis=1)
+#        plot_data[5, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s2], axis=1)
+#        plot_data[8, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s1], axis=1)
+#
+#        # Mode
+#        mode_model = self.samples[np.argmax(self.log_probabilities), :]
+#        mode_model = np.flip(np.reshape(mode_model, (d,d,d), order='F'))
+#        plot_data[0, 2-shift_idx, :, :] = np.rot90(mode_model[s1, :, :], axes=(0,1), k=3)
+#        plot_data[3, 2-shift_idx, :, :] = np.rot90(mode_model[s2, :, :], axes=(0,1), k=3)
+#        plot_data[6, 2-shift_idx, :, :] = np.rot90(mode_model[s3, :, :], axes=(0,1), k=3)
+#
+#        plot_data[1, 2-shift_idx, :, :] = np.flip(mode_model[:, s3, :], axis=1)
+#        plot_data[4, 2-shift_idx, :, :] = np.flip(mode_model[:, s2, :], axis=1)
+#        plot_data[7, 2-shift_idx, :, :] = np.flip(mode_model[:, s1, :], axis=1)
+#
+#        plot_data[2, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s3], axis=1)
+#        plot_data[5, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s2], axis=1)
+#        plot_data[8, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s1], axis=1)
+#
+#        # Std
+#        std_model = -np.std(self.samples, axis=0)
+#        std_model = np.flip(np.reshape(std_model, (d,d,d), order='F'))
+#        plot_data[0, 3-shift_idx, :, :] = np.rot90(std_model[s1, :, :], axes=(0,1), k=3)
+#        plot_data[3, 3-shift_idx, :, :] = np.rot90(std_model[s2, :, :], axes=(0,1), k=3)
+#        plot_data[6, 3-shift_idx, :, :] = np.rot90(std_model[s3, :, :], axes=(0,1), k=3)
+#
+#        plot_data[1, 3-shift_idx, :, :] = np.flip(std_model[:, s3, :], axis=1)
+#        plot_data[4, 3-shift_idx, :, :] = np.flip(std_model[:, s2, :], axis=1)
+#        plot_data[7, 3-shift_idx, :, :] = np.flip(std_model[:, s1, :], axis=1)
+#
+#        plot_data[2, 3-shift_idx, :, :] = np.flip(std_model[:, :, s3], axis=1)
+#        plot_data[5, 3-shift_idx, :, :] = np.flip(std_model[:, :, s2], axis=1)
+#        plot_data[8, 3-shift_idx, :, :] = np.flip(std_model[:, :, s1], axis=1)
+#
+#        if normalisation is None:
+#            norm = plt.cm.colors.Normalize(np.min(mean_model), np.max(mean_model))
+#        else:
+#            norm = plt.cm.colors.Normalize(normalisation[0], normalisation[1])
+#
+#        cmap = 'plasma'
+#        fig = plt.figure(figsize=(16, 14))
+#        outer = gridspec.GridSpec(3, len(slice_coords), wspace=0.2, hspace=-0.79)
+#        ylabels = ['y', 'z', 'z',
+#                   'y', 'z', 'z',
+#                   'y', 'z', 'z']
+#        xlabels = ['x', 'y', 'x',
+#                   'x', 'y', 'x',
+#                   'x', 'y', 'x']
+#        for i in range(int(3*len(slice_coords))):
+#            if plot_truth:
+#                r = len(slice_coords)+1
+#                inner = gridspec.GridSpecFromSubplotSpec(1, r, subplot_spec=outer[i],
+#                                                     wspace=0.1, hspace=0.1)
+#            else:
+#                r = len(slice_coords)
+#                inner = gridspec.GridSpecFromSubplotSpec(1, r, subplot_spec=outer[i],
+#                                                     wspace=0.1, hspace=0.1)
+#            row     = 0
+#            col     = 0
+#            maxCol  = 4
+#
+#            for j in range(r):
+#                ax = plt.Subplot(fig, inner[j])
+#                im = ax.imshow(plot_data[i, j, :, :], norm=norm, cmap=cmap, aspect='equal')
+#                ax.set_xticks([])
+#                ax.set_yticks([])
+#                if i < 3:
+#                    if plot_truth:
+#                        if j == 0:
+#                            ax.set_title('Li et al.', fontsize=12)
+#                            ax.set_ylabel(ylabels[i], fontsize=12)
+#                            ax.set_xlabel(xlabels[i], fontsize=12)
+#                    if j == 1-shift_idx:
+#                        ax.set_title("Mean", fontsize=12)
+#                        if not plot_truth:
+#                            ax.set_ylabel(ylabels[i], fontsize=12)
+#                            ax.set_xlabel(xlabels[i], fontsize=12)
+#                    if j == 2-shift_idx:
+#                        ax.set_title('Mode', fontsize=12)
+#                    if j == 3-shift_idx:
+#                        ax.set_title('SD', fontsize=12)
+#                else:
+#                    if j == 0:
+#                        ax.set_ylabel(ylabels[i], fontsize=12)
+#                        ax.set_xlabel(xlabels[i], fontsize=12)
+#                fig.add_subplot(ax)
+#
+#        cbar_ax = fig.add_axes([0.91, 0.35, 0.015, 0.29])
+#        fig.colorbar(im, cax=cbar_ax, cmap=cmap, norm=norm)
+#        cbar_ax.set_ylabel(f"\u03C1 [kg/$m^{3}$]",fontsize=12)
+#        cbar_ax.tick_params(labelsize=12)
+#
+#        plt.savefig(os.path.join(self.directory, filename), bbox_inches='tight', transparent=True)
+#        plt.close()
+#
+#
+#
