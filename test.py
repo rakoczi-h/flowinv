@@ -60,7 +60,7 @@ for i in range(testsize):
                            )
     results.append(result)
 
-    result.directory = os.path.join(flow_location, f"testcase_to_present_{i}/")
+    result.directory = os.path.join(flow_location, f"testcase_{i}/")
     # plotting the surveys we are inverting
     dt_test.surveys[i].plot_contours(filename=os.path.join(result.directory, "survey.png"), include_noise=True)
 
