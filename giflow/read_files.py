@@ -3,15 +3,17 @@ import numpy as np
 import os
 
 
-def read_files(data_location, filename, datasize, num_files, survey_coordinates_to_include=[], model_info_to_include=[], mix_survey_order=False):
+def read_files(data_location, filenames, datasize, survey_coordinates_to_include=[], model_info_to_include=[], mix_survey_order=False):
     train_data, train_conditional = ([],[])
-    for n in range(num_files):
-        print('file read')
-        with open(os.path.join(data_location, filename+f"_{n}.pkl"), 'rb') as file:
+    if isinstance(filenames, str):
+        filenames = [filenames]
+    for f in filenames:
+        with open(os.path.join(data_location, f), 'rb') as file:
             dt = pkl.load(file)
             td, tc = dt.make_data_for_network(survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
             train_data.append(td)
             train_conditional.append(tc)
+        print(f"{f} read")
 
     tc_list = []
     for i in range(len(train_conditional[0])):
