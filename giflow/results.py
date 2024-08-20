@@ -11,11 +11,13 @@ import matplotlib.gridspec as gridspec
 import torch
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+from pandas import DataFrame
 
 from .box import Box
 from .prior import Prior
 from .survey import GravitySurvey
 from .plot import make_gif
+from .utils import get_colors
 
 import plotly.io as pio
 pio.templates.default = "plotly_white"
@@ -166,7 +168,7 @@ class FlowResults:
         print("Made corner plot...")
 
     # fix overlaid corners method !!
-    def overlaid_corner(self, other_samples, dataset_labels, parameter_labels = None, filename='corner_plot_compare',  prior_bounds=None):
+    def overlaid_corner(self, other_samples, dataset_labels = None, parameter_labels = None, filename='corner_plot_compare.png',  prior_bounds=None):
         """
         Plots multiple corners on top of each other
         Parameters
@@ -189,11 +191,13 @@ class FlowResults:
         ------
         image file
         """
-        _, ndim = other_samples.shape
-        colors = ['#377eb8', '#ff7f00']
+        if not isinstance(other_samples, list):
+            other_samples = [other_samples]
+        _, ndim = other_samples[0].shape
 
-        n = 2
-        samples_list = [other_samples, self.samples]
+        n = len(other_samples)+1
+        colors = get_colors(n)
+        samples_list = other_samples+[self.samples]
         max_len = max([len(s) for s in samples_list])
         plot_range = []
         if prior_bounds is None:
@@ -216,7 +220,7 @@ class FlowResults:
 
         CORNER_KWARGS = dict(
         smooth=0.9,
-        show_titles=True,
+        show_titles=False,
         label_kwargs=dict(fontsize=20),
         title_kwargs=dict(fontsize=20),
         quantiles=[0.16, 0.5, 0.84],
@@ -248,20 +252,30 @@ class FlowResults:
             values = self.true_parameters[0]
             corner.overplot_lines(fig, values, color="black")
             corner.overplot_points(fig, values[None], marker="s", color="black")
-        plt.legend(
-            handles=[
-                mlines.Line2D([], [], color=colors[i], label=dataset_labels[i])
-                for i in range(n)
-            ],
-            fontsize=20, frameon=False,
-            bbox_to_anchor=(1, ndim), loc="upper right"
-        )
+        if dataset_labels is not None:
+            plt.legend(
+                handles=[
+                    mlines.Line2D([], [], 
+                    color=colors[i],
+                    label=dataset_labels[i])
+                    for i in range(n)
+                ],
+                fontsize=20, frameon=False,
+                bbox_to_anchor=(1, ndim), loc="upper right"
+            )
         if self.directory is not None:
             plt.savefig(os.path.join(self.directory, filename), transparent=False)
         else:
             plt.savefig(filename, transparent=False)
         plt.close()
         print("Made corner plot...")
+
+    def samples_to_csv(self, filename='samples.csv'):
+        """
+        Saves the samples into a csv.
+        """
+        df = DataFrame(self.samples)
+        df.to_csv(os.path.join(self.directory, filename))
 
 class BoxFlowResults(FlowResults):
     """
@@ -596,7 +610,7 @@ class BoxFlowResults(FlowResults):
                 raise ValueError("Only .html and .png file extensions are allowed")
             plt.close()
 
-    def plot_3D_samples(self, model_framework, num_to_plot=100, mode='cumulativemean', filename='3D_animation.gif', axis_scale=None):
+    def plot_3D_samples(self, model_framework, num_to_plot=100, mode='cumulativemean', filename='3D_animation.gif', axis_scale=None, normalisation=None):
         """
         Creates an animation of 3D plots of samples.
         Parameters:
@@ -615,6 +629,9 @@ class BoxFlowResults(FlowResults):
                 if None, then limits are inferred from voxel_grid
                 else the voxel_grid is multiplied by this factor
         """
+
+        if normalisation is None:
+            normalisation = [model_framework['density'], 0.0]
         if filename[-4:] != '.gif':
             print("Filename overwritten to .gif format")
             filename = filename[-4:]+'.gif'
@@ -649,8 +666,8 @@ class BoxFlowResults(FlowResults):
 
         image_names = []
         for i, s in enumerate(models):
-            s = s - model_framework['density']
-            fig = go.Figure(data=go.Volume(x=x, y=y, z=z, value=s, colorscale='Plasma', opacityscale='min', opacity=0.7, surface_count=17))
+            s = s
+            fig = go.Figure(data=go.Volume(x=x, y=y, z=z, value=s, colorscale='Plasma', opacityscale='min', opacity=0.7, surface_count=17, cmin=normalisation[0], cmax=normalisation[1]))
             fig.update_layout(height = 800,
                             width = 1000,
                             font = dict(size=12),
@@ -669,161 +686,179 @@ class BoxFlowResults(FlowResults):
         for im in image_names:
             os.remove(os.path.join(self.directory, im))
 
-#    def plot_compare_voxel_slices_pygimli(self, slice_coords=[1,3,5], filename='sliced_voxels.png', plot_truth=False, normalisation=None):
-#        """Makes a comparison plot consisting of slices of the voxelspace.
-#        Each column is slices along a different direction (x, y, z).
-#        Each row is a different slice, with increasing coordinates.
-#        The method is made for 3 slices.
-#        Parameters
-#        ----------
-#            slice_coords: list
-#                The coordinate of voxels along which to slice the volume. Has to have length 3.
-#            filename: str
-#                The name of the file under which it will be saved.
-#            plot_truth: bool
-#                Defines whether the true voxelised model is added to the plot.
-#            normalisation: list
-#                If not None, the list has to be two elements long, and it defines the color normalisation. [minimum value of color scaler, maximum value]
-#        """
-#        if normalisation is not None:
-#            if len(normalisation) != 2:
-#                raise ValueError('The normalisation input needs to be a list with 2 elements, defining the minimum and maximum of the color scale')
-#        if len(slice_coords) != 3:
-#                raise ValueError('Only three slices can be defined')
-#
-#        if plot_truth:
-#            if self.true_parameters is None:
-#                raise ValueError("Give the model as the true_parameters attribute to the class")
-#            true_model = self.true_parameters
-#        d = round(np.power(np.shape(self.samples[0])[0], 1/3))
-#        s1, s2, s3 = slice_coords
-#        if plot_truth:
-#            shift_idx = 0
-#            plot_data = np.zeros((9, len(slice_coords)+1, d, d)) # [number of subfigures, number of subplots, dim1, dim2]
-#            # Plotting the true slices
-#            #true_model = np.flip(np.reshape(true_model, (d,d,d), order='F'))
-#            true_model = np.flip(np.reshape(true_model, (d,d,d)))
-#
-#            plot_data[0, 0, :, :] = np.flip(np.rot90(true_model[s1, :, :], axes=(0,1), k=2), axis=0)
-#            plot_data[3, 0, :, :] = np.flip(np.rot90(true_model[s2, :, :], axes=(0,1), k=2), axis=0)
-#            plot_data[6, 0, :, :] = np.flip(np.rot90(true_model[s3, :, :], axes=(0,1), k=2), axis=0)
-#
-#            plot_data[1, 0, :, :] = np.flip(np.flip(true_model[:, :, s3], axis=0), axis=1)
-#            plot_data[4, 0, :, :] = np.flip(np.flip(true_model[:, :, s2], axis=0), axis=1)
-#            plot_data[7, 0, :, :] = np.flip(np.flip(true_model[:, :, s1], axis=0), axis=1)
-#
-#            plot_data[2, 0, :, :] = np.flip(np.flip(true_model[:, s3, :], axis=0), axis=1)
-#            plot_data[5, 0, :, :] = np.flip(np.flip(true_model[:, s2, :], axis=0), axis=1)
-#            plot_data[8, 0, :, :] = np.flip(np.flip(true_model[:, s1, :], axis=0), axis=1)
-#        else:
-#            shift_idx = 1
-#            plot_data = np.zeros((9, len(slice_coords), d, d))
-#
-#        # Mean
-#        mean_model = np.mean(self.samples, axis=0)
-#        mean_model = np.flip(np.reshape(mean_model, (d,d,d), order='F'))
-#        plot_data[0, 1-shift_idx, :, :] = np.rot90(mean_model[s1, :, :], axes=(0,1), k=3)
-#        plot_data[3, 1-shift_idx, :, :] = np.rot90(mean_model[s2, :, :], axes=(0,1), k=3)
-#        plot_data[6, 1-shift_idx, :, :] = np.rot90(mean_model[s3, :, :], axes=(0,1), k=3)
-#
-#        plot_data[1, 1-shift_idx, :, :] = np.flip(mean_model[:, s3, :], axis=1)
-#        plot_data[4, 1-shift_idx, :, :] = np.flip(mean_model[:, s2, :], axis=1)
-#        plot_data[7, 1-shift_idx, :, :] = np.flip(mean_model[:, s1, :], axis=1)
-#
-#        plot_data[2, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s3], axis=1)
-#        plot_data[5, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s2], axis=1)
-#        plot_data[8, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s1], axis=1)
-#
-#        # Mode
-#        mode_model = self.samples[np.argmax(self.log_probabilities), :]
-#        mode_model = np.flip(np.reshape(mode_model, (d,d,d), order='F'))
-#        plot_data[0, 2-shift_idx, :, :] = np.rot90(mode_model[s1, :, :], axes=(0,1), k=3)
-#        plot_data[3, 2-shift_idx, :, :] = np.rot90(mode_model[s2, :, :], axes=(0,1), k=3)
-#        plot_data[6, 2-shift_idx, :, :] = np.rot90(mode_model[s3, :, :], axes=(0,1), k=3)
-#
-#        plot_data[1, 2-shift_idx, :, :] = np.flip(mode_model[:, s3, :], axis=1)
-#        plot_data[4, 2-shift_idx, :, :] = np.flip(mode_model[:, s2, :], axis=1)
-#        plot_data[7, 2-shift_idx, :, :] = np.flip(mode_model[:, s1, :], axis=1)
-#
-#        plot_data[2, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s3], axis=1)
-#        plot_data[5, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s2], axis=1)
-#        plot_data[8, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s1], axis=1)
-#
-#        # Std
-#        std_model = -np.std(self.samples, axis=0)
-#        std_model = np.flip(np.reshape(std_model, (d,d,d), order='F'))
-#        plot_data[0, 3-shift_idx, :, :] = np.rot90(std_model[s1, :, :], axes=(0,1), k=3)
-#        plot_data[3, 3-shift_idx, :, :] = np.rot90(std_model[s2, :, :], axes=(0,1), k=3)
-#        plot_data[6, 3-shift_idx, :, :] = np.rot90(std_model[s3, :, :], axes=(0,1), k=3)
-#
-#        plot_data[1, 3-shift_idx, :, :] = np.flip(std_model[:, s3, :], axis=1)
-#        plot_data[4, 3-shift_idx, :, :] = np.flip(std_model[:, s2, :], axis=1)
-#        plot_data[7, 3-shift_idx, :, :] = np.flip(std_model[:, s1, :], axis=1)
-#
-#        plot_data[2, 3-shift_idx, :, :] = np.flip(std_model[:, :, s3], axis=1)
-#        plot_data[5, 3-shift_idx, :, :] = np.flip(std_model[:, :, s2], axis=1)
-#        plot_data[8, 3-shift_idx, :, :] = np.flip(std_model[:, :, s1], axis=1)
-#
-#        if normalisation is None:
-#            norm = plt.cm.colors.Normalize(np.min(mean_model), np.max(mean_model))
-#        else:
-#            norm = plt.cm.colors.Normalize(normalisation[0], normalisation[1])
-#
-#        cmap = 'plasma'
-#        fig = plt.figure(figsize=(16, 14))
-#        outer = gridspec.GridSpec(3, len(slice_coords), wspace=0.2, hspace=-0.79)
-#        ylabels = ['y', 'z', 'z',
-#                   'y', 'z', 'z',
-#                   'y', 'z', 'z']
-#        xlabels = ['x', 'y', 'x',
-#                   'x', 'y', 'x',
-#                   'x', 'y', 'x']
-#        for i in range(int(3*len(slice_coords))):
-#            if plot_truth:
-#                r = len(slice_coords)+1
-#                inner = gridspec.GridSpecFromSubplotSpec(1, r, subplot_spec=outer[i],
-#                                                     wspace=0.1, hspace=0.1)
-#            else:
-#                r = len(slice_coords)
-#                inner = gridspec.GridSpecFromSubplotSpec(1, r, subplot_spec=outer[i],
-#                                                     wspace=0.1, hspace=0.1)
-#            row     = 0
-#            col     = 0
-#            maxCol  = 4
-#
-#            for j in range(r):
-#                ax = plt.Subplot(fig, inner[j])
-#                im = ax.imshow(plot_data[i, j, :, :], norm=norm, cmap=cmap, aspect='equal')
-#                ax.set_xticks([])
-#                ax.set_yticks([])
-#                if i < 3:
-#                    if plot_truth:
-#                        if j == 0:
-#                            ax.set_title('Li et al.', fontsize=12)
-#                            ax.set_ylabel(ylabels[i], fontsize=12)
-#                            ax.set_xlabel(xlabels[i], fontsize=12)
-#                    if j == 1-shift_idx:
-#                        ax.set_title("Mean", fontsize=12)
-#                        if not plot_truth:
-#                            ax.set_ylabel(ylabels[i], fontsize=12)
-#                            ax.set_xlabel(xlabels[i], fontsize=12)
-#                    if j == 2-shift_idx:
-#                        ax.set_title('Mode', fontsize=12)
-#                    if j == 3-shift_idx:
-#                        ax.set_title('SD', fontsize=12)
-#                else:
-#                    if j == 0:
-#                        ax.set_ylabel(ylabels[i], fontsize=12)
-#                        ax.set_xlabel(xlabels[i], fontsize=12)
-#                fig.add_subplot(ax)
-#
-#        cbar_ax = fig.add_axes([0.91, 0.35, 0.015, 0.29])
-#        fig.colorbar(im, cax=cbar_ax, cmap=cmap, norm=norm)
-#        cbar_ax.set_ylabel(f"\u03C1 [kg/$m^{3}$]",fontsize=12)
-#        cbar_ax.tick_params(labelsize=12)
-#
-#        plt.savefig(os.path.join(self.directory, filename), bbox_inches='tight', transparent=True)
-#        plt.close()
-#
-#
-#
+    def plot_compare_voxel_slices_pygimli(self, pygimli_result, slice_coords=[1,3,5], filename='sliced_voxels.png', plot_truth=False, normalisation=None, aspect=[1.0, 0.5, 0.5]):
+        """Makes a comparison plot consisting of slices of the voxelspace.
+        Each column is slices along a different direction (x, y, z).
+        Each row is a different slice, with increasing coordinates.
+        The method is made for 3 slices.
+        Parameters
+        ----------
+            slice_coords: list
+                The coordinate of voxels along which to slice the volume. Has to have length 3.
+                If each element of the list is a list, then each element is the slices defined for the different dimenstions in the order of x y z.
+            filename: str
+                The name of the file under which it will be saved.
+            plot_truth: bool
+                Defines whether the true voxelised model is added to the plot.
+            normalisation: list
+                If not None, the list has to be two elements long, and it defines the color normalisation. [minimum value of color scaler, maximum value]
+        """
+        if normalisation is not None:
+            if len(normalisation) != 2:
+                raise ValueError('The normalisation input needs to be a list with 2 elements, defining the minimum and maximum of the color scale')
+        if len(slice_coords) != 3:
+                raise ValueError('Only three slices can be defined')
+
+        if plot_truth:
+            if self.true_parameters is None:
+                raise ValueError("Give the model as the true_parameters attribute to the class")
+            true_model = self.true_parameters
+        d = round(np.power(np.shape(self.samples[0])[0], 1/3))
+        s1, s2, s3 = slice_coords
+        if isinstance(s1, list):
+            s1_1, s1_2, s1_3 = s1
+            s2_1, s2_2, s2_3 = s2
+            s3_1, s3_2, s3_3 = s3
+        else:
+            s1_1, s1_2, s1_3 = s1, s2, s3
+            s2_1, s2_2, s2_3 = s1, s2, s3
+            s3_1, s3_2, s3_3 = s1, s2, s3
+        if plot_truth:
+            shift_idx = 0
+            plot_data = np.zeros((9, len(slice_coords)+1, d, d)) # [number of subfigures, number of subplots, dim1, dim2]
+            # Plotting the true slices
+            true_model = np.flip(np.reshape(true_model, (d,d,d), order='F'))
+            #true_model = np.flip(np.reshape(true_model, (d,d,d)))
+
+            plot_data[0, 0, :, :] = np.rot90(true_model[s1_1, :, :], axes=(0,1), k=3)
+            plot_data[3, 0, :, :] = np.rot90(true_model[s1_2, :, :], axes=(0,1), k=3)
+            plot_data[6, 0, :, :] = np.rot90(true_model[s1_3, :, :], axes=(0,1), k=3)
+
+            plot_data[1, 0, :, :] = np.flip(true_model[:, s2_3, :], axis=1)
+            plot_data[4, 0, :, :] = np.flip(true_model[:, s2_2, :], axis=1)
+            plot_data[7, 0, :, :] = np.flip(true_model[:, s2_1, :], axis=1)
+
+            plot_data[2, 0, :, :] = np.flip(true_model[:, :, s3_3], axis=1)
+            plot_data[5, 0, :, :] = np.flip(true_model[:, :, s3_2], axis=1)
+            plot_data[8, 0, :, :] = np.flip(true_model[:, :, s3_1], axis=1)
+
+        else:
+            shift_idx = 1
+            plot_data = np.zeros((9, len(slice_coords), d, d))
+
+        # Mean
+        li_model = np.flip(np.reshape(pygimli_result, (d,d,d)))
+        plot_data[0, 1-shift_idx, :, :] = np.flip(np.rot90(li_model[s1_1, :, :], axes=(0,1), k=2), axis=0)
+        plot_data[3, 1-shift_idx, :, :] = np.flip(np.rot90(li_model[s1_2, :, :], axes=(0,1), k=2), axis=0)
+        plot_data[6, 1-shift_idx, :, :] = np.flip(np.rot90(li_model[s1_3, :, :], axes=(0,1), k=2), axis=0)
+
+        plot_data[1, 1-shift_idx, :, :] = np.flip(np.flip(li_model[:, :, s2_3], axis=0), axis=1)
+        plot_data[4, 1-shift_idx, :, :] = np.flip(np.flip(li_model[:, :, s2_2], axis=0), axis=1)
+        plot_data[7, 1-shift_idx, :, :] = np.flip(np.flip(li_model[:, :, s2_1], axis=0), axis=1)
+
+        plot_data[2, 1-shift_idx, :, :] = np.flip(np.flip(li_model[:, s3_3, :], axis=0), axis=1)
+        plot_data[5, 1-shift_idx, :, :] = np.flip(np.flip(li_model[:, s3_2, :], axis=0), axis=1)
+        plot_data[8, 1-shift_idx, :, :] = np.flip(np.flip(li_model[:, s3_1, :], axis=0), axis=1)
+
+        # Mode
+        mean_model = np.mean(self.samples, axis=0)
+        mean_model = np.flip(np.reshape(mean_model, (d,d,d), order='F'))
+        plot_data[0, 2-shift_idx, :, :] = np.rot90(mean_model[s1_1, :, :], axes=(0,1), k=3)
+        plot_data[3, 2-shift_idx, :, :] = np.rot90(mean_model[s1_2, :, :], axes=(0,1), k=3)
+        plot_data[6, 2-shift_idx, :, :] = np.rot90(mean_model[s1_3, :, :], axes=(0,1), k=3)
+
+        plot_data[1, 2-shift_idx, :, :] = np.flip(mean_model[:, s2_3, :], axis=1)
+        plot_data[4, 2-shift_idx, :, :] = np.flip(mean_model[:, s2_2, :], axis=1)
+        plot_data[7, 2-shift_idx, :, :] = np.flip(mean_model[:, s2_1, :], axis=1)
+
+        plot_data[2, 2-shift_idx, :, :] = np.flip(mean_model[:, :, s3_3], axis=1)
+        plot_data[5, 2-shift_idx, :, :] = np.flip(mean_model[:, :, s3_2], axis=1)
+        plot_data[8, 2-shift_idx, :, :] = np.flip(mean_model[:, :, s3_1], axis=1)
+
+        # Std
+        #std_model = -np.std(self.samples, axis=0)
+        #std_model = np.flip(np.reshape(std_model, (d,d,d), order='F'))
+        mode_model = self.samples[np.argmax(self.log_probabilities), :]
+        mode_model = np.flip(np.reshape(mode_model, (d,d,d), order='F'))
+        plot_data[0, 3-shift_idx, :, :] = np.rot90(mode_model[s1_1, :, :], axes=(0,1), k=3)
+        plot_data[3, 3-shift_idx, :, :] = np.rot90(mode_model[s1_2, :, :], axes=(0,1), k=3)
+        plot_data[6, 3-shift_idx, :, :] = np.rot90(mode_model[s1_3, :, :], axes=(0,1), k=3)
+
+        plot_data[1, 3-shift_idx, :, :] = np.flip(mode_model[:, s2_3, :], axis=1)
+        plot_data[4, 3-shift_idx, :, :] = np.flip(mode_model[:, s2_2, :], axis=1)
+        plot_data[7, 3-shift_idx, :, :] = np.flip(mode_model[:, s2_1, :], axis=1)
+
+        plot_data[2, 3-shift_idx, :, :] = np.flip(mode_model[:, :, s3_3], axis=1)
+        plot_data[5, 3-shift_idx, :, :] = np.flip(mode_model[:, :, s3_2], axis=1)
+        plot_data[8, 3-shift_idx, :, :] = np.flip(mode_model[:, :, s3_1], axis=1)
+
+        if normalisation is None:
+            norm = plt.cm.colors.Normalize(np.min(mean_model), np.max(mean_model))
+        else:
+            norm = plt.cm.colors.Normalize(normalisation[0], normalisation[1])
+
+        cmap = 'plasma'
+        fig = plt.figure(figsize=(16, 14))
+        outer = gridspec.GridSpec(3, len(slice_coords), wspace=0.2, hspace=-0.85)
+        ylabels = ['y', 'z', 'z',
+                   'y', 'z', 'z',
+                   'y', 'z', 'z']
+        xlabels = ['x', 'y', 'x',
+                   'x', 'y', 'x',
+                   'x', 'y', 'x']
+        aspect = aspect
+        for i in range(int(3*len(slice_coords))):
+            if plot_truth:
+                r = len(slice_coords)+1
+                inner = gridspec.GridSpecFromSubplotSpec(1, r, subplot_spec=outer[i],
+                                                     wspace=0.1, hspace=-0.1)
+            else:
+                r = len(slice_coords)
+                inner = gridspec.GridSpecFromSubplotSpec(1, r, subplot_spec=outer[i],
+                                                     wspace=0.1, hspace=-0.1)
+            row     = 0
+            col     = 0
+            maxCol  = 4
+
+            for j in range(r):
+                ax = plt.Subplot(fig, inner[j])
+                im = ax.imshow(plot_data[i, j, :, :], norm=norm, cmap=cmap)
+                ax.set_xticks([])
+                ax.set_yticks([])
+                if any([i==a for a in [0,3,6]]):
+                    ax.set_aspect(aspect[0])
+                if any([i==a for a in [1,4,7]]):
+                    ax.set_aspect(aspect[1])
+                if any([i==a for a in [2,5,8]]):
+                    ax.set_aspect(aspect[2])
+                if i < 3:
+                    if plot_truth:
+                        if j == 0:
+                            ax.set_title('Truth', fontsize=12)
+                            ax.set_ylabel(ylabels[i], fontsize=12)
+                            ax.set_xlabel(xlabels[i], fontsize=12)
+                    if j == 1-shift_idx:
+                        ax.set_title("Li et al.", fontsize=12)
+                        if not plot_truth:
+                            ax.set_ylabel(ylabels[i], fontsize=12)
+                            ax.set_xlabel(xlabels[i], fontsize=12)
+                    if j == 2-shift_idx:
+                        ax.set_title('Mean', fontsize=12)
+                    if j == 3-shift_idx:
+                        ax.set_title('Mode', fontsize=12)
+                else:
+                    if j == 0:
+                        ax.set_ylabel(ylabels[i], fontsize=12)
+                        ax.set_xlabel(xlabels[i], fontsize=12)
+                fig.add_subplot(ax)
+
+        cbar_ax = fig.add_axes([0.91, 0.35, 0.015, 0.29])
+        fig.colorbar(im, cax=cbar_ax, cmap=cmap, norm=norm)
+        cbar_ax.set_ylabel(f"\u03C1 [kg/$m^{3}$]",fontsize=12)
+        cbar_ax.tick_params(labelsize=12)
+
+        plt.savefig(os.path.join(self.directory, filename), bbox_inches='tight', transparent=True)
+        plt.close()
+
+
+
