@@ -20,33 +20,35 @@ sweep_configuration = {
     'metric': {'goal': 'minimize', 'name': 'val_loss'},
     'parameters':
     {
-        'n_transforms': {'min': 8, 'max' : 15},
-        'n_blocks_per_transform': {'min' : 1, 'max' : 5},
+        'n_transforms': {'min': 1, 'max' : 15},
+        'n_blocks_per_transform': {'min' : 1, 'max' : 10},
         'n_neurons': {'min' : 10, 'max': 80},
-        'data_size': {'values': [500, 1000, 10000, 100000, 500000, 1000000]}
+        'batch_size': {'min' : 1000, 'max': 10000}
      }
 }
 # Initialize sweep by passing in config. (Optional) Provide a name of the project.
-sweep_id = wandb.sweep(sweep=sweep_configuration, project='parameterised-inversion-to-present')
+sweep_id = wandb.sweep(sweep=sweep_configuration, project='combined-inversion')
 
 
 # ------------- Directories ---------------------------------
-data_location = '/scratch/balta0/2263373r/giflow/4_paper/parameterised/' # THIS needs to be edited to give the data location
+data_location = '/scratch/balta0/2263373r/giflow/box/narrow_volume/combined/' # THIS needs to be edited to give the data location
 
 # ------------- Reading the data ----------------------------
-survey_coordinates_to_include = [] # THIS needs to be edited if we want to include survey coordinates in the conditional
+survey_coordinates_to_include = ['x', 'y', 'noise_scale'] # THIS needs to be edited if we want to include survey coordinates in the conditional
 model_info_to_include=[]
 mix_survey_order = False
 
 datasize = 1000000 # THIS needs to be edited to give the overall desired data set size
-num_files = 2 #number of files that needs to be read
-train_data, train_conditional = read_files(data_location=data_location, filename='trainset', datasize=datasize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
+train_data, train_conditional = read_files(data_location=data_location, filenames=['trainset_0.pkl', 'trainset_1.pkl'], datasize=datasize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
 
 
 valsize = 100000 # THIS needs to be edited to give the overall desired data set size
-num_files = 1 #number of files that needs to be read
-val_data, val_conditional = read_files(data_location=data_location, filename='validationset', datasize=valsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
+val_data, val_conditional = read_files(data_location=data_location, filenames=['validationset_0.pkl'], datasize=valsize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
 
+# ------------- Defining the prior ---------------------
+with open(os.path.join(data_location, "validationset_0.pkl"), 'rb') as file:
+    dt_val = pkl.load(file)
+priors = dt_val.priors
 
 print(f"Data read. Location: \t {data_location}")
 # ------------- Defining scalers ---------------------------
@@ -54,24 +56,23 @@ scalers = [MinMaxScaler()]
 sc_data = Scaler(scalers=scalers)
 sc_data.scale_data(train_data, fit=True)
 
-scalers = [MinMaxScaler()]
+scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler()]
 sc_conditional=Scaler(scalers=scalers)
-
 sc_conditional.scale_data(train_conditional, fit=True)
 
 scalers = {'conditional': sc_conditional, 'data': sc_data}
 
 # --------------- Defining the flow ------------------------
 def main():
-    wandb.init(project='real-box-inversion-voxelised')
+    wandb.init(project='combined-inversion')
     device = torch.device('cuda')
     hyperparameters={'n_inputs': 7,
-                 'n_conditional_inputs': 64,
+                 'n_conditional_inputs': 193,
                  'n_transforms': wandb.config.n_transforms,
                  'n_blocks_per_transform': wandb.config.n_blocks_per_transform,
                  'n_neurons': wandb.config.n_neurons,
                  'batch_norm': True,
-                 'batch_size': 5000,
+                 'batch_size': wandb.config.batch_size,
                  'early_stopping': False,
                  'lr': 0.001,
                  'epochs': 1500
@@ -80,16 +81,16 @@ def main():
     flow.data_location = data_location
     flow.construct()
 
-    train_size = wandb.config.data_size
-    val_size = int(train_size/10)
+    train_size = datasize
+    val_size = valsize
 
     flowmodel = flow.flowmodel
     optimiser = torch.optim.Adam(flow.flowmodel.parameters(), lr=flow.hyperparameters['lr'])
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimiser, mode='min', factor=0.05, patience=100, cooldown=10,
                                                        min_lr=1e-6, verbose=True)
 
-    train_dataset = flow.make_tensor_dataset([train_data[0][:train_size]], [train_conditional[0][:train_size]], device=device, scale=True)
-    validation_dataset = flow.make_tensor_dataset([val_data[0][:val_size]], [val_conditional[0][:val_size]], device=device, scale=True)
+    train_dataset = flow.make_tensor_dataset(train_data, train_conditional, device=device, scale=True)
+    validation_dataset = flow.make_tensor_dataset(val_data, val_conditional, device=device, scale=True)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=hyperparameters['batch_size'], shuffle=True)
     validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=hyperparameters['batch_size'], shuffle=True)
 
@@ -140,7 +141,17 @@ def main():
             latent_logprobs = log_prob.cpu().numpy()
             latent_state = FlowLatent(latent_samples, log_probabilities=latent_logprobs)
             kl_divergence = latent_state.get_kl_divergence_statistics()
-            wandb.log({'kl_div': kl_divergence['mean']})
+            # JS test
+            js_mean = []
+            for i in range(100):
+                with torch.no_grad():
+                    conditional = torch.repeat_interleave(torch.unsqueeze(validation_dataset.tensors[1][i], axis=0), 2000, axis=0)
+                    samples, _ = flowmodel.sample_and_log_prob(2000, conditional=conditional)
+                samples = samples.cpu().numpy()
+                js, mean_js = priors.get_js_divergence(samples, n=100, num_samples=2000)
+                js_mean.append(mean_js)
+            js_mean = np.mean(js_mean)
+            wandb.log({'kl_div': kl_divergence['mean'], 'js_div': js_mean})
 
-wandb.agent(sweep_id, function=main, count=20)
+wandb.agent(sweep_id, function=main, count=30)
 

@@ -20,14 +20,18 @@ def rescale_bilby_samples(bilby_parameter_dict, parameters_to_rescale, scale_fac
     return bilby_parameter_dict
 
 
-flow_location = '/data/www.astro/2263373r/giflow/4_paper/voxelised_noisy/run_2024-07-30 20:56:45.690508/'
+flow_location = '/data/www.astro/2263373r/giflow/box/voxelised/narrow_volume/run_2024-08-11 18:33:00.254950/'
 save_location = os.path.join(flow_location, 'qinetiq_data_gridordering/')
 if not os.path.exists(save_location):
     os.mkdir(save_location)
 # -------------------- Reading in other results
-truth = pd.read_csv('/scratch/balta0/2263373r/giflow/4_paper/pygimli_results_final.csv')['result']
-truth = truth*1000 # changing to kg/m^3
-truth = truth 
+li_result = pd.read_csv('/scratch/balta0/2263373r/giflow/4_paper/pygimli_result_3.csv')['result']
+li_result = li_result*1000 # changing to kg/m^3
+
+with open("/scratch/balta0/2263373r/giflow/4_paper/real_bunker.pkl", 'rb') as file:
+    dt_real = pkl.load(file)
+truth = dt_real.boxes[0].voxelised_model
+
 
 # -------------------- Reading the flow --------------------------
 device = torch.device('cuda')
@@ -75,6 +79,11 @@ survey.gravity = reordered_grav
 survey.noise_scale = noise_scale
 survey.survey_coordinates = reordered_coordinates
 
+data = {'x': survey.survey_coordinates[:,0], 'y': survey.survey_coordinates[:,1], 'grav': survey.gravity}
+
+df = pd.DataFrame(data=data)
+df.to_csv(path_or_buf='/scratch/balta0/2263373r/giflow/4_paper/qinetiq_data_4_paper_inv_ready.csv')
+
 survey.plot_contours(filename=os.path.join(save_location, 'survey.png'), include_noise=False)
 
 dt_test = BoxDataset(size=1, priors=priors, survey_framework=dt_val.survey_framework, model_framework=dt_val.model_framework)
@@ -121,14 +130,14 @@ for i in range(10):
 #result.corner_plot(filename="corner_plot.png")
     #result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
 
-    result.plot_compare_voxel_slices_pygimli(filename=f"compare_voxel_slices_{i}.png", normalisation=[-1000.0, 500.0], slice_coords=[2,5,8], plot_truth=True)
+    result.plot_compare_voxel_slices_pygimli(li_result, filename=f"compare_voxel_slices_{i}.png", normalisation=[-1000.0, 0.0], slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=True)
     #result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png", slice_coords=[2,5,8], plot_truth=False, normalisation=[-1000.0, 500.0])
 
 #result.plot_3D_statistics(model_framework=dt_test.model_framework)
 
 
 #result.plot_3D_samples(model_framework=dt_test.model_framework, num_to_plot=2000, mode='cumulativemean', filename='3D_cumulativemean.gif')
-#result.plot_3D_samples(model_framework=dt_test.model_framework, num_to_plot=50, mode='maxlikelihood', filename='3D_samples.gif', axis_scale=scale_factor)
+#result.plot_3D_samples(model_framework=dt_test.model_framework, num_to_plot=50, mode='maxlikelihood', filename='3D_samples.gif')
 
 
 

@@ -12,37 +12,38 @@ from giflow.read_files import read_files
 from giflow.flowmodel import FlowModel, save_flow
 from giflow.box import BoxDataset
 
-n = int(sys.argv[1])
-
-train_sizes = [100, 1000, 10000, 50000, 100000, 500000, 1000000]
 # ------------- Directories ---------------------------------
-data_location = '/scratch/balta0/2263373r/giflow/4_paper/parameterised/' # THIS needs to be edited to give the data location
-save_dir = '/data/www.astro/2263373r/giflow/4_paper/parameterised/different_data_sizes/' # THIS needs to be edited to give the saving location
+data_location = '/scratch/balta0/2263373r/giflow/box/narrow_volume/combined/'  # THIS needs to be edited to give the data location
+save_dir = '/data/www.astro/2263373r/giflow/box/combined/' # THIS needs to be edited to give the saving location
 if not os.path.exists(save_dir):
     os.mkdir(save_dir)
 # ------------- Reading the data ----------------------------
-survey_coordinates_to_include = [] # THIS needs to be edited if we want to include survey coordinates in the conditional
+survey_coordinates_to_include = ['x', 'y', 'noise_scale'] # THIS needs to be edited if we want to include survey coordinates in the conditional
 model_info_to_include=[]
 mix_survey_order = False
 
-datasize = int(train_sizes[n]) # THIS needs to be edited to give the overall desired data set size
-num_files = 2 #number of files that needs to be read
-train_data, train_conditional = read_files(data_location=data_location, filename='trainset', datasize=datasize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
+datasize = 2000000 # THIS needs to be edited to give the overall desired data set size
+train_data, train_conditional = read_files(data_location=data_location, filenames=['trainset_0.pkl', 'trainset_1.pkl', 'trainset_2.pkl', 'trainset_3.pkl'], datasize=datasize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
 
 
-valsize = int(train_sizes[n]/10) # THIS needs to be edited to give the overall desired data set size
+valsize = 100000 # THIS needs to be edited to give the overall desired data set size
 num_files = 1 #number of files that needs to be read
-val_data, val_conditional = read_files(data_location=data_location, filename='validationset', datasize=valsize, num_files=num_files, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
+val_data, val_conditional = read_files(data_location=data_location, filenames=['validationset_0.pkl'], datasize=valsize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
 
 
 print(f"Data read. Location: \t {data_location}")
+
+# ------------- Defining the prior ---------------------
+with open(os.path.join(data_location, "validationset_0.pkl"), 'rb') as file:
+    dt_val = pkl.load(file)
+priors = dt_val.priors
 
 # ------------- Defining scalers ---------------------------
 scalers = [MinMaxScaler()]
 sc_data = Scaler(scalers=scalers)
 sc_data.scale_data(train_data, fit=True)
 
-scalers = [MinMaxScaler()]
+scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler()]
 #scalers = [MinMaxScaler()]
 sc_conditional=Scaler(scalers=scalers)
 sc_conditional.scale_data(train_conditional, fit=True)
@@ -57,13 +58,13 @@ os.mkdir(save_location)
 device = torch.device('cuda')
 # THIS needs to be edited for the hyperparameters of the flow
 hyperparameters={'n_inputs': 7,
-                 'n_conditional_inputs': 64,
-                 'n_transforms': 12,
-                 'n_blocks_per_transform': 2,
-                 'n_neurons': 64,
+                 'n_conditional_inputs': 193,
+                 'n_transforms': 11,
+                 'n_blocks_per_transform': 3,
+                 'n_neurons': 50,
                  'batch_norm': True,
-                 'batch_size': 5000,
-                 'early_stopping': False,
+                 'batch_size': 7000,
+                 'early_stopping': True,
                  'lr': 0.001,
                  'epochs': 3000
 }
@@ -83,6 +84,6 @@ train_dataset = flow.make_tensor_dataset(train_data, train_conditional, device=d
 val_dataset = flow.make_tensor_dataset(val_data, val_conditional, device=device, scale=True)
 
 # ----------------- Training the flow ----------------------
-flow.train(optimiser=optimiser, validation_dataset=val_dataset, train_dataset=train_dataset, scheduler=scheduler, device=device)
+flow.train(optimiser=optimiser, validation_dataset=val_dataset, train_dataset=train_dataset, scheduler=scheduler, device=device, prior=priors)
 
 
