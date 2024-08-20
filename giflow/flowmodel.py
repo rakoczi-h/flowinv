@@ -16,6 +16,7 @@ from .latent import FlowLatent
 from .plot import make_pp_plot
 from .box import BoxDataset
 from .scaler import Scaler
+from .prior import Prior
 
 plt.style.use('seaborn-v0_8-deep')
 
@@ -111,7 +112,7 @@ class FlowModel():
         self.flowmodel.load_state_dict(torch.load(os.path.join(location, 'flow.pt')))
         self.flowmodel.to(device)
 
-    def train(self, optimiser: torch.optim, validation_dataset: torch.utils.data.TensorDataset, train_dataset: torch.utils.data.TensorDataset, scheduler=None, device=torch.device('cuda')):
+    def train(self, optimiser: torch.optim, validation_dataset: torch.utils.data.TensorDataset, train_dataset: torch.utils.data.TensorDataset, scheduler=None, device=torch.device('cuda'), prior=None):
         """
         The main training function, which trains, validates and plots diagnostics.
         Parameters
@@ -126,6 +127,8 @@ class FlowModel():
                 If provided, it is used to schedule the learning rate decay. Defaults to None.
             device: torch.device
                 The device to send the flow to. Has to match that of the datasets. Defaults to cuda.
+            prior: Prior object
+                If given, it is used to calcualte JS divergence between prior and posterior as a metric.
         """
         # Creating the flow
         if self.flowmodel is None:
@@ -154,7 +157,7 @@ class FlowModel():
 
         self.flowmodel.to(device)
         loss_plot_freq = 10
-        test_freq = 100
+        test_freq = 10
         # Training
         iters_no_improve = 0
         min_val_loss = np.inf
@@ -186,7 +189,10 @@ class FlowModel():
                 latent_samples, latent_logprobs = self.forward_and_logprob(validation_dataset)
                 latent_state = FlowLatent(latent_samples, log_probabilities=latent_logprobs)
                 latent_state.get_kl_divergence_statistics()
-                self.plot_flow_diagnostics(latent_state, timestamp=start_test-start_train)
+                js_values = None
+                if prior is not None:
+                    js_values, js_mean = self.js_test(validation_dataset, prior=prior)
+                self.plot_flow_diagnostics(latent_state, timestamp=start_test-start_train, js=js_values)
                 end_test = datetime.now()
                 print(f"Finished testing, time taken: \t {end_test-start_test}")
                 print("----------------------------------------")
@@ -196,7 +202,7 @@ class FlowModel():
                 iters_no_improve = 0
             else:
                 iters_no_improve += 1
-            if self.hyperparameters['early_stopping'] and iters_no_improve == 100:
+            if self.hyperparameters['early_stopping'] and iters_no_improve == 110:
                 print("Early stopping!")
                 break
             end_epoch = datetime.now()
@@ -262,6 +268,19 @@ class FlowModel():
         self.flowmodel = flow
         return flow
 
+    def js_test(self, dataset: torch.utils.data.TensorDataset, prior: Prior):
+        js_values = []
+        js_mean = []
+        for i in range(100):
+            samples, _ = self.sample_and_logprob(dataset.tensors[1][i], num=2000)
+            js, mean_js = prior.get_js_divergence(samples, n=100, num_samples=2000)
+            js_values.append(js)
+            js_mean.append(mean_js)
+        js_mean = np.mean(js_mean)
+        js_values = np.vstack(js_values)
+        return js_values, js_mean
+
+
     # --------------------- Plotting Methods -------------------------------------
     def plot_loss(self):
         """
@@ -275,7 +294,7 @@ class FlowModel():
         plt.savefig(os.path.join(self.save_location, "loss.png"))
         plt.close(
 )
-    def plot_flow_diagnostics(self, latent: FlowLatent, timestamp=None):
+    def plot_flow_diagnostics(self, latent: FlowLatent, timestamp=None, js=None):
         """
         Plots diagnostics during training.
         Parameters:
@@ -283,12 +302,21 @@ class FlowModel():
                 Used to generate plots relating to the latent space
             timestamp:
                 Any value we want to pass to be printed as an indication of timestamp. Defaults to None.
+            js: np.ndarray
+                with the shape [number of test cases, number of dimensions]. If given, this is used to make a js divergence metric histogram.
         """
 
-        plt.figure(figsize=(20,30))
-        fig, axs = plt.subplot_mosaic([['A', 'A'], ['B', 'B'], ['C', 'D']],
-                                  width_ratios=np.array([1,1]), height_ratios=np.array([1,1,1]),
+
+        if js is not None:
+            plt.figure(figsize=(20,45))
+            fig, axs = plt.subplot_mosaic([['A', 'A'], ['B', 'B'], ['C', 'C'], ['D', 'E']],
+                                  width_ratios=np.array([1,1]), height_ratios=np.array([1,1,1,1]),
                                   gridspec_kw={'wspace' : -0.1, 'hspace' : 0.8})
+        else:
+            plt.figure(figsize=(20,30))
+            fig, axs = plt.subplot_mosaic([['A', 'A'], ['B', 'B'], ['D', 'E']],
+                      width_ratios=np.array([1,1]), height_ratios=np.array([1,1,1]),
+                      gridspec_kw={'wspace' : -0.1, 'hspace' : 0.8})
         # Plotting the loss
         ax = axs['A']
         ax.set_box_aspect(0.2)
@@ -317,8 +345,17 @@ class FlowModel():
         ax.set_ylabel('Sample Density', fontdict={'fontsize': 10})
         ax.legend()
 
+        # Plotting the latent space distribution
+        if js is not None:
+            ax = axs['C']
+            for i in range(np.shape(js)[1]):
+                ax.hist(js[:,i], bins=10, histtype='step', density=True)
+            ax.set_box_aspect(0.2)
+            ax.set_title(f"JS Divergence with Prior | Mean JS = {np.mean(js):.3f}", fontdict={'fontsize': 10})
+            ax.set_ylabel('Count Density', fontdict={'fontsize': 10})
+
         # Plotting a histogram of the latent log probabilites
-        ax = axs['C']
+        ax = axs['D']
         ax.hist(latent.log_probabilities, bins=100, density=True)
         ax.set_box_aspect(1)
         ax.set_title('LS Sample Probabilities', fontdict={'fontsize': 10})
@@ -326,7 +363,7 @@ class FlowModel():
         ax.set_xlabel('Log-Prob', fontdict={'fontsize': 10})
 
         # Plotting an image of the correlation of the latent space samples
-        ax = axs['D']
+        ax = axs['E']
         ax.set_box_aspect(1)
         sigma = np.abs(np.corrcoef(latent.samples.T))
         im = ax.imshow(sigma, norm=matplotlib.colors.LogNorm())
@@ -383,7 +420,7 @@ class FlowModel():
             start_sample = datetime.now()
             s, l = self.flowmodel.sample_and_log_prob(num, conditional=conditional)
             end_sample = datetime.now()
-        print(f"{num} samples drawn. Time taken: \t {end_sample-start_sample}")
+        # print(f"{num} samples drawn. Time taken: \t {end_sample-start_sample}")
         s = s.cpu().numpy()
 
         s = self.scalers['data'].inv_scale_data(s)[0]
