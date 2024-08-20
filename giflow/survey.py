@@ -180,6 +180,33 @@ class GravitySurvey():
         snr = np.sqrt(np.sum((self.gravity-np.mean(self.gravity))**2)/num_points)/(noise_scale)
         return snr
 
+    def reorder_locations(self, benchmark_coordinates):
+        """
+        Function that reorders the current order of the survey points to align with the benchmark given to this function. For each survey location, it finds the benchmark location that is closest to it, and places the survey location to the same place within the array. This only works when both the benchmark and the survey coordinates arrays have the same shape.
+        Parameters
+        ----------
+            benchmark_coordinates: np.ndarray
+                The coordinate array to rearrange based on. Has to have the same shape as self.survey_coordinates
+        """
+        if np.shape(self.survey_coordinates) != np.shape(benchmark_coordinates):
+            raise ValueError('The shape of the benchmark coordinates and the class survey coordinates needs to agree.')
+        reordered_coordinates = np.zeros(np.shape(self.survey_coordinates))
+        reordered_grav = np.zeros(np.shape(self.survey_coordinates)[0])
+        reordered_noise = np.zeros(np.shape(self.survey_coordinates)[0])
+        for i, s in enumerate(benchmark_coordinates):
+            diff = np.sqrt((self.survey_coordinates[:,0] - s[0])**2 + (self.survey_coordinates[:,1] - s[1])**2 + (self.survey_coordinates[:,2] - s[2])**2)
+            reordered_coordinates[i,:] = self.survey_coordinates[np.argmin(diff),:]
+            if self.gravity is not None:
+                reordered_grav[i] = self.gravity[np.argmin(diff)]
+            if self.noise is not None:
+                reordered_noise[i] = self.noise[np.argmin(diff)]
+
+        if self.noise is not None:
+            self.noise = reordered_noise
+        if self.gravity is not None:
+            self.gravity = reordered_grav
+        self.survey_coordinates = reordered_coordinates
+
     #Plotting
     def plot_pixels(self, filename='survey.png', include_noise=False):
         """
