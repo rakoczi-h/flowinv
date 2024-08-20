@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 def multiply_along_axis(A, B, axis):
     """
@@ -35,4 +36,7 @@ def moving_average(a, n=3):
     ret = np.cumsum(a, dtype=float)
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n-1:] / n
+
+def get_colors(n):
+    return ["#%06x" % random.randint(0, 0xFFFFFF) for _ in range(n)]
 
