@@ -110,10 +110,11 @@ class Prior():
         ------
             js: array of floats
                 The list of JS-divergence values with length of the no. of parameters/dimensions.
+            mean_js: float
+                The mean of the js divergence values.
         """
         samples = self.sample(size=2000)
         print(np.shape(samples))
-        print(np.shape(samples_to_compare))
         js = []
         for i, dim in enumerate(samples.T):
             xmin = min([np.min(dim), np.min(samples_to_compare[:num_samples,i])])
@@ -127,5 +128,7 @@ class Prior():
             js_pq = np.nan_to_num(np.power(jensenshannon(p_x, q_x), 2))
             js.append(js_pq)
         js = np.array(js)
-        return js
+        mean_js = np.mean(js)
+        print(f"JS divergence statistics calculated: Mean = {mean_js}")
+        return js, mean_js
 
