@@ -20,7 +20,7 @@ def rescale_bilby_samples(bilby_parameter_dict, parameters_to_rescale, scale_fac
     return bilby_parameter_dict
 
 
-flow_location = '/data/www.astro/2263373r/giflow/box/voxelised/narrow_volume/run_2024-08-11 18:33:00.254950/'
+flow_location = '/data/www.astro/2263373r/giflow/box/combined/run_2024-08-20 10:04:06.026417/'
 save_location = os.path.join(flow_location, 'qinetiq_data_gridordering/')
 if not os.path.exists(save_location):
     os.mkdir(save_location)
@@ -31,17 +31,18 @@ li_result = li_result*1000 # changing to kg/m^3
 with open("/scratch/balta0/2263373r/giflow/4_paper/real_bunker.pkl", 'rb') as file:
     dt_real = pkl.load(file)
 truth = dt_real.boxes[0].voxelised_model
-
+dt_real.boxes[0].translate_to_parameterised_model()
+truth = dt_real.boxes[0].parameterised_model
 
 # -------------------- Reading the flow --------------------------
 device = torch.device('cuda')
 flow=FlowModel()
 flow.load(flow_location)
 flow.flowmodel.to(device)
-print(flow.data_location)
 with open(os.path.join(flow.data_location, "validationset_0.pkl"), 'rb') as file:
     dt_val = pkl.load(file)
 priors = dt_val.priors
+labels = dt_val.parameter_labels
 model_framework = dt_val.model_framework
 
 #print(dt_val.survey_framework)
@@ -65,8 +66,6 @@ survey_coordinates = np.c_[x, y, z]
 
 survey = GravitySurvey(ranges=dt_val.survey_framework['ranges'], survey_shape=dt_val.survey_framework['survey_shape'])
 survey.make_survey()
-
-print(survey.survey_coordinates)
 
 reordered_coordinates = np.zeros(np.shape(survey_coordinates))
 reordered_grav = np.zeros(np.shape(survey_coordinates)[0])
@@ -102,7 +101,7 @@ test_conditional_tensor = torch.from_numpy(test_conditional_tensor.astype(np.flo
 #test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
 # --------------------- Results --------------------------
 for i in range(10):
-    samples, log_probabilities = flow.sample_and_logprob(test_conditional_tensor, num=10000)
+    samples, log_probabilities = flow.sample_and_logprob(test_conditional_tensor, num=2000)
 
 # Translating into voxelised model 
 #samples_translated = []
@@ -121,16 +120,20 @@ for i in range(10):
 #result.directory = save_location
 #result.plot_compare_voxel_slices(filename='compare_voxel_slices.png', plot_truth=False)
 
-    result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][0] for j in range(len(test_conditional))], log_probabilities=log_probabilities, true_parameters=np.array(truth), parameter_labels=dt_val.parameter_labels, survey_coordinates=dt_test.surveys[0].survey_coordinates)
+    result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][0] for j in range(len(test_conditional))],
+        log_probabilities=log_probabilities,
+        true_parameters=np.array([truth]),
+        parameter_labels=labels,
+        survey_coordinates=dt_test.surveys[0].survey_coordinates)
 
 #result = BoxFlowResults(samples=samples, conditional=test_conditional[0,:], log_probabilities=log_probabilities, parameter_labels=None, survey_coordinates=dt_test.surveys[0].survey_coordinates)
     result.directory = save_location
 #result.rescale(scaling_factor=scale_factor, parameters_to_rescale=['px', 'py', 'pz', 'lx', 'ly', 'lz'])
 
-#result.corner_plot(filename="corner_plot.png")
+    result.corner_plot(filename="corner_plot.png")
     #result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
 
-    result.plot_compare_voxel_slices_pygimli(li_result, filename=f"compare_voxel_slices_{i}.png", normalisation=[-1000.0, 0.0], slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=True)
+    result.plot_compare_voxel_slices_pygimli(li_result, filename=f"compare_voxel_slices_{i}.png", normalisation=[-1000.0, 0.0], slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=True, model_framework=dt_test.model_framework)
     #result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png", slice_coords=[2,5,8], plot_truth=False, normalisation=[-1000.0, 500.0])
 
 #result.plot_3D_statistics(model_framework=dt_test.model_framework)

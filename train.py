@@ -59,9 +59,9 @@ device = torch.device('cuda')
 # THIS needs to be edited for the hyperparameters of the flow
 hyperparameters={'n_inputs': 7,
                  'n_conditional_inputs': 193,
-                 'n_transforms': 11,
-                 'n_blocks_per_transform': 3,
-                 'n_neurons': 50,
+                 'n_transforms': 12,
+                 'n_blocks_per_transform': 2,
+                 'n_neurons': 64,
                  'batch_norm': True,
                  'batch_size': 7000,
                  'early_stopping': True,
