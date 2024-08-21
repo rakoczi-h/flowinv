@@ -133,7 +133,6 @@ class FlowResults:
         """
         plot_range = []
         if prior_bounds is None:
-            print("applying priors")
             for dim in self.samples.T:
                 plot_range.append([min(dim), max(dim)])
         else:
@@ -387,7 +386,6 @@ class BoxFlowResults(FlowResults):
             model_framework: dict
                 If None, then the samples are directly plotted and assumed that each value is a density of a voxel on a grid. If it is given, then the dictionary is assumed to contain values that can be passed to the Box class model_framework attribute.
         """
-        print(np.shape(self.samples))
         if normalisation is not None:
             if len(normalisation) != 2:
                 raise ValueError('The normalisation input needs to be a list with 2 elements, defining the minimum and maximum of the color scale')
@@ -422,7 +420,6 @@ class BoxFlowResults(FlowResults):
                 samples = self.samples
         else:
             samples = self.samples
-        print(np.shape(samples))
 
         d = round(np.power(np.shape(samples[0,:])[0], 1/3))
         s1, s2, s3 = slice_coords
@@ -686,7 +683,7 @@ class BoxFlowResults(FlowResults):
         for im in image_names:
             os.remove(os.path.join(self.directory, im))
 
-    def plot_compare_voxel_slices_pygimli(self, pygimli_result, slice_coords=[1,3,5], filename='sliced_voxels.png', plot_truth=False, normalisation=None, aspect=[1.0, 0.5, 0.5]):
+    def plot_compare_voxel_slices_pygimli(self, pygimli_result, slice_coords=[1,3,5], filename='sliced_voxels.png', plot_truth=False, normalisation=None, aspect=[1.0, 0.5, 0.5], model_framework=None):
         """Makes a comparison plot consisting of slices of the voxelspace.
         Each column is slices along a different direction (x, y, z).
         Each row is a different slice, with increasing coordinates.
@@ -712,9 +709,36 @@ class BoxFlowResults(FlowResults):
         if plot_truth:
             if self.true_parameters is None:
                 raise ValueError("Give the model as the true_parameters attribute to the class")
-            true_model = self.true_parameters
-        d = round(np.power(np.shape(self.samples[0])[0], 1/3))
+            true_model = self.true_parameters[0,:]
+
+        if model_framework is not None:
+            if model_framework['type'] == 'parameterised':
+                print("Translating samples to voxelised model...")
+                if self.parameter_labels is None:
+                    raise ValueError('Provide the parameter labels as an attribute to the Results class.')
+                samples = []
+                for s in self.samples:
+                    box = Box(parameterised_model=s, parameter_labels=self.parameter_labels)
+                    box.translate_to_parameters()
+                    box.make_voxel_grid(model_framework['grid_shape'], model_framework['ranges'])
+                    box.translate_to_voxels(density=model_framework['density'])
+                    samples.append(box.voxelised_model)
+                samples = np.vstack(samples)
+                if plot_truth:
+                    print(np.shape(true_model))
+                    box = Box(parameterised_model=true_model, parameter_labels=self.parameter_labels)
+                    box.translate_to_parameters()
+                    box.make_voxel_grid(model_framework['grid_shape'], model_framework['ranges'])
+                    box.translate_to_voxels(density=model_framework['density'])
+                    true_model = box.voxelised_model
+            if model_framework['type'] == 'voxelised':
+                samples = self.samples
+        else:
+            samples = self.samples
+
         s1, s2, s3 = slice_coords
+        d = round(np.power(np.shape(samples[0,:])[0], 1/3))
+
         if isinstance(s1, list):
             s1_1, s1_2, s1_3 = s1
             s2_1, s2_2, s2_3 = s2
@@ -761,7 +785,7 @@ class BoxFlowResults(FlowResults):
         plot_data[8, 1-shift_idx, :, :] = np.flip(np.flip(li_model[:, s3_1, :], axis=0), axis=1)
 
         # Mode
-        mean_model = np.mean(self.samples, axis=0)
+        mean_model = np.mean(samples, axis=0)
         mean_model = np.flip(np.reshape(mean_model, (d,d,d), order='F'))
         plot_data[0, 2-shift_idx, :, :] = np.rot90(mean_model[s1_1, :, :], axes=(0,1), k=3)
         plot_data[3, 2-shift_idx, :, :] = np.rot90(mean_model[s1_2, :, :], axes=(0,1), k=3)
@@ -778,7 +802,7 @@ class BoxFlowResults(FlowResults):
         # Std
         #std_model = -np.std(self.samples, axis=0)
         #std_model = np.flip(np.reshape(std_model, (d,d,d), order='F'))
-        mode_model = self.samples[np.argmax(self.log_probabilities), :]
+        mode_model = samples[np.argmax(self.log_probabilities), :]
         mode_model = np.flip(np.reshape(mode_model, (d,d,d), order='F'))
         plot_data[0, 3-shift_idx, :, :] = np.rot90(mode_model[s1_1, :, :], axes=(0,1), k=3)
         plot_data[3, 3-shift_idx, :, :] = np.rot90(mode_model[s1_2, :, :], axes=(0,1), k=3)
