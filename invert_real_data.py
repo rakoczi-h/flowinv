@@ -33,6 +33,7 @@ with open("/scratch/balta0/2263373r/giflow/4_paper/real_bunker.pkl", 'rb') as fi
 truth = dt_real.boxes[0].voxelised_model
 dt_real.boxes[0].translate_to_parameterised_model()
 truth = dt_real.boxes[0].parameterised_model
+print(truth)
 
 # -------------------- Reading the flow --------------------------
 device = torch.device('cuda')

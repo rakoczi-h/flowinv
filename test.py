@@ -20,7 +20,7 @@ model_info_to_include= []
 mix_survey_order = False
 #bilby_location = '/data/www.astro/2263373r/giflow/4_paper/bilby/'
 bilby_location = None
-flow_location = '/data/www.astro/2263373r/giflow/box/combined/run_2024-08-20 10:04:06.026417/'
+flow_location = '/data/www.astro/2263373r/giflow/box/combined/run_2024-08-21 10:27:06.950900/'
 
 #directories = []
 #for roots, dirs, files in os.walk(flow_location):
