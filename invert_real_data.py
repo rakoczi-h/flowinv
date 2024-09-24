@@ -25,10 +25,10 @@ save_location = os.path.join(flow_location, 'qinetiq_data_gridordering/')
 if not os.path.exists(save_location):
     os.mkdir(save_location)
 # -------------------- Reading in other results
-li_result = pd.read_csv('/scratch/balta0/2263373r/giflow/4_paper/pygimli_result_3.csv')['result']
-li_result = li_result*1000 # changing to kg/m^3
+#li_result = pd.read_csv('/scratch/balta0/2263373r/giflow/4_paper/pygimli_result_3.csv')['result']
+#li_result = li_result*1000 # changing to kg/m^3
 
-with open("/scratch/balta0/2263373r/giflow/4_paper/real_bunker.pkl", 'rb') as file:
+with open("/scratch/balta1/2263373r/4_paper/real_bunker.pkl", 'rb') as file:
     dt_real = pkl.load(file)
 truth = dt_real.boxes[0].voxelised_model
 dt_real.boxes[0].translate_to_parameterised_model()
