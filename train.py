@@ -13,8 +13,8 @@ from giflow.flowmodel import FlowModel, save_flow
 from giflow.box import BoxDataset
 
 # ------------- Directories ---------------------------------
-data_location = '/scratch/balta0/2263373r/giflow/box/narrow_volume/combined/'  # THIS needs to be edited to give the data location
-save_dir = '/data/www.astro/2263373r/giflow/box/combined/' # THIS needs to be edited to give the saving location
+data_location = '/scratch/balta1/2263373r/box/narrow_volume/combined/'  # THIS needs to be edited to give the data location
+save_dir = '/data/www.astro/2263373r/giflow/4_paper/narrow_volume/combined/' # THIS needs to be edited to give the saving location
 if not os.path.exists(save_dir):
     os.mkdir(save_dir)
 # ------------- Reading the data ----------------------------
@@ -63,7 +63,7 @@ hyperparameters={'n_inputs': 7,
                  'n_blocks_per_transform': 2,
                  'n_neurons': 64,
                  'batch_norm': True,
-                 'batch_size': 7000,
+                 'batch_size': 5000,
                  'early_stopping': True,
                  'lr': 0.001,
                  'epochs': 3000
