@@ -131,6 +131,8 @@ class FlowResults:
         priors_bounds: list
             The length of the list is the same as the dimensions, and each element in the list is [minimum, maximum] bounds.
         """
+        if np.shape(self.samples)[1] > 10:
+            raise valueError(f"The samples have too many dimensions to present on a corner plot. Number of dimensions: {np.shape(self.samples)[1]}")
         plot_range = []
         if prior_bounds is None:
             for dim in self.samples.T:
@@ -421,8 +423,18 @@ class BoxFlowResults(FlowResults):
         else:
             samples = self.samples
 
-        d = round(np.power(np.shape(samples[0,:])[0], 1/3))
+
         s1, s2, s3 = slice_coords
+        d = round(np.power(np.shape(samples[0,:])[0], 1/3))
+
+        if isinstance(s1, list):
+            s1_1, s1_2, s1_3 = s1
+            s2_1, s2_2, s2_3 = s2
+            s3_1, s3_2, s3_3 = s3
+        else:
+            s1_1, s1_2, s1_3 = s1, s2, s3
+            s2_1, s2_2, s2_3 = s1, s2, s3
+            s3_1, s3_2, s3_3 = s1, s2, s3
         if plot_truth:
             shift_idx = 0
             plot_data = np.zeros((9, len(slice_coords)+1, d, d)) # [number of subfigures, number of subplots, dim1, dim2]
@@ -447,32 +459,32 @@ class BoxFlowResults(FlowResults):
         # Mean
         mean_model = np.mean(samples, axis=0)
         mean_model = np.flip(np.reshape(mean_model, (d,d,d), order='F'))
-        plot_data[0, 1-shift_idx, :, :] = np.rot90(mean_model[s1, :, :], axes=(0,1), k=3)
-        plot_data[3, 1-shift_idx, :, :] = np.rot90(mean_model[s2, :, :], axes=(0,1), k=3)
-        plot_data[6, 1-shift_idx, :, :] = np.rot90(mean_model[s3, :, :], axes=(0,1), k=3)
+        plot_data[0, 1-shift_idx, :, :] = np.rot90(mean_model[s1_1, :, :], axes=(0,1), k=3)
+        plot_data[3, 1-shift_idx, :, :] = np.rot90(mean_model[s1_2, :, :], axes=(0,1), k=3)
+        plot_data[6, 1-shift_idx, :, :] = np.rot90(mean_model[s1_3, :, :], axes=(0,1), k=3)
 
-        plot_data[1, 1-shift_idx, :, :] = np.flip(mean_model[:, s3, :], axis=1)
-        plot_data[4, 1-shift_idx, :, :] = np.flip(mean_model[:, s2, :], axis=1)
-        plot_data[7, 1-shift_idx, :, :] = np.flip(mean_model[:, s1, :], axis=1)
+        plot_data[1, 1-shift_idx, :, :] = np.flip(mean_model[:, s2_3, :], axis=1)
+        plot_data[4, 1-shift_idx, :, :] = np.flip(mean_model[:, s2_2, :], axis=1)
+        plot_data[7, 1-shift_idx, :, :] = np.flip(mean_model[:, s2_1, :], axis=1)
 
-        plot_data[2, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s3], axis=1)
-        plot_data[5, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s2], axis=1)
-        plot_data[8, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s1], axis=1)
+        plot_data[2, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s3_3], axis=1)
+        plot_data[5, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s3_2], axis=1)
+        plot_data[8, 1-shift_idx, :, :] = np.flip(mean_model[:, :, s3_1], axis=1)
 
         # Mode
         mode_model = samples[np.argmax(self.log_probabilities), :]
         mode_model = np.flip(np.reshape(mode_model, (d,d,d), order='F'))
-        plot_data[0, 2-shift_idx, :, :] = np.rot90(mode_model[s1, :, :], axes=(0,1), k=3)
-        plot_data[3, 2-shift_idx, :, :] = np.rot90(mode_model[s2, :, :], axes=(0,1), k=3)
-        plot_data[6, 2-shift_idx, :, :] = np.rot90(mode_model[s3, :, :], axes=(0,1), k=3)
+        plot_data[0, 2-shift_idx, :, :] = np.rot90(mode_model[s1_1, :, :], axes=(0,1), k=3)
+        plot_data[3, 2-shift_idx, :, :] = np.rot90(mode_model[s1_2, :, :], axes=(0,1), k=3)
+        plot_data[6, 2-shift_idx, :, :] = np.rot90(mode_model[s1_3, :, :], axes=(0,1), k=3)
 
-        plot_data[1, 2-shift_idx, :, :] = np.flip(mode_model[:, s3, :], axis=1)
-        plot_data[4, 2-shift_idx, :, :] = np.flip(mode_model[:, s2, :], axis=1)
-        plot_data[7, 2-shift_idx, :, :] = np.flip(mode_model[:, s1, :], axis=1)
+        plot_data[1, 2-shift_idx, :, :] = np.flip(mode_model[:, s2_3, :], axis=1)
+        plot_data[4, 2-shift_idx, :, :] = np.flip(mode_model[:, s2_2, :], axis=1)
+        plot_data[7, 2-shift_idx, :, :] = np.flip(mode_model[:, s2_1, :], axis=1)
 
-        plot_data[2, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s3], axis=1)
-        plot_data[5, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s2], axis=1)
-        plot_data[8, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s1], axis=1)
+        plot_data[2, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s3_3], axis=1)
+        plot_data[5, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s3_2], axis=1)
+        plot_data[8, 2-shift_idx, :, :] = np.flip(mode_model[:, :, s3_1], axis=1)
 
         # Std
         std_model = -np.std(samples, axis=0)
