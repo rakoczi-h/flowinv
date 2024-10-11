@@ -202,7 +202,7 @@ class FlowModel():
                 iters_no_improve = 0
             else:
                 iters_no_improve += 1
-            if self.hyperparameters['early_stopping'] and iters_no_improve == 110:
+            if self.hyperparameters['early_stopping'] and iters_no_improve == 200:
                 print("Early stopping!")
                 break
             end_epoch = datetime.now()
