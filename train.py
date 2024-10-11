@@ -13,8 +13,8 @@ from giflow.flowmodel import FlowModel, save_flow
 from giflow.box import BoxDataset
 
 # ------------- Directories ---------------------------------
-data_location = '/scratch/balta1/2263373r/box/narrow_volume/combined/'  # THIS needs to be edited to give the data location
-save_dir = '/data/www.astro/2263373r/giflow/4_paper/narrow_volume/combined/' # THIS needs to be edited to give the saving location
+data_location = '/scratch/balta0/2263373r/giflow/4_paper/combined/'  # THIS needs to be edited to give the data location
+save_dir = '/data/www.astro/2263373r/giflow/4_paper/combined/' # THIS needs to be edited to give the saving location
 if not os.path.exists(save_dir):
     os.mkdir(save_dir)
 # ------------- Reading the data ----------------------------
@@ -22,13 +22,12 @@ survey_coordinates_to_include = ['x', 'y', 'noise_scale'] # THIS needs to be edi
 model_info_to_include=[]
 mix_survey_order = False
 
-datasize = 2000000 # THIS needs to be edited to give the overall desired data set size
-train_data, train_conditional = read_files(data_location=data_location, filenames=['trainset_0.pkl', 'trainset_1.pkl', 'trainset_2.pkl', 'trainset_3.pkl'], datasize=datasize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
+datasize = 5000000 # THIS needs to be edited to give the overall desired data set size
+train_data, train_conditional = read_files(data_location=data_location, filenames=[f"trainset_{i}.pkl" for i in range(10)], datasize=datasize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
 
 
-valsize = 100000 # THIS needs to be edited to give the overall desired data set size
-num_files = 1 #number of files that needs to be read
-val_data, val_conditional = read_files(data_location=data_location, filenames=['validationset_0.pkl'], datasize=valsize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
+valsize = 500000 # THIS needs to be edited to give the overall desired data set size
+val_data, val_conditional = read_files(data_location=data_location, filenames=[f"validationset_{i}.pkl" for i in range(5)], datasize=valsize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
 
 
 print(f"Data read. Location: \t {data_location}")
@@ -59,9 +58,9 @@ device = torch.device('cuda')
 # THIS needs to be edited for the hyperparameters of the flow
 hyperparameters={'n_inputs': 7,
                  'n_conditional_inputs': 193,
-                 'n_transforms': 12,
+                 'n_transforms': 15,
                  'n_blocks_per_transform': 2,
-                 'n_neurons': 64,
+                 'n_neurons': 30,
                  'batch_norm': True,
                  'batch_size': 5000,
                  'early_stopping': True,

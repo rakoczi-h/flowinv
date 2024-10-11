@@ -27,11 +27,11 @@ sweep_configuration = {
      }
 }
 # Initialize sweep by passing in config. (Optional) Provide a name of the project.
-sweep_id = wandb.sweep(sweep=sweep_configuration, project='combined-inversion')
+sweep_id = wandb.sweep(sweep=sweep_configuration, project='combined-inversion-2')
 
 
 # ------------- Directories ---------------------------------
-data_location = '/scratch/balta0/2263373r/giflow/box/narrow_volume/combined/' # THIS needs to be edited to give the data location
+data_location = '/scratch/balta0/2263373r/giflow/4_paper/combined/' # THIS needs to be edited to give the data location
 
 # ------------- Reading the data ----------------------------
 survey_coordinates_to_include = ['x', 'y', 'noise_scale'] # THIS needs to be edited if we want to include survey coordinates in the conditional

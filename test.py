@@ -13,14 +13,14 @@ from giflow.plot import plot_js_hist
 from giflow.read_files import read_files
 from giflow.latent import FlowLatent
 
-#n = int(sys.argv[1])
-#survey_coordinates_to_include = []
-survey_coordinates_to_include = ['x', 'y', 'noise_scale']
+n = int(sys.argv[1])
+survey_coordinates_to_include = []
+#survey_coordinates_to_include = ['x', 'y', 'noise_scale']
 model_info_to_include= []
 mix_survey_order = False
-#bilby_location = '/data/www.astro/2263373r/giflow/4_paper/bilby/'
-bilby_location = None
-flow_location = '/data/www.astro/2263373r/giflow/box/combined/run_2024-08-21 10:27:06.950900/'
+bilby_location = '/data/www.astro/2263373r/giflow/4_paper/bilby/'
+#bilby_location = None
+flow_location = f"/data/www.astro/2263373r/giflow/4_paper/parameterised/initialisation_tests/run_{n}/"
 
 #directories = []
 #for roots, dirs, files in os.walk(flow_location):
@@ -118,10 +118,10 @@ for i, result in enumerate(results):
 #for i, result in enumerate(results):
 #    result.plot_3D_statistics(dt_test.model_framework)
 #    result.plot_3D_samples(dt_test.model_framework, mode='maxlikelihood', num_to_plot=100, filename='maxlikelihood_animation.gif')
-#
+##
 #
 ## ------------------------ Comparison with Bilby --------------------------------
-#if bilby_location is not None:
+if bilby_location is not None:
 #    # JS-DIVERGENCE WITH PRIOR
 #    js_100_cases = []
 #    for i in range(100):
@@ -157,18 +157,19 @@ for i, result in enumerate(results):
 #    df = pd.DataFrame(data=data)
 #    df.to_csv(os.path.join(flow_location, 'js_divergences_with_bilby.csv'))
 #
-#    # CORNER PLOT WITH BILBY (done with test data)
-#    for i, result in enumerate(results):
-#        if i == 0 or i == 1 or i == 2:
-#            continue
-#        with open(os.path.join(bilby_location, "testcases_to_present_v2", f"testcase_{i}", "inversion_result.json"), 'r') as file:
-#            bilby_results = json.load(file)
-#            bilby_posterior_dict = bilby_results['posterior']['content']
-#            bilby_samples = []
-#            for key in keys:
-#                bilby_samples.append(bilby_posterior_dict[key])
-#            bilby_samples = np.array(bilby_samples).T[:,3:5]
-#        result.overlaid_corner(bilby_samples, ['NS', 'NF'], parameter_labels=[r'$l_x$', r'$l_y$'], filename="overlaid_corner_plot.png")
-#        result.overlaid_corner(bilby_samples, ['NS', 'NF'], parameter_labels=[r'$l_x$', r'$l_y$'], filename="overlaid_corner_plot_with_rior_bounds.png", prior_bounds=[prior_bounds[3], prior_bounds[4]])
-#        js = result.get_js_divergence(bilby_samples)
-#        print(js)
+    # CORNER PLOT WITH BILBY (done with test data)
+    for i, result in enumerate(results):
+        if i == 0 or i == 1:
+            continue
+        with open(os.path.join(bilby_location, "testcases_to_present_v2", f"testcase_{i}", "inversion_result.json"), 'r') as file:
+            bilby_results = json.load(file)
+            bilby_posterior_dict = bilby_results['posterior']['content']
+            bilby_samples = []
+            for key in keys:
+                bilby_samples.append(bilby_posterior_dict[key])
+            bilby_samples = np.array(bilby_samples).T
+        result.overlaid_corner(bilby_samples, ['NS', 'NF'], filename="overlaid_corner_plot.png")
+        js = result.get_js_divergence(bilby_samples)
+        df = pd.DataFrame(data={'js': js})
+        df.to_csv(os.path.join(result.directory, 'js.csv'))
+        print(js)

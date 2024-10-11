@@ -20,7 +20,7 @@ def rescale_bilby_samples(bilby_parameter_dict, parameters_to_rescale, scale_fac
     return bilby_parameter_dict
 
 
-flow_location = '/data/www.astro/2263373r/giflow/box/combined/run_2024-08-20 10:04:06.026417/'
+flow_location = '/data/www.astro/2263373r/giflow/4_paper/narrow_volume/voxelised_noisy/run_2024-09-28 21:31:40.559861/'
 save_location = os.path.join(flow_location, 'qinetiq_data_gridordering/')
 if not os.path.exists(save_location):
     os.mkdir(save_location)
@@ -134,8 +134,8 @@ for i in range(10):
     result.corner_plot(filename="corner_plot.png")
     #result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
 
-    result.plot_compare_voxel_slices_pygimli(li_result, filename=f"compare_voxel_slices_{i}.png", normalisation=[-1000.0, 0.0], slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=True, model_framework=dt_test.model_framework)
-    #result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png", slice_coords=[2,5,8], plot_truth=False, normalisation=[-1000.0, 500.0])
+    #result.plot_compare_voxel_slices_pygimli(li_result, filename=f"compare_voxel_slices_{i}.png", normalisation=[-1000.0, 0.0], slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=True, model_framework=dt_test.model_framework)
+    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png", slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=False, normalisation=[-1000.0, 500.0], model_framework=dt_test.model_framework)
 
 #result.plot_3D_statistics(model_framework=dt_test.model_framework)
 

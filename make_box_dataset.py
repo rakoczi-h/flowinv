@@ -1,5 +1,4 @@
-#!/scratch/wiay/2263373r/masters/conda_envs/flowenv/bin/python
-
+#!/scratch/balta0/2263373r/conda_envs/giflow/bin/python
 import pickle as pkl
 import os
 import numpy as np
@@ -9,8 +8,9 @@ import sys
 from giflow.prior import Prior
 from giflow.box import BoxDataset
 
-n = int(sys.argv[1])
-save_loc = '/scratch/balta1/2263373r/4_paper/voxelised_noisy/'
+n = int(sys.argv[1])+2
+#save_loc = '/scratch/balta1/2263373r/4_paper/voxelised_noisy/'
+save_loc = '/data/wiay/2263373r/giflow/limbo/'
 if not os.path.exists(save_loc):
     os.mkdir(save_loc)
 
@@ -36,7 +36,7 @@ model_framework = {'type': 'voxelised', 'density': -2670.0, 'noise_scale': 500.0
 #with open(file_name, 'wb') as file:
 #    pkl.dump(dt_train, file)
 #print(f"Data set of size {size} made and saved as {file_name}.")
-#
+
 ## Make train data:
 #size = 500000
 #dt_train = BoxDataset(priors=priors, size=size, survey_framework=survey_framework, model_framework=model_framework)
@@ -50,7 +50,7 @@ model_framework = {'type': 'voxelised', 'density': -2670.0, 'noise_scale': 500.0
 size = 100000
 dt_val = BoxDataset(priors=priors, size=size, survey_framework=survey_framework, model_framework=model_framework)
 dt_val.make_dataset()
-file_name = os.path.join(save_loc, 'validationset_{n}.pkl')
+file_name = os.path.join(save_loc, f"validationset_{n}.pkl")
 with open(file_name, 'wb') as file:
     pkl.dump(dt_val, file)
 print(f"Data set of size {size} made and saved as {file_name}.")
@@ -111,21 +111,21 @@ print(f"Data set of size {size} made and saved as {file_name}.")
 #    s.plot_pixels(filename=f"/data/www.astro/2263373r/survey_{i}.png", include_noise=True)
 
 
-size = 1
-dt_test = BoxDataset(priors=priors, size=size, survey_framework=survey_framework, model_framework=model_framework)
-parameters_dict = dict.fromkeys(priors.keys)
-parameters_dict['px'] = np.array([-0.5])
-print(parameters_dict['px'])
-parameters_dict['py'] = np.array([0.08])
-parameters_dict['pz'] = np.array([-0.043])
-parameters_dict['lx'] = np.array([0.71])
-parameters_dict['ly'] = np.array([0.31])
-parameters_dict['lz'] = np.array([0.12])
-parameters_dict['alpha'] = np.array([0.36])
-dt_test.make_dataset(parameters_dict=parameters_dict)
-
-
-file_name = os.path.join(save_loc, f"real_bunker.pkl")
-with open(file_name, 'wb') as file:
-    pkl.dump(dt_test, file)
-print(f"Data set of size {size} made and saved as {file_name}.")
+#size = 1
+#dt_test = BoxDataset(priors=priors, size=size, survey_framework=survey_framework, model_framework=model_framework)
+#parameters_dict = dict.fromkeys(priors.keys)
+#parameters_dict['px'] = np.array([-0.5])
+#print(parameters_dict['px'])
+#parameters_dict['py'] = np.array([0.08])
+#parameters_dict['pz'] = np.array([-0.043])
+#parameters_dict['lx'] = np.array([0.71])
+#parameters_dict['ly'] = np.array([0.31])
+#parameters_dict['lz'] = np.array([0.12])
+#parameters_dict['alpha'] = np.array([0.36])
+#dt_test.make_dataset(parameters_dict=parameters_dict)
+#
+#
+#file_name = os.path.join(save_loc, f"real_bunker.pkl")
+#with open(file_name, 'wb') as file:
+#    pkl.dump(dt_test, file)
+#print(f"Data set of size {size} made and saved as {file_name}.")
