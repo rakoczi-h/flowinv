@@ -14,6 +14,7 @@ save = 'trained_flow' # where we want to save our outputs
 if not os.path.exists(save):
     os.mkdir(save)
 
+# -------------------------------------------------
 # ------------------- DATA -------------------------
 # Reading in files
 trainsize = 5000
