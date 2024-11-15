@@ -17,27 +17,16 @@ data_location = '/scratch/balta0/2263373r/giflow/4_paper/combined/'  # THIS need
 save_dir = '/data/www.astro/2263373r/giflow/4_paper/combined/' # THIS needs to be edited to give the saving location
 if not os.path.exists(save_dir):
     os.mkdir(save_dir)
-# ------------- Reading the data ----------------------------
+
+
 survey_coordinates_to_include = ['x', 'y', 'noise_scale'] # THIS needs to be edited if we want to include survey coordinates in the conditional
 model_info_to_include=[]
 mix_survey_order = False
 
-datasize = 5000000 # THIS needs to be edited to give the overall desired data set size
-train_data, train_conditional = read_files(data_location=data_location, filenames=[f"trainset_{i}.pkl" for i in range(10)], datasize=datasize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
-
-
-valsize = 500000 # THIS needs to be edited to give the overall desired data set size
-val_data, val_conditional = read_files(data_location=data_location, filenames=[f"validationset_{i}.pkl" for i in range(5)], datasize=valsize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
-
-
-print(f"Data read. Location: \t {data_location}")
-
-# ------------- Defining the prior ---------------------
-with open(os.path.join(data_location, "validationset_0.pkl"), 'rb') as file:
-    dt_val = pkl.load(file)
-priors = dt_val.priors
-
 # ------------- Defining scalers ---------------------------
+datasize = 5000000 # THIS needs to be edited to give the overall desired data set size
+train_data, train_conditional = read_files(data_location=data_location, filenames=[f"trainset_{i}.pkl" for i in range(10)], datasize=datasize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order, noise_augment_factor=1)
+
 scalers = [MinMaxScaler()]
 sc_data = Scaler(scalers=scalers)
 sc_data.scale_data(train_data, fit=True)
@@ -49,6 +38,21 @@ sc_conditional.scale_data(train_conditional, fit=True)
 
 scalers = {'conditional': sc_conditional, 'data': sc_data}
 
+# ------------- Reading the data ---------------------------
+datasize = 10000000 # THIS needs to be edited to give the overall desired data set size
+train_data, train_conditional = read_files(data_location=data_location, filenames=[f"trainset_{i}.pkl" for i in range(10)], datasize=datasize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order, noise_augment_factor=2)
+
+
+valsize = 1000000 # THIS needs to be edited to give the overall desired data set size
+val_data, val_conditional = read_files(data_location=data_location, filenames=[f"validationset_{i}.pkl" for i in range(5)], datasize=valsize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order, noise_augment_factor=2)
+
+
+print(f"Data read. Location: \t {data_location}")
+
+# ------------- Defining the prior ---------------------
+with open(os.path.join(data_location, "validationset_0.pkl"), 'rb') as file:
+    dt_val = pkl.load(file)
+priors = dt_val.priors
 # --------------- Defining the flow ------------------------
 start_time = datetime.now()
 save_location = os.path.join(save_dir, 'run_'+str(start_time))
@@ -62,7 +66,7 @@ hyperparameters={'n_inputs': 7,
                  'n_blocks_per_transform': 3,
                  'n_neurons': 30,
                  'batch_norm': True,
-                 'batch_size': 5000,
+                 'batch_size': 10000,
                  'early_stopping': True,
                  'lr': 0.001,
                  'epochs': 3000

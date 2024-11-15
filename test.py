@@ -13,14 +13,14 @@ from giflow.plot import plot_js_hist
 from giflow.read_files import read_files
 from giflow.latent import FlowLatent
 
-n = int(sys.argv[1])
-survey_coordinates_to_include = []
-#survey_coordinates_to_include = ['x', 'y', 'noise_scale']
+#n = int(sys.argv[1])
+#survey_coordinates_to_include = []
+survey_coordinates_to_include = ['x', 'y', 'noise_scale']
 model_info_to_include= []
 mix_survey_order = False
 bilby_location = '/data/www.astro/2263373r/giflow/4_paper/bilby/'
 #bilby_location = None
-flow_location = f"/data/www.astro/2263373r/giflow/4_paper/parameterised/initialisation_tests/run_{n}/"
+flow_location = f"/data/www.astro/2263373r/giflow/4_paper/combined/run_2024-10-14 10:44:55.499724/"
 
 #directories = []
 #for roots, dirs, files in os.walk(flow_location):
