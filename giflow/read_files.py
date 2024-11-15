@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 
-def read_files(data_location, filenames, datasize, survey_coordinates_to_include=[], model_info_to_include=[], mix_survey_order=False):
+def read_files(data_location, filenames, datasize, survey_coordinates_to_include=[], model_info_to_include=[], mix_survey_order=False, noise_augment_factor=1):
     train_data, train_conditional = ([],[])
     if isinstance(filenames, str):
         filenames = [filenames]
@@ -13,6 +13,15 @@ def read_files(data_location, filenames, datasize, survey_coordinates_to_include
             td, tc = dt.make_data_for_network(survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
             train_data.append(td)
             train_conditional.append(tc)
+            if noise_augment_factor > 1:
+                print("Noise augmentation.")
+                for i in range(noise_augment_factor):
+                    print(i)
+                    for s in dt.surveys:
+                        s.make_noise() # remaking a new realisation of the noise, with the same noise scale
+                    td, tc = dt.make_data_for_network(survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
+                train_data.append(td)
+                train_conditional.append(tc)
         print(f"{f} read")
 
     tc_list = []
