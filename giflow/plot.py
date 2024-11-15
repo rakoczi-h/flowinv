@@ -273,8 +273,8 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
     #vmax2 = std.max()
     vmin1 = 0
     vmin2 = 0
-    vmax1 = 4.0
-    vmax2 = 0.08
+    vmax1 = 5.5
+    vmax2 = 2.0
     levels1 = np.linspace(vmin1, vmax1, 256)
     levels2 = np.linspace(vmin2, vmax2, 256)
     cmap = 'plasma'
@@ -312,12 +312,12 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
         if any([idx==i for i in [0,1,2]]):
             ax.set(title=titles[idx])
     cax1 = ax.inset_axes([-2.3, -0.3, 2.15, 0.1])
-    cbar = fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm1, cmap=cmap), orientation='horizontal', ticks=[0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0], boundaries=levels1, cax=cax1)
+    cbar = fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm1, cmap=cmap), orientation='horizontal', ticks=[0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5], boundaries=levels1, cax=cax1)
     #cbar = fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm1, cmap=cmap), orientation='horizontal', boundaries=levels1, cax=cax1)
     cbar.set_label(r'$\Delta$g [$\mu$Gal]', size=8)
     cbar.ax.tick_params(rotation=45, labelsize=8)
     cax2 = ax.inset_axes([0.0, -0.3, 1.0, 0.1])
-    cbar=fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', ticks=[0.0, 0.02, 0.04, 0.06, 0.08], boundaries=levels2, cax=cax2)
+    cbar=fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', ticks=[0.0, 0.5, 1.0, 1.5, 2.0], boundaries=levels2, cax=cax2)
     #cbar=fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', boundaries=levels2, cax=cax2)
     cbar.set_label(r'$\Delta$g [$\mu$Gal]', size=8)
     cbar.ax.tick_params(rotation=45, labelsize=8)
