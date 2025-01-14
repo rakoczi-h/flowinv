@@ -18,8 +18,8 @@ from giflow.latent import FlowLatent
 survey_coordinates_to_include = ['x', 'y', 'noise_scale']
 model_info_to_include= []
 mix_survey_order = False
-bilby_location = '/data/www.astro/2263373r/giflow/4_paper/bilby/'
-#bilby_location = None
+#bilby_location = '/data/www.astro/2263373r/giflow/4_paper/bilby/'
+bilby_location = None
 flow_location = f"/data/www.astro/2263373r/giflow/4_paper/combined/run_2024-10-14 10:44:55.499724/"
 
 #directories = []
@@ -28,7 +28,7 @@ flow_location = f"/data/www.astro/2263373r/giflow/4_paper/combined/run_2024-10-1
 #        directories.append(dirs)
 #directories = directories[0]
 #print(directories)
-#
+
 #flow_location = os.path.join(flow_location, directories[n])
 # -------------------- Reading the flow --------------------------
 device = torch.device('cuda')
@@ -36,8 +36,8 @@ flow=FlowModel()
 flow.load(flow_location)
 flow.flowmodel.to(device)
 flow.save_location = flow_location
-data_location = flow.data_location
 
+data_location = flow.data_location
 
 # -------------------- Validation data --------------
 with open(os.path.join(flow.data_location, "validationset_0.pkl"), 'rb') as file:
@@ -62,6 +62,11 @@ val_dataset = flow.make_tensor_dataset(val_data, val_conditional, device=device,
 with open(os.path.join(flow.data_location, "testset_to_present_0.pkl"), 'rb') as file:
 #with open("/data/wiay/2263373r/giflow/box/qinetiq_dummy_set.pkl", 'rb') as file:
     dt_test = pkl.load(file)
+
+
+with open('/scratch/balta1/2263373r/4_paper/voxelised_noisy/testset_to_present_0.pkl', 'rb') as file:
+    dt_voxelised = pkl.load(file)
+voxelised_model = dt_voxelised.boxes[2].voxelised_model
 
 testsize = 4 # THIS needs to be edited to give the overall desired data set size
 test_data, test_conditional = read_files(data_location=data_location, filenames=['testset_to_present_0.pkl'], datasize=testsize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
@@ -88,31 +93,34 @@ for i in range(testsize):
     results.append(result)
 
 # ----------------- Consistency tests --------------------------
-# P-P TEST
-flow.pp_test(validation_dataset=pp_dataset,
-    parameter_labels = labels,
-    #parameter_labels=[r'$q_1$', r'$q_2$', r'$q_3$', r'$q_4$', r'$q_5$', r'$q_6$', r'$q_7$', r'$q_8$', r'$q_9$', r'$q_10$']
-)
-
-# CORNER PLOTS                              
-for i, result in enumerate(results):
-    result.corner_plot(filename="corner_plot.png")
-    result.corner_plot(filename="corner_plot_with_prior_bounds.png", prior_bounds=prior_bounds)
-    print(f"Made {i+1}/{testsize} corner plots.")
-
-# SURVEY CONSISTENCY
-for i, result in enumerate(results):
-    result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
-    print(f"Made {i+1}/{testsize} survey comparison plots.")
+## P-P TEST
+#flow.pp_test(validation_dataset=pp_dataset,
+#    parameter_labels = labels,
+#    #parameter_labels=[r'$q_1$', r'$q_2$', r'$q_3$', r'$q_4$', r'$q_5$', r'$q_6$', r'$q_7$', r'$q_8$', r'$q_9$', r'$q_10$']
+#)
 #
-## VOXELISED MODEL COMPARISON
+## CORNER PLOTS                              
 #for i, result in enumerate(results):
-#    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png",
-#        plot_truth=True,
-#        normalisation=[-1500.0, 500.0], 
-#        model_framework=dt_test.model_framework,
-#        slice_coords=[1, 4, 8])
-#    print(f"Made {i+1}/{testsize} voxel slice comparison plots.")
+#    result.corner_plot(filename="corner_plot.png")
+#    result.corner_plot(filename="corner_plot_with_prior_bounds.png", prior_bounds=prior_bounds)
+#    print(f"Made {i+1}/{testsize} corner plots.")
+#
+## SURVEY CONSISTENCY
+#for i, result in enumerate(results):
+#    result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
+#    print(f"Made {i+1}/{testsize} survey comparison plots.")
+#
+# VOXELISED MODEL COMPARISON
+for i, result in enumerate(results):
+    if not i == 2:
+        continue
+    result.true_parameters = voxelised_model[np.newaxis,...]
+    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png",
+        plot_truth=True,
+        normalisation=[-1500.0, 500.0], 
+        model_framework=dt_test.model_framework,
+        slice_coords=[1, 4, 8])
+    print(f"Made {i+1}/{testsize} voxel slice comparison plots.")
 #
 ## 3D PLOT COMPARISON PLOT
 #for i, result in enumerate(results):
