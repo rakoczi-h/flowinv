@@ -236,7 +236,7 @@ class GravitySurvey():
         plt.savefig(filename)
         plt.close()
 
-    def plot_contours(self, filename='survey.png', include_noise=False):
+    def plot_contours(self, filename='survey.png', include_noise=False, axis_limits=None):
         """
         Creates a contour plot of the survey.
         Parameters
@@ -245,6 +245,9 @@ class GravitySurvey():
                 The location where the image is saved.
             include_noise: bool
                 If True, the noise is added to the survey before plotting.
+            axis_limts: list
+                If given then it has to be a list with 4 elements, giving the limits of left, right, bottom, top, in order.
+                Default: None.
         """
         if self.gravity is None:
             raise ValueError("Compute the gravity first.")
@@ -264,7 +267,10 @@ class GravitySurvey():
         ax.set(ylabel='y')
         ax.set(xlabel='x')
         ax.set_aspect(aspect='equal')
-        plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=r'microGal')
+        if axis_limits is not None:
+            ax.set_xlim(left=axis_limits[0], right=axis_limits[1])
+            ax.set_ylim(bottom=axis_limits[2], top=axis_limits[3])
+        plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=r'$\Delta$g [$\mu$Gal]')
         plt.savefig(filename)
         plt.close()
 
