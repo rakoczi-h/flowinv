@@ -132,7 +132,7 @@ class FlowResults:
             The length of the list is the same as the dimensions, and each element in the list is [minimum, maximum] bounds.
         """
         if np.shape(self.samples)[1] > 10:
-            raise valueError(f"The samples have too many dimensions to present on a corner plot. Number of dimensions: {np.shape(self.samples)[1]}")
+            raise ValueError(f"The samples have too many dimensions to present on a corner plot. Number of dimensions: {np.shape(self.samples)[1]}")
         plot_range = []
         if prior_bounds is None:
             for dim in self.samples.T:
@@ -370,7 +370,7 @@ class BoxFlowResults(FlowResults):
             plt.savefig(filename, transparent=False)
         plt.close()
 
-    def plot_compare_voxel_slices(self, slice_coords=[1,3,5], filename='sliced_voxels.png', plot_truth=False, normalisation=None, model_framework=None):
+    def plot_compare_voxel_slices(self, slice_coords=[1,3,5], filename='sliced_voxels.png', plot_truth=False, normalisation=None, model_framework=None, aspect=[1.0, 1.0, 1.0]):
         """Makes a comparison plot consisting of slices of the voxelspace.
         Each column is slices along a different direction (x, y, z).
         Each row is a different slice, with increasing coordinates.
@@ -411,7 +411,6 @@ class BoxFlowResults(FlowResults):
                     box.translate_to_voxels(density=model_framework['density'])
                     samples.append(box.voxelised_model)
                 samples = np.vstack(samples)
-                print(np.shape(samples))
                 if plot_truth:
                     box = Box(parameterised_model=true_model, parameter_labels=self.parameter_labels)
                     box.translate_to_parameters()
@@ -422,7 +421,6 @@ class BoxFlowResults(FlowResults):
                 samples = self.samples
         else:
             samples = self.samples
-
 
         s1, s2, s3 = slice_coords
         d = round(np.power(np.shape(samples[0,:])[0], 1/3))
@@ -441,20 +439,22 @@ class BoxFlowResults(FlowResults):
             # Plotting the true slices
             true_model = np.flip(np.reshape(true_model, (d,d,d), order='F'))
             #true_model = np.reshape(true_model, (d,d,d)
-            plot_data[0, 0, :, :] = np.rot90(true_model[s1, :, :], axes=(0,1), k=3)
-            plot_data[3, 0, :, :] = np.rot90(true_model[s2, :, :], axes=(0,1), k=3)
-            plot_data[6, 0, :, :] = np.rot90(true_model[s3, :, :], axes=(0,1), k=3)
+            plot_data[0, 0, :, :] = np.rot90(true_model[s1_1, :, :], axes=(0,1), k=3)
+            plot_data[3, 0, :, :] = np.rot90(true_model[s1_2, :, :], axes=(0,1), k=3)
+            plot_data[6, 0, :, :] = np.rot90(true_model[s1_3, :, :], axes=(0,1), k=3)
 
-            plot_data[1, 0, :, :] = np.flip(true_model[:, s3, :], axis=1)
-            plot_data[4, 0, :, :] = np.flip(true_model[:, s2, :], axis=1)
-            plot_data[7, 0, :, :] = np.flip(true_model[:, s1, :], axis=1)
+            plot_data[1, 0, :, :] = np.flip(true_model[:, s2_3, :], axis=1)
+            plot_data[4, 0, :, :] = np.flip(true_model[:, s2_2, :], axis=1)
+            plot_data[7, 0, :, :] = np.flip(true_model[:, s2_1, :], axis=1)
 
-            plot_data[2, 0, :, :] = np.flip(true_model[:, :, s3], axis=1)
-            plot_data[5, 0, :, :] = np.flip(true_model[:, :, s2], axis=1)
-            plot_data[8, 0, :, :] = np.flip(true_model[:, :, s1], axis=1)
+            plot_data[2, 0, :, :] = np.flip(true_model[:, :, s3_3], axis=1)
+            plot_data[5, 0, :, :] = np.flip(true_model[:, :, s3_2], axis=1)
+            plot_data[8, 0, :, :] = np.flip(true_model[:, :, s3_1], axis=1)
         else:
             shift_idx = 1
             plot_data = np.zeros((9, len(slice_coords), d, d))
+
+        print(np.shape(plot_data))
 
         # Mean
         mean_model = np.mean(samples, axis=0)
@@ -490,17 +490,17 @@ class BoxFlowResults(FlowResults):
         std_model = -np.std(samples, axis=0)
         std_model = np.nan_to_num(std_model)
         std_model = np.flip(np.reshape(std_model, (d,d,d), order='F'))
-        plot_data[0, 3-shift_idx, :, :] = np.rot90(std_model[s1, :, :], axes=(0,1), k=3)
-        plot_data[3, 3-shift_idx, :, :] = np.rot90(std_model[s2, :, :], axes=(0,1), k=3)
-        plot_data[6, 3-shift_idx, :, :] = np.rot90(std_model[s3, :, :], axes=(0,1), k=3)
+        plot_data[0, 3-shift_idx, :, :] = np.rot90(std_model[s1_1, :, :], axes=(0,1), k=3)
+        plot_data[3, 3-shift_idx, :, :] = np.rot90(std_model[s1_2, :, :], axes=(0,1), k=3)
+        plot_data[6, 3-shift_idx, :, :] = np.rot90(std_model[s1_3, :, :], axes=(0,1), k=3)
 
-        plot_data[1, 3-shift_idx, :, :] = np.flip(std_model[:, s3, :], axis=1)
-        plot_data[4, 3-shift_idx, :, :] = np.flip(std_model[:, s2, :], axis=1)
-        plot_data[7, 3-shift_idx, :, :] = np.flip(std_model[:, s1, :], axis=1)
+        plot_data[1, 3-shift_idx, :, :] = np.flip(std_model[:, s2_3, :], axis=1)
+        plot_data[4, 3-shift_idx, :, :] = np.flip(std_model[:, s2_2, :], axis=1)
+        plot_data[7, 3-shift_idx, :, :] = np.flip(std_model[:, s2_1, :], axis=1)
 
-        plot_data[2, 3-shift_idx, :, :] = np.flip(std_model[:, :, s3], axis=1)
-        plot_data[5, 3-shift_idx, :, :] = np.flip(std_model[:, :, s2], axis=1)
-        plot_data[8, 3-shift_idx, :, :] = np.flip(std_model[:, :, s1], axis=1)
+        plot_data[2, 3-shift_idx, :, :] = np.flip(std_model[:, :, s3_3], axis=1)
+        plot_data[5, 3-shift_idx, :, :] = np.flip(std_model[:, :, s3_2], axis=1)
+        plot_data[8, 3-shift_idx, :, :] = np.flip(std_model[:, :, s3_1], axis=1)
 
         if normalisation is None:
             norm = plt.cm.colors.Normalize(np.min(mean_model), np.max(mean_model))
@@ -531,9 +531,15 @@ class BoxFlowResults(FlowResults):
 
             for j in range(r):
                 ax = plt.Subplot(fig, inner[j])
-                im = ax.imshow(plot_data[i, j, :, :], norm=norm, cmap=cmap, aspect='equal')
+                im = ax.imshow(plot_data[i, j, :, :], norm=norm, cmap=cmap)
                 ax.set_xticks([])
                 ax.set_yticks([])
+                if any([i==a for a in [0,3,6]]):
+                    ax.set_aspect(aspect[0])
+                if any([i==a for a in [1,4,7]]):
+                    ax.set_aspect(aspect[1])
+                if any([i==a for a in [2,5,8]]):
+                    ax.set_aspect(aspect[2])
                 if i < 3:
                     if plot_truth:
                         if j == 0:
