@@ -151,13 +151,14 @@ class FlowModel():
         print("----------------------------------------")
 
         if train_dataset.tensors[0].shape[0] != self.datasize:
+            print(train_dataset.tensors[0].shape[0])
             raise ValueError("The size of the training data set does not agree with the desired datasize.")
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.hyperparameters['batch_size'], shuffle=True)
         validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=self.hyperparameters['batch_size'], shuffle=True)
 
         self.flowmodel.to(device)
         loss_plot_freq = 10
-        test_freq = 10
+        test_freq = 100
         # Training
         iters_no_improve = 0
         min_val_loss = np.inf
