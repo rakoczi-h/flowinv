@@ -257,20 +257,24 @@ class GravitySurvey():
             plot_data = self.add_noise()
         else:
             plot_data = self.gravity
-        levels = np.linspace(self.gravity.min(), self.gravity.max(), 20)
+        gravity_range = self.gravity.max()-self.gravity.min()
+        levels = np.linspace(self.gravity.min(), self.gravity.max()+gravity_range/20, 256)
         cmap = 'plasma'
-        norm = matplotlib.colors.Normalize(vmin=self.gravity.min(), vmax=self.gravity.max())
+        norm = matplotlib.colors.Normalize(vmin=self.gravity.min(), vmax=self.gravity.max()+gravity_range/20)
         fig, ax = plt.subplots()
         ax.plot(self.survey_coordinates[:,0], self.survey_coordinates[:,1], 'o', markersize=2, color='black')
         ax.tricontourf(self.survey_coordinates[:,0], self.survey_coordinates[:,1], plot_data, levels=levels, cmap=cmap, norm=norm)
-        ax.set(xlim=(np.min(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,0])), ylim=(np.min(self.survey_coordinates[:,1]), np.max(self.survey_coordinates[:,1])))
-        ax.set(ylabel='y')
-        ax.set(xlabel='x')
-        ax.set_aspect(aspect='equal')
+        ax.tricontour(self.survey_coordinates[:,0], self.survey_coordinates[:,1], plot_data, levels=4, colors='k', linewidths=0.2)
         if axis_limits is not None:
             ax.set_xlim(left=axis_limits[0], right=axis_limits[1])
             ax.set_ylim(bottom=axis_limits[2], top=axis_limits[3])
-        plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=r'$\Delta$g [$\mu$Gal]')
+        else:
+            ax.set(xlim=(np.min(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,0])), ylim=(np.min(self.survey_coordinates[:,1]), np.max(self.survey_coordinates[:,1])))
+        ax.set_ylabel('y', fontsize=14)
+        ax.set_xlabel('x', fontsize=14)
+        ax.set_aspect(aspect='equal')
+        cbar = plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax)
+        cbar.set_label(label=r'$\Delta$g [$\mu$Gal]', fontsize=14)
         plt.savefig(filename)
         plt.close()
 
