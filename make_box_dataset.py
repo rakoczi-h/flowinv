@@ -8,16 +8,16 @@ import sys
 from giflow.prior import Prior
 from giflow.box import BoxDataset
 
-n = int(sys.argv[1])+2
-#save_loc = '/scratch/balta1/2263373r/4_paper/voxelised_noisy/'
-save_loc = '/data/wiay/2263373r/giflow/limbo/'
+n = int(sys.argv[1])
+save_loc = '/scratch/balta1/2263373r/box/narrow_volume/voxelised_noisy/'
+#save_loc = '/data/wiay/2263373r/giflow/limbo/'
 if not os.path.exists(save_loc):
     os.mkdir(save_loc)
 
 
 # PRIOR
-distributions = {"px": ['Uniform', -0.75, 0.75], "py": ['Uniform', -0.75, 0.75], "pz": ['Uniform', -0.75, 0.0],
-    "lx": ['Uniform', 0.0, 1.5], "ly": ['Uniform', 0.0, 1.5], "lz": ['Uniform', 0.0, 0.75], "alpha": ['Uniform', 0, 1.5708]}
+distributions = {"px": ['Uniform', -0.75, 0.75], "py": ['Uniform', -0.75, 0.75], "pz": ['Uniform', -0.375, 0.0],
+    "lx": ['Uniform', 0.0, 1.5], "ly": ['Uniform', 0.0, 1.5], "lz": ['Uniform', 0.0, 0.375], "alpha": ['Uniform', 0, 1.5708]}
 # 0.0125 is 10% of the separation of the survey points
 priors = Prior(distributions=distributions)
 
@@ -25,7 +25,7 @@ priors = Prior(distributions=distributions)
 survey_framework = {'noise_scale' : ['Uniform', 0.01, 0.25], 'survey_shape' : [8,8], 'ranges': [[-0.5,0.5],[-0.5, 0.5],[0]], 'noise_on_location_scale' : 0.025}
 # variable noise scale: ['Uniform', 0.01, 0.25], single noise scale: 0.125
 # noise on location 0.025
-model_framework = {'type': 'voxelised', 'density': -2670.0, 'noise_scale': 500.0, 'grid_shape': [10,10,10], 'ranges': [[-0.75,0.75],[-0.75,0.75],[-1.5,0.0]]}
+model_framework = {'type': 'voxelised', 'density': -2670.0, 'noise_scale': 500.0, 'grid_shape': [10,10,10], 'ranges': [[-0.75,0.75],[-0.75,0.75],[-0.75,0.0]]}
 # noise scale: 500.0
 
 ## Make train data:

@@ -13,8 +13,8 @@ from giflow.flowmodel import FlowModel, save_flow
 from giflow.box import BoxDataset
 
 # ------------- Directories ---------------------------------
-data_location = '/scratch/balta0/2263373r/giflow/4_paper/combined/'  # THIS needs to be edited to give the data location
-save_dir = '/data/www.astro/2263373r/giflow/4_paper/combined/' # THIS needs to be edited to give the saving location
+data_location = '/scratch/balta1/2263373r/box/narrow_volume/combined/'  # THIS needs to be edited to give the data location
+save_dir = '/data/www.astro/2263373r/giflow/4_paper/narrow_volume/combined/' # THIS needs to be edited to give the saving location
 if not os.path.exists(save_dir):
     os.mkdir(save_dir)
 
@@ -41,10 +41,11 @@ scalers = {'conditional': sc_conditional, 'data': sc_data}
 # ------------- Reading the data ---------------------------
 datasize = 10000000 # THIS needs to be edited to give the overall desired data set size
 train_data, train_conditional = read_files(data_location=data_location, filenames=[f"trainset_{i}.pkl" for i in range(10)], datasize=datasize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order, noise_augment_factor=2)
-
+datasize = np.shape(train_data[0])[0]
 
 valsize = 1000000 # THIS needs to be edited to give the overall desired data set size
 val_data, val_conditional = read_files(data_location=data_location, filenames=[f"validationset_{i}.pkl" for i in range(5)], datasize=valsize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order, noise_augment_factor=2)
+valsize = np.shape(val_data[0][0])[0]
 
 
 print(f"Data read. Location: \t {data_location}")
@@ -62,14 +63,14 @@ device = torch.device('cuda')
 # THIS needs to be edited for the hyperparameters of the flow
 hyperparameters={'n_inputs': 7,
                  'n_conditional_inputs': 193,
-                 'n_transforms': 13,
-                 'n_blocks_per_transform': 3,
-                 'n_neurons': 30,
+                 'n_transforms': 12,
+                 'n_blocks_per_transform': 2,
+                 'n_neurons': 64,
                  'batch_norm': True,
                  'batch_size': 10000,
                  'early_stopping': True,
                  'lr': 0.001,
-                 'epochs': 3000
+                 'epochs': 10000
 }
 flow = FlowModel(hyperparameters=hyperparameters, datasize=datasize, scalers=scalers)
 flow.save_location = save_location

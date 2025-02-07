@@ -20,7 +20,7 @@ def rescale_bilby_samples(bilby_parameter_dict, parameters_to_rescale, scale_fac
     return bilby_parameter_dict
 
 
-flow_location = '/data/www.astro/2263373r/giflow/4_paper/narrow_volume/voxelised_noisy/run_2024-09-28 21:31:40.559861/'
+flow_location = '/data/www.astro/2263373r/giflow/4_paper/narrow_volume/combined/run_2025-01-23 12:10:10.004675/'
 save_location = os.path.join(flow_location, 'qinetiq_data_gridordering/')
 if not os.path.exists(save_location):
     os.mkdir(save_location)
@@ -30,10 +30,9 @@ if not os.path.exists(save_location):
 
 with open("/scratch/balta1/2263373r/4_paper/real_bunker.pkl", 'rb') as file:
     dt_real = pkl.load(file)
-truth = dt_real.boxes[0].voxelised_model
+#truth = dt_real.boxes[0].voxelised_model
 dt_real.boxes[0].translate_to_parameterised_model()
 truth = dt_real.boxes[0].parameterised_model
-print(truth)
 
 # -------------------- Reading the flow --------------------------
 device = torch.device('cuda')
@@ -45,10 +44,16 @@ with open(os.path.join(flow.data_location, "validationset_0.pkl"), 'rb') as file
 priors = dt_val.priors
 labels = dt_val.parameter_labels
 model_framework = dt_val.model_framework
+keys = dt_val.parameter_labels
+prior_bounds = []
+for k in keys:
+    p = priors.distributions[k]
+    prior_bounds.append([p[1], p[2]])
 
+prior_samples = priors.sample(2000, returntype='array')
 #print(dt_val.survey_framework)
 # -------------------- Reading the data --------------------------
-data_loc = '/scratch/balta0/2263373r/giflow/4_paper/qinetiq_data_4_paper.csv'
+data_loc = '/scratch/balta1/2263373r/4_paper/qinetiq_data_4_paper.csv'
 df = pd.read_csv(data_loc)
 
 x = np.array(df['x'])
@@ -82,7 +87,7 @@ survey.survey_coordinates = reordered_coordinates
 data = {'x': survey.survey_coordinates[:,0], 'y': survey.survey_coordinates[:,1], 'grav': survey.gravity}
 
 df = pd.DataFrame(data=data)
-df.to_csv(path_or_buf='/scratch/balta0/2263373r/giflow/4_paper/qinetiq_data_4_paper_inv_ready.csv')
+df.to_csv(path_or_buf='/scratch/balta1/2263373r/4_paper/qinetiq_data_4_paper_inv_ready.csv')
 
 survey.plot_contours(filename=os.path.join(save_location, 'survey.png'), include_noise=False)
 
@@ -124,18 +129,20 @@ for i in range(10):
     result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][0] for j in range(len(test_conditional))],
         log_probabilities=log_probabilities,
         true_parameters=np.array([truth]),
-        parameter_labels=labels,
+        parameter_labels=[r'$c_x$', r'$c_y$', r'$c_z$', r'$l_x$', r'$l_y$', r'$l_z$', r'$\alpha$'],
         survey_coordinates=dt_test.surveys[0].survey_coordinates)
 
 #result = BoxFlowResults(samples=samples, conditional=test_conditional[0,:], log_probabilities=log_probabilities, parameter_labels=None, survey_coordinates=dt_test.surveys[0].survey_coordinates)
     result.directory = save_location
 #result.rescale(scaling_factor=scale_factor, parameters_to_rescale=['px', 'py', 'pz', 'lx', 'ly', 'lz'])
 
-    result.corner_plot(filename="corner_plot.png")
+    result.corner_plot(filename="corner_plot_prior_bounds.png", prior_bounds=prior_bounds)
+    js = result.get_js_divergence(prior_samples)
+    print(js)
     #result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
 
     #result.plot_compare_voxel_slices_pygimli(li_result, filename=f"compare_voxel_slices_{i}.png", normalisation=[-1000.0, 0.0], slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=True, model_framework=dt_test.model_framework)
-    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png", slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=False, normalisation=[-1000.0, 500.0], model_framework=dt_test.model_framework)
+    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices_{i}.png", slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=True, normalisation=[-1000.0, 500.0], model_framework=dt_test.model_framework, aspect=[1.0, 0.5, 0.5])
 
 #result.plot_3D_statistics(model_framework=dt_test.model_framework)
 
