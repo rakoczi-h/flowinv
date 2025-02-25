@@ -63,17 +63,17 @@ val_data, val_conditional = read_files(data_location=data_location, filenames=['
 val_dataset = flow.make_tensor_dataset(val_data, val_conditional, device=device, scale=True)
 
 # -------------------- Test data  ------------------
-with open(os.path.join(flow.data_location, "testset_to_present_0.pkl"), 'rb') as file:
+with open(os.path.join(flow.data_location, "testset_0.pkl"), 'rb') as file:
 #with open("/data/wiay/2263373r/giflow/box/qinetiq_dummy_set.pkl", 'rb') as file:
     dt_test = pkl.load(file)
 
 
-with open('/scratch/balta1/2263373r/4_paper/voxelised_noisy/testset_to_present_0.pkl', 'rb') as file:
+with open('/scratch/balta1/2263373r/4_paper/voxelised_noisy/testset_0.pkl', 'rb') as file:
     dt_voxelised = pkl.load(file)
 voxelised_model = dt_voxelised.boxes[2].voxelised_model
 
 testsize = 4 # THIS needs to be edited to give the overall desired data set size
-test_data, test_conditional = read_files(data_location=data_location, filenames=['testset_to_present_0.pkl'], datasize=testsize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
+test_data, test_conditional = read_files(data_location=data_location, filenames=['testset_0.pkl'], datasize=testsize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
 
 
 test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
@@ -91,7 +91,7 @@ results = []
 for i in range(testsize):
     samples, log_probabilities = flow.sample_and_logprob(test_dataset.tensors[1][i], num=2000)
     result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][i] for j in range(len(test_conditional))], log_probabilities=log_probabilities, true_parameters=np.array([test_data[0][i]]), parameter_labels=labels, survey_coordinates=dt_test.surveys[0].survey_coordinates)
-    result.directory = os.path.join(flow_location, f"testcase_to_present_{i}/")
+    result.directory = os.path.join(flow_location, f"testcase_{i}/")
     result.samples_to_csv()
     dt_test.surveys[i].plot_contours(filename=os.path.join(result.directory, "survey.png"), include_noise=True, axis_limits=[-0.4375, 0.4375, -0.4375, 0.4375])
     results.append(result)
@@ -171,9 +171,8 @@ if bilby_location is not None:
 #
     # CORNER PLOT WITH BILBY (done with test data)
     for i, result in enumerate(results):
-        if i == 0 or i == 1:
-            continue
-        with open(os.path.join(bilby_location, "testcases_to_present_v2", f"testcase_{i}", "inversion_result.json"), 'r') as file:
+        print(i)
+        with open(os.path.join(bilby_location, "10_testcases", f"testcase_{i}", "inversion_result.json"), 'r') as file:
             bilby_results = json.load(file)
             bilby_posterior_dict = bilby_results['posterior']['content']
             bilby_samples = []
