@@ -154,6 +154,7 @@ class FlowResults:
                             fill_contours=True,
                             max_n_ticks=3,
                             range=plot_range,
+                            bins=20,
                             labels=labels)
 
         figure = corner.corner(self.samples, **CORNER_KWARGS, color='#ff7f00')
@@ -197,7 +198,8 @@ class FlowResults:
         _, ndim = other_samples[0].shape
 
         n = len(other_samples)+1
-        colors = get_colors(n)
+        #colors = get_colors(n)
+        colors = ['#377eb8', '#ff7f00']
         samples_list = other_samples+[self.samples]
         max_len = max([len(s) for s in samples_list])
         plot_range = []
@@ -231,7 +233,8 @@ class FlowResults:
         fill_contours=True,
         max_n_ticks=3,
         range=plot_range,
-        labels=labels)
+        labels=labels,
+        bins=20)
 
         fig = corner.corner(
             samples_list[0],
@@ -265,9 +268,9 @@ class FlowResults:
                 bbox_to_anchor=(1, ndim), loc="upper right"
             )
         if self.directory is not None:
-            plt.savefig(os.path.join(self.directory, filename), transparent=False)
+            plt.savefig(os.path.join(self.directory, filename), transparent=True)
         else:
-            plt.savefig(filename, transparent=False)
+            plt.savefig(filename, transparent=True)
         plt.close()
         print("Made corner plot...")
 
