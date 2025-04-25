@@ -33,6 +33,8 @@ with open("/scratch/balta1/2263373r/4_paper/real_bunker.pkl", 'rb') as file:
 #truth = dt_real.boxes[0].voxelised_model
 dt_real.boxes[0].translate_to_parameterised_model()
 truth = dt_real.boxes[0].parameterised_model
+truth[:6] = truth[:6]*70
+print(truth)
 
 # -------------------- Reading the flow --------------------------
 device = torch.device('cuda')
@@ -48,7 +50,10 @@ keys = dt_val.parameter_labels
 prior_bounds = []
 for k in keys:
     p = priors.distributions[k]
-    prior_bounds.append([p[1], p[2]])
+    if k != 'alpha':
+        prior_bounds.append([p[1]*70, p[2]*70])
+    else:
+        prior_bounds.append([p[1], p[2]])
 
 prior_samples = priors.sample(2000, returntype='array')
 #print(dt_val.survey_framework)
@@ -136,6 +141,9 @@ for i in range(10):
     result.directory = save_location
 #result.rescale(scaling_factor=scale_factor, parameters_to_rescale=['px', 'py', 'pz', 'lx', 'ly', 'lz'])
 
+    samples[:,:6] = samples[:,:6]*70
+    print(prior_bounds)
+    result.samples = samples
     result.corner_plot(filename="corner_plot_prior_bounds.png", prior_bounds=prior_bounds)
     js = result.get_js_divergence(prior_samples)
     print(js)
