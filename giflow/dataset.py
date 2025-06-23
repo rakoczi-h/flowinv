@@ -1,3 +1,8 @@
+import numpy as np
+from .prior import Prior
+from .survey import GravitySurvey
+
+
 class Dataset():
     """
     General class for making a data set of source models and corresponding gravity surveys.
@@ -102,4 +107,48 @@ class Dataset():
         return data, conditional
 
 
+class FaultDataset(Dataset):
+    """
+    Class for making a data set of faults and corresponding gravity surveys.
+    """
+    def __init__(self, size: int, priors: Prior, model_framework={}, survey_framework={}):
+        self.size = size
+        self.priors = priors
+        self.model_framework = model_framework
+        self.survey_framework = survey_framework
+        self.sourcemodels = None
+        self.surveys = None
+
+    def make_dataset(self):
+        total_time = datetime.now()
+        if parameters_dict is None:
+            parameters_dict = self.priors.sample(size=self.size, returntype='dict') # if the parameters dictionary is not passed to the function, then the prior is sampled
+
+        # Making the grid
+        X = np.linspace(self.survey_framework['grid_ranges'][0][0], self.survey_framework['grid_ranges'][0][1], num=self.survey_framework['grid_resolution'])
+        Y = np.linspace(self.survey_framework['grid_ranges'][1][0], self.survey_framework['grid_ranges'][1][1], num=self.survey_framework['grid_resolution'])
+        X, Y = np.meshgrid(X, Y)
+        X = np.expand_dims(X, axis=2)
+        Y = np.expand_dims(Y, axis=2)
+        Z = np.zeros(np.shape(X))
+        grid = np.c_[X, Y, Z]
+
+        # Making the survey area
+        X = np.linspace(-2, 2, num=self.survey_framework['survey_shape'][0])
+        Y = np.linspace(-2, 2, num=self.survey_framework['survey_shape'][1])
+        X, Y = np.meshgrid(X, Y)
+        Z = np.zeros(np.shape(X))
+        survey_coordinates = np.c_[X.flatten(), Y.flatten(), Z.flatten()]
+
+        grid = np.c_[X, Y, Z]
+        for i in range(self.size):
+            parameters = dict.fromkeys(self.model_framework['parameter_to_include'])
+            parameters['density'] = self.model_framework['density']
+            for key in parameters.keys():
+                parameters[key] = parameters_dict[key][i]
+            fault = Fault(parameters=parameters)
+            fault.make_fault(grid)
+            grav, _ = fault.forward_model(survey_coordinates=survey_coordinates)
+            noise = np.random.normal(loc=0.0, scale=self.survey_framework['noise_scale'], size=np.shape(grav))
+            grav = grav+noise
 
