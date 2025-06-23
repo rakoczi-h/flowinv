@@ -1,5 +1,4 @@
 import numpy as np
-from utils import points_within_area, distance_to_line_segment
 from scipy.interpolate import splprep, splev
 from scipy.interpolate import LinearNDInterpolator
 import math
@@ -7,7 +6,9 @@ import plotly.io
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 from datetime import datetime
-from prior import Prior
+
+from .prior import Prior
+from .utils import points_within_area, distance_to_line_segment
 
 class Fault:
     def __init__(self, parameters: dict, grid=None, displacement_profile=None, density=800.0):
@@ -88,11 +89,7 @@ class Fault:
             if max_displacement == 0:
                 print('There is no displacement.')
 
-            # using the polynomial method
-            # n = 100
-            # xyboundary_coeffs, xyboundary_points = make_angular_bend_curve_v2(xyboundary[:,0], xyboundary[:,1], alpha, n)
-            # # points_inside = np.array([[-1, -1.5],[-0.5, -1], [0.5, -1]])
-            # dist_a, dist_b = distance_to_curve_v2(points_inside, xyboundary_coeffs)
+
 
 
             # Using the spline method
@@ -459,16 +456,18 @@ class FaultDataset():
         if name == 'model_framework':
             if not isinstance(value, dict):
                 raise ValueError("Expected dict for model_framework.")
-            value.setdefault("parameters_to_include", ['cx', 'cy', 'l', 'alpha'])
+            value.setdefault("type", 'parameterised')
+            value.setdefault("noise_scale", 0.0)
             value.setdefault("density", 800.0)
-            value.setdefault("grid_ranges", None)
-            value.setdefault("grid_resolution", None)
+            value.setdefault("grid_shape", None)
+            value.setdefault("ranges", None)
         if name == 'survey_framework':
             if not isinstance(value, dict):
                 raise ValueError("Expected dict for survey_framework.")
             value.setdefault("noise_scale", 0.0)
-            value.setdefault("sizes", [1,1,0])
+            value.setdefault("ranges", [[-10,10],[-10,10],[0]])
             value.setdefault("survey_shape", [5,5])
+            value.setdefault("noise_on_location_scale", 0.0)
             if not isinstance(value["survey_shape"], list):
                 raise ValueError("The survey shape has to be a list. Can have a single element")
         super().__setattr__(name, value)
@@ -488,8 +487,8 @@ class FaultDataset():
         grid = np.c_[X, Y, Z]
 
         # Making the survey area
-        X = np.linspace(-2, 2, num=50)
-        Y = np.linspace(-2, 2, num=50)
+        X = np.linspace(-2, 2, num=self.survey_framework['survey_shape'][0])
+        Y = np.linspace(-2, 2, num=self.survey_framework['survey_shape'][1])
         X, Y = np.meshgrid(X, Y)
         Z = np.zeros(np.shape(X))
         survey_coordinates = np.c_[X.flatten(), Y.flatten(), Z.flatten()]
