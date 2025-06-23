@@ -12,7 +12,7 @@ from giflow.box import Box
 
 n = int(sys.argv[1]) # Give the index of the testcase as an input to the script
 
-label = "inversion"
+label = "box_inversion"
 bilby_outdir = "/bilby_results/"
 
 data_loc = '/data/'
