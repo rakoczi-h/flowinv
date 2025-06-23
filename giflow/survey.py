@@ -24,7 +24,7 @@ class GravitySurvey():
         gravity: array
             Array of gravity measurements.
     """
-    def __init__(self, ranges=None, survey_coordinates=None, noise_scale=None, noise_on_location_scale=0.0, survey_shape=None):
+    def __init__(self, gravity=None, ranges=None, survey_coordinates=None, noise_scale=None, noise_on_location_scale=0.0, survey_shape=None):
         self.ranges = ranges
         self.survey_coordinates = survey_coordinates
         self.noise_scale = noise_scale
@@ -32,7 +32,7 @@ class GravitySurvey():
         self.noise = None
         self.noise_on_location = None
         self.survey_shape = survey_shape
-        self.gravity = None
+        self.gravity = gravity
 
     def __setattr__(self, name, value):
         if name == 'ranges':
