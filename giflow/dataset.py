@@ -1,6 +1,8 @@
 import numpy as np
+from datetime import datetime
 from .prior import Prior
 from .survey import GravitySurvey
+from .fault import Fault
 
 
 class Dataset():
@@ -43,16 +45,18 @@ class Dataset():
             value.setdefault("type", 'parameterised')
             value.setdefault("noise_scale", 0.0)
             value.setdefault("density", 1000.0)
-            value.setdefault("grid_shape", None)
+            value.setdefault("shape", None)
             value.setdefault("ranges", None)
+            value.setdefault("varied_parameters", None)
+            value.setdefault("default_parameters", None)
         if name == 'survey_framework':
             if not isinstance(value, dict):
                 raise ValueError("Expected dict for survey_framework.")
             value.setdefault("noise_scale", 0.0)
             value.setdefault("ranges", [[-1,1],[-1,1],[0]])
-            value.setdefault("survey_shape", [10,10])
+            value.setdefault("shape", [10,10])
             value.setdefault("noise_on_location_scale", 0.0)
-            if not isinstance(value["survey_shape"], list):
+            if not isinstance(value["shape"], list):
                 raise ValueError("The survey shape has to be a list. Can have a single element")
         super().__setattr__(name, value)
 
@@ -119,14 +123,15 @@ class FaultDataset(Dataset):
         self.sourcemodels = None
         self.surveys = None
 
-    def make_dataset(self):
+    def make_dataset(self, parameters_dict=None):
         total_time = datetime.now()
         if parameters_dict is None:
             parameters_dict = self.priors.sample(size=self.size, returntype='dict') # if the parameters dictionary is not passed to the function, then the prior is sampled
+        self.model_framework['varied_parameters'] = [key for key in parameters_dict.keys()]
 
         # Making the grid
-        X = np.linspace(self.survey_framework['grid_ranges'][0][0], self.survey_framework['grid_ranges'][0][1], num=self.survey_framework['grid_resolution'])
-        Y = np.linspace(self.survey_framework['grid_ranges'][1][0], self.survey_framework['grid_ranges'][1][1], num=self.survey_framework['grid_resolution'])
+        X = np.linspace(self.model_framework['ranges'][0][0], self.model_framework['ranges'][0][1], num=self.model_framework['shape'][0])
+        Y = np.linspace(self.model_framework['ranges'][1][0], self.model_framework['ranges'][1][1], num=self.model_framework['shape'][1])
         X, Y = np.meshgrid(X, Y)
         X = np.expand_dims(X, axis=2)
         Y = np.expand_dims(Y, axis=2)
@@ -134,21 +139,30 @@ class FaultDataset(Dataset):
         grid = np.c_[X, Y, Z]
 
         # Making the survey area
-        X = np.linspace(-2, 2, num=self.survey_framework['survey_shape'][0])
-        Y = np.linspace(-2, 2, num=self.survey_framework['survey_shape'][1])
+        X = np.linspace(self.survey_framework['ranges'][0][0], self.survey_framework['ranges'][0][1], num=self.survey_framework['shape'][0])
+        Y = np.linspace(self.survey_framework['ranges'][1][0], self.survey_framework['ranges'][1][1], num=self.survey_framework['shape'][1])
         X, Y = np.meshgrid(X, Y)
         Z = np.zeros(np.shape(X))
         survey_coordinates = np.c_[X.flatten(), Y.flatten(), Z.flatten()]
 
-        grid = np.c_[X, Y, Z]
+        faults = []
+        surveys = []
         for i in range(self.size):
-            parameters = dict.fromkeys(self.model_framework['parameter_to_include'])
-            parameters['density'] = self.model_framework['density']
-            for key in parameters.keys():
-                parameters[key] = parameters_dict[key][i]
+            parameters = {}
+            if self.model_framework['default_parameters']:
+                for key in self.model_framework['default_parameters']:
+                    parameters[key] = self.model_framework['default_parameters'][key] # first the default values are loaded into the dict
+            for key in self.model_framework['varied_parameters']:
+                parameters[key] = parameters_dict[key][i] # then the varied values are added
             fault = Fault(parameters=parameters)
             fault.make_fault(grid)
+            faults.append(fault)
             grav, _ = fault.forward_model(survey_coordinates=survey_coordinates)
             noise = np.random.normal(loc=0.0, scale=self.survey_framework['noise_scale'], size=np.shape(grav))
             grav = grav+noise
+            survey = GravitySurvey(gravity=grav, survey_coordinates=survey_coordinates)
+            surveys.append(survey)
+
+        self.sourcemodels = faults
+        self.surveys = surveys
 
