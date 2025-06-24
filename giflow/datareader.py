@@ -4,7 +4,7 @@ import numpy as np
 import random
 
 from .prior import Prior
-from .fault import FaultDataset
+
 
 class DataReader():
     """
