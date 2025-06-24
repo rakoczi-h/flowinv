@@ -11,17 +11,17 @@ from .prior import Prior
 from .utils import points_within_area, distance_to_line_segment
 
 class Fault:
-    def __init__(self, parameters: dict, grid=None, displacement_profile=None, density=800.0):
+    def __init__(self, parameters: dict, grid=None, displacement_profile=None):
         self.parameters = parameters
         self.grid = grid
         self.displacement_profile = displacement_profile
-        self.density = density
+
     def __setattr__(self, name, value):
         if name == 'parameters':
             if value is not None:
                 if not isinstance(value, dict):
                     raise ValueError("parameters has to be a dictionary")
-                default_keys = ["cx", "cy", "alpha", "l", "DL_ratio", "Extent_ratio", "dip", "sym_factor", "Displacement_order", "Blend_order", "depth"]
+                default_keys = ["cx", "cy", "alpha", "l", "DL_ratio", "Extent_ratio", "dip", "sym_factor", "Displacement_order", "Blend_order", "cz", "density"]
                 for key in value.keys():
                     if not key in default_keys:
                         raise ValueError('At least one of the keys in parameters is not recognised.')
@@ -33,7 +33,8 @@ class Fault:
                 value.setdefault("Extent_ratio", 1.5)
                 value.setdefault("Displacement_order", 1.2)
                 value.setdefault("Blend_order", 1.2)
-                value.setdefault("depth", 0.0)
+                value.setdefault("cz", 0.0)
+                value.setdefault("density", 800.0)
                 for i, key in enumerate(default_keys):
                     super().__setattr__(key, value[key])
         super().__setattr__(name, value)
@@ -88,9 +89,6 @@ class Fault:
 
             if max_displacement == 0:
                 print('There is no displacement.')
-
-
-
 
             # Using the spline method
             n = 100 # must be even
@@ -288,7 +286,7 @@ class Fault:
         if self.displacement_profile is None:
             self.make_fault()
         if depth is None:
-            depth = self.parameters["depth"]
+            depth = self.parameters["cz"]
             if depth is None:
                 raise ValueError("Need to provide the depth of the fault")
         k_mag = self.make_k_vector()
@@ -303,7 +301,7 @@ class Fault:
             R1 = R1+r1
         self.fourier_domain_model = R1
         G = 6.67430*10**(-11) # Nm**2kg**(-2)
-        f_g = -2*np.pi*G*np.exp((-k_mag)*depth*1000.0)*R1*self.density
+        f_g = -2*np.pi*G*np.exp((-k_mag)*depth*1000.0)*R1*self.parameters['density']
         g = np.fft.ifft2(f_g)
         g_vec = g.ravel()
         g_orig = np.real(g_vec) * 1e5 # changing to mGal
@@ -389,7 +387,7 @@ class Fault:
         X = self.grid[:,:,0]
         Y = self.grid[:,:,1] # changing to km
         model = self.displacement_profile/1000.0
-        depth = self.parameters['depth']
+        depth = self.parameters['cz']
         model = np.reshape(model, np.shape(X))
         aspect_ratios = [1, 1, 0.2]
         fig = go.Figure(data=[go.Surface(z=model-depth, x=X, y=Y, cmax=np.max(-depth)-depth/100, cmin=np.min(-depth)+depth/100,
