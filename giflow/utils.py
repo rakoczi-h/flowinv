@@ -71,3 +71,16 @@ def distance_to_line_segment(p, a, b):
     c = d_pa[:, 0] * d[:, 1] - d_pa[:, 1] * d[:, 0]
     return np.hypot(h, c)
 
+def normalize(x, range=(0, 1)):
+    minx = np.min(x)
+    maxx = np.max(x)
+    if minx == maxx:
+        y = np.full_like(x, np.mean(range), dtype=float)
+        scale = 0
+        offset = np.mean(range)
+    else:
+        scale = (range[1] - range[0]) / (maxx - minx)
+        offset = range[0] - minx * scale
+        y = scale * x + offset
+    return y, scale, offset
+
