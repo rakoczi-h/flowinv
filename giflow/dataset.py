@@ -82,7 +82,7 @@ class Dataset():
         data = []
         if model_info_to_include:
             for key in model_info_to_include:
-                arr = np.array([self.source_models[i].parameters[key] for i in range(self.size)])[...,np.newaxis]
+                arr = np.array([self.sourcemodels[i].parameters[key] for i in range(self.size)])[...,np.newaxis]
                 data.append(arr)
 
         conditional_gz = np.array([self.surveys[i].gravity for i in range(self.size)])
@@ -105,7 +105,7 @@ class Dataset():
                     conditional.append(np.array([self.surveys[i].ranges[idx] for i in range(self.size)]))
             if any([c=='survey_width_ratio' for c in survey_info_to_include]):
                 conditional.append(np.expand_dims(np.array([((self.surveys[i].ranges[0][1]-self.surveys[i].ranges[0][0])/(self.surveys[i].ranges[1][1]-self.surveys[i].ranges[1][0])) for i in range(self.size)]), axis=1))
-            if any([l=='noise_scale' for l in survey_coordinates_to_include]):
+            if any([l=='noise_scale' for l in survey_info_to_include]):
                 conditional.append(np.expand_dims(np.array([self.surveys[i].noise_scale for i in range(self.size)]), axis=1))
 
         return data, conditional
@@ -122,6 +122,28 @@ class FaultDataset(Dataset):
         self.survey_framework = survey_framework
         self.sourcemodels = None
         self.surveys = None
+
+    def __setattr__(self, name, value):
+        if name == 'model_framework':
+            if not isinstance(value, dict):
+                raise ValueError("Expected dict for model_framework.")
+            value.setdefault("type", 'parameterised')
+            value.setdefault("noise_scale", 0.0)
+            value.setdefault("density", 800.0)
+            value.setdefault("shape", None)
+            value.setdefault("ranges", None)
+            value.setdefault("varied_parameters", None)
+            value.setdefault("default_parameters", None)
+        if name == 'survey_framework':
+            if not isinstance(value, dict):
+                raise ValueError("Expected dict for survey_framework.")
+            value.setdefault("noise_scale", 0.0)
+            value.setdefault("ranges", [[-1,1],[-1,1],[0]])
+            value.setdefault("shape", [10,10])
+            value.setdefault("noise_on_location_scale", 0.0)
+            if not isinstance(value["shape"], list):
+                raise ValueError("The survey shape has to be a list. Can have a single element")
+        super().__setattr__(name, value)
 
     def make_dataset(self, parameters_dict=None):
         total_time = datetime.now()
@@ -159,8 +181,9 @@ class FaultDataset(Dataset):
             faults.append(fault)
             grav, _ = fault.forward_model(survey_coordinates=survey_coordinates)
             noise = np.random.normal(loc=0.0, scale=self.survey_framework['noise_scale'], size=np.shape(grav))
-            grav = grav+noise
             survey = GravitySurvey(gravity=grav, survey_coordinates=survey_coordinates)
+            survey.noise = noise
+            survey.noise_scale = self.survey_framework['noise_scale']
             surveys.append(survey)
 
         self.sourcemodels = faults
