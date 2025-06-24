@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 
 from .prior import Prior
-from .utils import points_within_area, distance_to_line_segment
+from .utils import points_within_area, distance_to_line_segment, normalize
 
 class Fault:
     def __init__(self, parameters: dict, grid=None, displacement_profile=None):
@@ -27,7 +27,7 @@ class Fault:
                         raise ValueError('At least one of the keys in parameters is not recognised.')
                 for df in ['cx', 'cy', 'alpha', 'l']:
                     value.setdefault(df, None)
-                value.setdefault("DL_ratio", 0.1)
+                value.setdefault("DL_ratio", 0.02)
                 value.setdefault("dip", 70/180*np.pi)
                 value.setdefault("sym_factor", 0.2)
                 value.setdefault("Extent_ratio", 1.5)
@@ -109,7 +109,7 @@ class Fault:
 
 
             distance_from_edge = np.abs((dist_a**(-Displacement_Order) + dist_b**(-Displacement_Order))**(-Displacement_Order))
-            d = distance_from_edge / (self.parameters['l']/2) # Normalise. The maximum distance from the edge is the half length of the trace, and the minimum is 0
+            d = normalize(distance_from_edge)
             taper = ((np.cos(d*np.pi)+1)/2)**(Blend_Order)
             dz1 = (1-taper)*max_displacement
 
