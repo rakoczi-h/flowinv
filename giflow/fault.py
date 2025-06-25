@@ -109,7 +109,7 @@ class Fault:
 
 
             distance_from_edge = np.abs((dist_a**(-Displacement_Order) + dist_b**(-Displacement_Order))**(-Displacement_Order))
-            d = normalize(distance_from_edge)
+            d, _, _ = normalize(distance_from_edge)
             taper = ((np.cos(d*np.pi)+1)/2)**(Blend_Order)
             dz1 = (1-taper)*max_displacement
 
