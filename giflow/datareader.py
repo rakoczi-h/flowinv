@@ -4,7 +4,7 @@ import numpy as np
 import random
 
 from .prior import Prior
-
+from .dataset import FaultDataset
 
 class DataReader():
     """
@@ -27,13 +27,13 @@ class DataReader():
         datasize: int
             The desired number of data points in the output. If none, then it is inferred from the read files. Default: None
     """
-    def __init__(self, filenames, data_location, model_parameters_to_include, survey_coordinates_to_include=[], noise_scale=None, chunk_size=None, datasize=None):
+    def __init__(self, filenames, data_location, model_info_to_include, survey_info_to_include=[], noise_scale=None, chunk_size=None, datasize=None):
         self.filenames = filenames
         self.n_files = int(len(filenames))
         self.data_location = data_location
         self.chunk_size = chunk_size
-        self.model_parameters_to_include = model_parameters_to_include
-        self.survey_coordinates_to_include = survey_coordinates_to_include
+        self.model_info_to_include = model_info_to_include
+        self.survey_info_to_include = survey_info_to_include
         self.noise_scale = noise_scale
         self.datasize = datasize
 
@@ -100,7 +100,7 @@ class DataReader():
                 dt = pkl.load(file)
                 # Reading files containing FaultDataset objects
                 if isinstance(dt, FaultDataset):
-                    td, tc = dt.make_data_for_network(survey_coordinates_to_include=self.survey_coordinates_to_include, model_parameters_to_include=self.model_parameters_to_include, add_noise=True)   # these objects have corresponding method to format the data that is compatible with training
+                    td, tc = dt.make_data_for_network(survey_info_to_include=self.survey_info_to_include, model_info_to_include=self.model_info_to_include, add_noise=True)   # these objects have corresponding method to format the data that is compatible with training
                     train_data.append(td)
                     train_conditional.append(tc)
                     # Noise augmentation
@@ -109,7 +109,7 @@ class DataReader():
                             raise ValueError('Need to provide the noise scale to the class')
                         for i in range(noise_augment_factor-1):
                             self.regenerate_noise(dt)
-                            td, tc = dt.make_data_for_network(survey_coordinates_to_include=self.survey_coordinates_to_include, model_parameters_to_include=self.model_parameters_to_include, add_noise=True)
+                            td, tc = dt.make_data_for_network(survey_info_to_include=self.survey_info_to_include, model_info_to_include=self.model_info_to_include, add_noise=True)
                             train_data.append(td)
                             train_conditional.append(tc)
                 # Reading files containing dictionaries
@@ -199,23 +199,23 @@ class DataReader():
         if self.survey_coordinates_to_include is not None:
             labels = ['x', 'y', 'z']
             for idx, label in enumerate(labels):
-                if any([l==label for l in self.survey_coordinates_to_include]):
+                if any([l==label for l in self.survey_info_to_include]):
                     if not label in dt:
                         raise ValueError(f"{label} can't be found in dictionary.")
                     tc.append(dt[label])
             labels = ['x_ranges', 'y_ranges', 'z_ranges']
             for idx, label in enumerate(labels):
-                if any([l==label for l in self.survey_coordinates_to_include]):
+                if any([l==label for l in self.survey_info_to_include]):
                     if not 'survey_ranges' in dt:
                         raise ValueError(f"survey_ranges can't be found in dictionary.")
                     tc.append(dt['survey_ranges'][idx])
-            if any([c=='survey_width_ratio' for c in self.survey_coordinates_to_include]):
+            if any([c=='survey_width_ratio' for c in self.survey_info_to_include]):
                 if not 'survey_ranges' in dt:
                     raise ValueError(f"survey_ranges can't be found in dictionary.")
                 survey_width_ratio = np.array([(r[0][1]-r[0][0])/(r[1][1]-r[1][0]) for r in dt['survey_ranges']])
                 survey_width_ratio = np.expand_dims(survey_width_ratio, axis=1)
                 tc.append(survey_width_ratio)
-            if any([l=='noise_scale' for l in self.survey_coordinates_to_include]):
+            if any([l=='noise_scale' for l in self.survey_info_to_include]):
                 tc.append(noise_scale_sampled)
 
         td = [np.expand_dims(dt[k], axis=1) for k in self.model_parameters_to_include]
