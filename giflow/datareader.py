@@ -158,68 +158,68 @@ class DataReader():
         print(f"Dataset read. Data size = {self.datasize}")
         return train_data, train_conditional
 
-    def read_dictionary(self, dt, make_noise=True):
-        """
-        Method to extract relevant information from a dictionary.
-        Parameters
-        ----------
-            dt: dict
-                The dictionary to read.
-            make_noise: bool
-                If True, then noise is made from the given noise_scale.
-        """
-
-        if not isinstance(dt, dict):
-            raise ValueError('Input has to be a dictionary.')
-        if not make_noise:
-            if dt['noise'] is None:
-                print('No noise in dictionary, making noise.')
-                make_noise = True
-
-        # Making noise
-        if make_noise:
-            if self.noise_scale is None:
-                raise ValueError('Either provide the noise_scale to the class, or set make_noise to False.')
-            noise_prior = Prior(distributions={"noise_scale" : self.noise_scale})
-            noise_scale_sampled = noise_prior.sample(size=(np.shape(dt['gravity'])[0],1), returntype='dict')['noise_scale']
-            gravity = []
-            for i, n in enumerate(noise_scale_sampled):
-                gravity.append(dt['gravity'][i]+np.random.normal(0.0, n, size=np.shape(dt['gravity'])[1]))
-            gravity = np.vstack(gravity)
-        # Using noise from within the dictionary
-        else:
-            gravity = []
-            for g in dt['gravity']:
-                gravity.append(g+dt['noise'][i])
-            gravity = np.vstack(gravity)
-
-        tc = [gravity]
-
-        # Making the conditional
-        if self.survey_coordinates_to_include is not None:
-            labels = ['x', 'y', 'z']
-            for idx, label in enumerate(labels):
-                if any([l==label for l in self.survey_info_to_include]):
-                    if not label in dt:
-                        raise ValueError(f"{label} can't be found in dictionary.")
-                    tc.append(dt[label])
-            labels = ['x_ranges', 'y_ranges', 'z_ranges']
-            for idx, label in enumerate(labels):
-                if any([l==label for l in self.survey_info_to_include]):
-                    if not 'survey_ranges' in dt:
-                        raise ValueError(f"survey_ranges can't be found in dictionary.")
-                    tc.append(dt['survey_ranges'][idx])
-            if any([c=='survey_width_ratio' for c in self.survey_info_to_include]):
-                if not 'survey_ranges' in dt:
-                    raise ValueError(f"survey_ranges can't be found in dictionary.")
-                survey_width_ratio = np.array([(r[0][1]-r[0][0])/(r[1][1]-r[1][0]) for r in dt['survey_ranges']])
-                survey_width_ratio = np.expand_dims(survey_width_ratio, axis=1)
-                tc.append(survey_width_ratio)
-            if any([l=='noise_scale' for l in self.survey_info_to_include]):
-                tc.append(noise_scale_sampled)
-
-        td = [np.expand_dims(dt[k], axis=1) for k in self.model_parameters_to_include]
-        return td, tc
-
+#    def read_dictionary(self, dt, make_noise=True):
+#        """
+#        Method to extract relevant information from a dictionary.
+#        Parameters
+#        ----------
+#            dt: dict
+#                The dictionary to read.
+#            make_noise: bool
+#                If True, then noise is made from the given noise_scale.
+#        """
+#
+#        if not isinstance(dt, dict):
+#            raise ValueError('Input has to be a dictionary.')
+#        if not make_noise:
+#            if dt['noise'] is None:
+#                print('No noise in dictionary, making noise.')
+#                make_noise = True
+#
+#        # Making noise
+#        if make_noise:
+#            if self.noise_scale is None:
+#                raise ValueError('Either provide the noise_scale to the class, or set make_noise to False.')
+#            noise_prior = Prior(distributions={"noise_scale" : self.noise_scale})
+#            noise_scale_sampled = noise_prior.sample(size=(np.shape(dt['gravity'])[0],1), returntype='dict')['noise_scale']
+#            gravity = []
+#            for i, n in enumerate(noise_scale_sampled):
+#                gravity.append(dt['gravity'][i]+np.random.normal(0.0, n, size=np.shape(dt['gravity'])[1]))
+#            gravity = np.vstack(gravity)
+#        # Using noise from within the dictionary
+#        else:
+#            gravity = []
+#            for g in dt['gravity']:
+#                gravity.append(g+dt['noise'][i])
+#            gravity = np.vstack(gravity)
+#
+#        tc = [gravity]
+#
+#        # Making the conditional
+#        if self.survey_coordinates_to_include is not None:
+#            labels = ['x', 'y', 'z']
+#            for idx, label in enumerate(labels):
+#                if any([l==label for l in self.survey_info_to_include]):
+#                    if not label in dt:
+#                        raise ValueError(f"{label} can't be found in dictionary.")
+#                    tc.append(dt[label])
+#            labels = ['x_ranges', 'y_ranges', 'z_ranges']
+#            for idx, label in enumerate(labels):
+#                if any([l==label for l in self.survey_info_to_include]):
+#                    if not 'survey_ranges' in dt:
+#                        raise ValueError(f"survey_ranges can't be found in dictionary.")
+#                    tc.append(dt['survey_ranges'][idx])
+#            if any([c=='survey_width_ratio' for c in self.survey_info_to_include]):
+#                if not 'survey_ranges' in dt:
+#                    raise ValueError(f"survey_ranges can't be found in dictionary.")
+#                survey_width_ratio = np.array([(r[0][1]-r[0][0])/(r[1][1]-r[1][0]) for r in dt['survey_ranges']])
+#                survey_width_ratio = np.expand_dims(survey_width_ratio, axis=1)
+#                tc.append(survey_width_ratio)
+#            if any([l=='noise_scale' for l in self.survey_info_to_include]):
+#                tc.append(noise_scale_sampled)
+#
+#        td = [np.expand_dims(dt[k], axis=1) for k in self.model_parameters_to_include]
+#        return td, tc
+#
 
 

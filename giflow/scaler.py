@@ -113,6 +113,7 @@ class Scaler:
                 check_is_fitted(c)
         data_list = []
         for sds in self.scaled_data_sizes:
+
             data_list.append(data[:,:sds[1]])
             data = data[:,sds[1]:]
         data = data_list
@@ -124,7 +125,9 @@ class Scaler:
             if self.compressors is not None:
                 if self.compressors[i] is not None:
                     d = self.compressors[i].inverse_transform(d)
+
             data_unscaled.append(d)
+
         return data_unscaled
 
 
