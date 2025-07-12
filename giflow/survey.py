@@ -24,14 +24,14 @@ class GravitySurvey():
         gravity: array
             Array of gravity measurements.
     """
-    def __init__(self, gravity=None, ranges=None, survey_coordinates=None, noise_scale=None, noise_on_location_scale=0.0, survey_shape=None):
+    def __init__(self, gravity=None, ranges=None, survey_coordinates=None, noise_scale=None, noise_on_location_scale=0.0, shape=None):
         self.ranges = ranges
         self.survey_coordinates = survey_coordinates
         self.noise_scale = noise_scale
         self.noise_on_location_scale = noise_on_location_scale
         self.noise = None
         self.noise_on_location = None
-        self.survey_shape = survey_shape
+        self.shape = shape
         self.gravity = gravity
 
     def __setattr__(self, name, value):
@@ -59,12 +59,12 @@ class GravitySurvey():
                     raise ValueError("Noise has to be of type ndarray.")
         super().__setattr__(name, value)
 
-    def make_survey(self, survey_shape=None):
+    def make_survey(self, shape=None):
         """
         Method to make the survey points.
         Parameters
         ----------
-            survey_shape: list
+            shape: list
                 the type of survey configuration is inferred from the lenght of the list
                 len = 1 --> randomised survey locations
                 len = 2 --> 2D grid, [number of points in the x dimension, y dimension]
@@ -76,37 +76,37 @@ class GravitySurvey():
         """
         if self.ranges is None:
             raise ValueError('The ranges of the survey coordinates are not defined.')
-        if survey_shape is not None:
-            self.survey_shape = survey_shape
+        if shape is not None:
+            self.shape = shape
         x_min, x_max = self.ranges[0]
         y_min, y_max = self.ranges[1]
 
         self.make_noise_on_location()
 
-        if self.survey_shape is None:
-            raise ValueError('The survey_shape is not defined.')
-        if len(self.survey_shape) == 2:
+        if self.shape is None:
+            raise ValueError('The shape is not defined.')
+        if len(self.shape) == 2:
             z = self.ranges[2][0]
-            dx = (x_max - x_min)/self.survey_shape[0]
-            dy = (y_max - y_min)/self.survey_shape[1]
-            x_cm = np.arange(x_min+dx/2, x_max+dx/2, dx)[:self.survey_shape[0]]
-            y_cm = np.arange(y_min+dy/2, y_max+dy/2, dy)[:self.survey_shape[1]]
+            dx = (x_max - x_min)/self.shape[0]
+            dy = (y_max - y_min)/self.shape[1]
+            x_cm = np.arange(x_min+dx/2, x_max+dx/2, dx)[:self.shape[0]]
+            y_cm = np.arange(y_min+dy/2, y_max+dy/2, dy)[:self.shape[1]]
 
             X_cm, Y_cm, Z_cm = np.meshgrid(x_cm, y_cm, z, indexing='ij')
             X_cm, Y_cm, Z_cm = X_cm.ravel(), Y_cm.ravel(), Z_cm.ravel()
             survey_coordinates = np.c_[X_cm, Y_cm, Z_cm]
             survey_coordinates[:,:2] = survey_coordinates[:,:2] + self.noise_on_location[:,:2]
             self.survey_coordinates = survey_coordinates
-        elif len(self.survey_shape) == 3:
+        elif len(self.shape) == 3:
             if len(self.ranges[2]) != 2:
                 raise ValueError("range is not defined for the z dimension.")
             z_min, z_max = self.ranges[2]
-            dx = (x_max - x_min)/self.survey_shape[0]
-            dy = (y_max - y_min)/self.survey_shape[1]
-            dz = (z_max - z_min)/self.survey_shape[2]
-            x_cm = np.arange(x_min+dx/2, x_max+dx/2, dx)[:self.survey_shape[0]]
-            y_cm = np.arange(y_min+dy/2, y_max+dy/2, dy)[:self.survey_shape[1]]
-            z_cm = np.arange(z_min+dy/2, z_max+dy/2, dz)[:self.survey_shape[2]]
+            dx = (x_max - x_min)/self.shape[0]
+            dy = (y_max - y_min)/self.shape[1]
+            dz = (z_max - z_min)/self.shape[2]
+            x_cm = np.arange(x_min+dx/2, x_max+dx/2, dx)[:self.shape[0]]
+            y_cm = np.arange(y_min+dy/2, y_max+dy/2, dy)[:self.shape[1]]
+            z_cm = np.arange(z_min+dy/2, z_max+dy/2, dz)[:self.shape[2]]
 
             X_cm, Y_cm, Z_cm = np.meshgrid(x_cm, y_cm, z_cm, indexing='ij')
             X_cm, Y_cm, Z_cm = X_cm.ravel(), Y_cm.ravel(), Z_cm.ravel()
@@ -114,17 +114,17 @@ class GravitySurvey():
             survey_coordinates = survey_coordinates + self.noise_on_location
             self.survey_coordinates = survey_coordinates
         elif len(self.survey_shape) == 1:
-            x = np.random.uniform(self.ranges[0][0], self.ranges[0][1], size=self.survey_shape)
-            y = np.random.uniform(self.ranges[1][0], self.ranges[1][1], size=self.survey_shape)
+            x = np.random.uniform(self.ranges[0][0], self.ranges[0][1], size=self.shape)
+            y = np.random.uniform(self.ranges[1][0], self.ranges[1][1], size=self.shape)
             if len(self.ranges[2]) == 2:
-                z = np.random.uniform(self.ranges[2][0], self.ranges[2][1], size=self.survey_shape)
+                z = np.random.uniform(self.ranges[2][0], self.ranges[2][1], size=self.shape)
             else:
-                z = np.ones(self.survey_shape)*self.ranges[2][0]
+                z = np.ones(self.shape)*self.ranges[2][0]
             survey_coordinates = np.vstack([x, y, z]).T
             survey_coordinates[:,:2] = survey_coordinates[:,:2] + self.noise_on_location[:,:2]
             self.survey_coordinates = survey_coordinates
         else:
-            raise ValueError('The given survey_shape cannot be interpreted')
+            raise ValueError('The given shape cannot be interpreted')
         return survey_coordinates
 
     def make_noise(self, noise_scale=None):
@@ -171,7 +171,7 @@ class GravitySurvey():
 
     def get_number_of_surveypoints(self):
         """
-        Calculates the number of survey points from the survey_shape or survey_coordinates.
+        Calculates the number of survey points from the shape or survey_coordinates.
         Output
         -----
             num_points: int
@@ -179,12 +179,12 @@ class GravitySurvey():
         """
         if self.survey_coordinates is not None:
             num_points = np.shape(self.survey_coordinates)[0]
-        elif self.survey_shape is not None:
+        elif self.shape is not None:
             num_points = 1
-            for i in self.survey_shape:
+            for i in self.shape:
                 num_points = num_points*i
         else:
-            raise ValueError("Not enough information is given. Provide either survey_shape or survey_coordinates to the class")
+            raise ValueError("Not enough information is given. Provide either shape or survey_coordinates to the class")
         return num_points
 
     def add_noise(self):
@@ -230,7 +230,7 @@ class GravitySurvey():
             include_noise: bool
                 If True, the noise is added to the survey before plotting.
         """
-        if len(self.survey_shape) == 1:
+        if len(self.shape) == 1:
             raise ValueError("This function is only available for gridded data points.")
         if self.gravity is None:
             raise ValueError("Compute the gravity first.")
@@ -240,7 +240,11 @@ class GravitySurvey():
             plot_data = self.add_noise()
         else:
             plot_data = self.gravity
-        plt.imshow(np.reshape(plot_data, self.survey_shape), extent=(np.min(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,1]), np.min(self.survey_coordinates[:,1])))
+        if self.survey_coordinates is None:
+            extent = (self.ranges[0][0], self.ranges[0][1], self.ranges[1][1], self.ranges[1][0])
+        else:
+            extent = (np.min(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,1]), np.min(self.survey_coordinates[:,1]))
+        plt.imshow(np.reshape(plot_data, self.shape), extent=extent)
         plt.xlabel('y')
         plt.ylabel('x')
         # the extent and order of coordinates has been validated
@@ -260,6 +264,8 @@ class GravitySurvey():
         """
         if self.gravity is None:
             raise ValueError("Compute the gravity first.")
+        if self.survey_coordinates is None:
+            self.make_survey()
         if include_noise is True:
             if self.noise is None:
                 self.make_noise()
