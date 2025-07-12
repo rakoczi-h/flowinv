@@ -119,6 +119,7 @@ class Scaler:
         data = data_list
         data_unscaled = []
         for i, d in enumerate(data):
+
             data_shape = np.shape(d)
             d = self.scalers[i].inverse_transform(d.flatten()[..., np.newaxis])
             d = d.reshape(data_shape)
