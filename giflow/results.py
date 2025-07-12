@@ -96,10 +96,7 @@ class FlowResults:
                 The list of JS-divergence values with length of the no. of parameters/dimensions.
         """
         if self.samples is None:
-            if scaler is not None:
-                self.inverse_scale('samples', scaler)
-            else:
-                raise AttributeError("Samples have not been unnormalised and scaler was not provided.")
+            raise AttributeError("Samples have not been provided")
         if not self.nparameters == np.shape(samples_to_compare)[1]:
             raise ValueError('The two sample sets do not have the same number of parameters.')
         js = []
@@ -152,9 +149,10 @@ class FlowResults:
                             range=plot_range,
                             labels=labels)
 
+
         figure = corner.corner(self.samples, **CORNER_KWARGS, color='#ff7f00')
         if self.true_parameters is not None:
-            values = self.true_parameters[0]
+            values = self.true_parameters
             corner.overplot_lines(figure, values, color="black")
             corner.overplot_points(figure, values[None], marker="s", color="black")
         if self.directory is not None:
@@ -344,7 +342,7 @@ class BoxFlowResults(FlowResults):
         cmap = 'plasma'
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
         for idx, ax in enumerate(axes.flatten()):
-            print(titles[idx])
+
             ax.plot(coordinates[:,0], coordinates[:,1], 'o', markersize=2, color='black')
             ax.tricontourf(coordinates[:,0], coordinates[:,1], plot_data[idx], levels=levels, cmap=cmap, norm=norm)
             ax.set(xlim=(np.min(coordinates[:,0]), np.max(coordinates[:,0])), ylim=(np.min(coordinates[:,1]), np.max(coordinates[:,1])), aspect='equal', title=titles[idx])
