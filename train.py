@@ -56,7 +56,7 @@ hyperparameters = {
         'batch_norm': True,
         'lr': 0.001,
         'epochs': 3000,
-        'early_stopping': False # if set True, the training stops when the validation loss stops decreasing
+        'early_stopping': True # if set True, the training stops when the validation loss stops decreasing
 }
 
 # Construct the flow

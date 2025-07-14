@@ -8,7 +8,7 @@ from giflow.results import FlowResults
 from giflow.flowmodel import FlowModel
 from giflow.datareader import DataReader
 
-flow_location = '/data/www.astro/2263373r/fault_python_version/5_parameter_test/run_2025-07-07 08:08:14.088743/'
+flow_location = '/data/www.astro/2263373r/fault_python_version/5_parameter_test/run_2025-07-12 03:40:42.633896/'
 
 #Reading the flow
 device = torch.device('cuda')
@@ -29,13 +29,13 @@ pp_data, pp_conditional = dr_pp.read_files()
 
 pp_dataset = flow.make_tensor_dataset(pp_data, pp_conditional, device=device, scale=True)
 
-testsize = 1
-dr_test = DataReader(filenames="testset_1.pkl", data_location=data, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=testsize)
+testsize = 10
+dr_test = DataReader(filenames="testset_2.pkl", data_location=data, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=testsize)
 test_data, test_conditional = dr_test.read_files()
 
 test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
 
-with open(os.path.join(data, 'trainset_1.pkl'), 'rb') as file:
+with open(os.path.join(data, 'trainset_2.pkl'), 'rb') as file:
     dt_test = pkl.load(file)
 print(dt_test.sourcemodels[0].parameters)
 
@@ -61,7 +61,7 @@ for i in range(testsize):
                            )
     results.append(result)
 
-    result.directory = os.path.join(flow_location, f"testcase_bilby_{i}/")
+    result.directory = os.path.join(flow_location, f"testcase_{i}/")
     # plotting the surveys we are inverting
     dt_test.surveys[i].plot_contours(filename=os.path.join(result.directory, "survey.png"), include_noise=True)
     dt_test.surveys[i].plot_pixels(filename=os.path.join(result.directory, "survey.png"), include_noise=True)
