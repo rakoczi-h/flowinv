@@ -8,20 +8,20 @@ from giflow.fault import Fault
 from giflow.survey import GravitySurvey
 
 
-label = "6_parameters_dl"
-bilby_outdir = '/data/www.astro/2263373r/fault_python_version/bilby/'
+label = "6_parameters_density"
+bilby_outdir = 'outdir'
 bilby.utils.check_directory_exists_and_if_not_mkdir(bilby_outdir)
 bilby_outdir = os.path.join(bilby_outdir, label)
 bilby.utils.check_directory_exists_and_if_not_mkdir(bilby_outdir)
 
 # ----------------------- Functions -------------------------------
-def model(survey_coordinates, cx, cy, l, alpha, cz, DL_ratio):
+def model(survey_coordinates, cx, cy, l, alpha, cz, density):
     """
     Function defining the forward model.
     """
     fault = Fault(parameters = {"cx": cx, "cy": cy, "l": l, "alpha": alpha, "cz": cz,
-                                 "density": 800.0,
-                                 "DL_ratio": DL_ratio,
+                                 "density": density,
+                                 "DL_ratio": 0.02,
                                  "dip": 70*np.pi/180})
     X = np.linspace(-2, 2, num=50)
     Y = np.linspace(-2, 2, num=50)
@@ -50,24 +50,24 @@ def prior(keys, distributions):
             priors.pop(key, None)
     return priors
 
-# ---------------------- Reading the data ----------------------
-data_location = '/scratch/balta1/2263373r/fault/gzBA_eFTG_Survey_2_padded.pkl'
-with open(data_location, 'rb') as file:
-    real = pkl.load(file)
-extent = (real.ranges[0][0], real.ranges[0][1], real.ranges[1][1], real.ranges[1][0])
-plt.imshow(np.rot90(real.gravity.reshape((50,50))), extent=extent)
-plt.colorbar()
-plt.savefig(os.path.join(bilby_outdir, 'survey.png'))
-plt.close()
+# # ---------------------- Reading the data ----------------------
+# data_location = '/scratch/balta1/2263373r/fault/gzBA_eFTG_Survey_2_padded.pkl'
+# with open(data_location, 'rb') as file:
+#     real = pkl.load(file)
+# extent = (real.ranges[0][0], real.ranges[0][1], real.ranges[1][1], real.ranges[1][0])
+# plt.imshow(np.rot90(real.gravity.reshape((50,50))), extent=extent)
+# plt.colorbar()
+# plt.savefig(os.path.join(bilby_outdir, 'survey.png'))
+# plt.close()
 
-survey_coordinates = real.survey_coordinates
+# survey_coordinates = real.survey_coordinates
 
 # --------------------- Defining sampler inputs ------------------
-keys = ['cx', 'cy', 'l', 'alpha', 'cz', 'DL_ratio']
+keys = ['cx', 'cy', 'l', 'alpha', 'cz', 'density']
 sigma = 0.1
 
 # SURVEY GRID
-survey_shape = [50,50]
+survey_shape = [50, 50]
 X = np.linspace(-2, 2, num=survey_shape[0])
 Y = np.linspace(-2, 2, num=survey_shape[1])
 X, Y = np.meshgrid(X, Y)
@@ -77,13 +77,20 @@ Z = np.zeros(np.shape(X))
 survey_coordinates = np.c_[X.flatten(), Y.flatten(), Z.flatten()]
 
 # PRIOR
-prior_distributions = {'cx': ['Uniform', -1.0, 1.0], 'cy': ['Uniform', -1.0, 1.0], 'l': ['Uniform', 1.0, 2.0], 'alpha': ['Uniform', 0.0, 2*np.pi], 'cz': ['Uniform', 0.1, 0.2], 'DL_ratio': ['Uniform', 0.001, 1.0]}
+prior_distributions = {'cx': ['Uniform', -1.0, 1.0],
+                       'cy': ['Uniform', -1.0, 1.0],
+                       'l': ['Uniform', 1.0, 2.0], 
+                       'alpha': ['Uniform', 0.0, 2*np.pi], 
+                       'cz': ['Uniform', 0.1, 0.2],
+                       'density': ['Uniform', 500.0, 1000.0]}
 priors = prior(keys, prior_distributions)
 
 # TRUTH
-truth = {'cx': 0.25, 'cy': 0.5, 'l': 1.5, 'alpha': np.pi/4, 'cz': 0.1, 'DL_ratio': 0.02}
-data = model(survey_coordinates, truth['cx'], truth['cy'], truth['l'], truth['alpha'], truth['cz'], truth['DL_ratio'])
+truth = {'cx': 0.25, 'cy': 0.5, 'l': 1.5, 'alpha': np.pi/4, 'cz': 0.1, 'density': 800.0}
+data = model(survey_coordinates, truth['cx'], truth['cy'], truth['l'], truth['alpha'], truth['cz'], truth['density'])
+np.random.seed(seed=123) # setting the seed just for the noise
 noise = np.random.normal(loc=0.0, scale=sigma, size=np.shape(data))
+np.random.seed(seed=None)
 data = data+noise
 survey = GravitySurvey(gravity=data, shape=survey_shape, survey_coordinates = survey_coordinates)
 survey.plot_pixels(filename=os.path.join(bilby_outdir, 'survey.png'))
@@ -100,7 +107,7 @@ result = bilby.run_sampler(
    likelihood=likelihood,
    priors=priors,
    sampler="dynesty",
-   nlive=1000,
+   nlive = 1000,
    maxmcmc = 10000,
    injection_parameters=injection_parameters,
    outdir=bilby_outdir,
