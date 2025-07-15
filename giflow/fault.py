@@ -107,9 +107,9 @@ class Fault:
             dist_a = self.distance_to_curve(xyboundary_a, points_inside)
             dist_b = self.distance_to_curve(xyboundary_b, points_inside)
 
-
             distance_from_edge = np.abs((dist_a**(-Displacement_Order) + dist_b**(-Displacement_Order))**(-Displacement_Order))
-            d, _, _ = normalize(distance_from_edge)
+            max_distance_from_edge = np.abs(((self.l/2)**(-Displacement_Order) + (self.l/2)**(-Displacement_Order))**(-Displacement_Order))
+            d, _, _ = normalize(distance_from_edge, minx=0, maxx=max_distance_from_edge)
             taper = ((np.cos(d*np.pi)+1)/2)**(Blend_Order)
             dz1 = (1-taper)*max_displacement
 
@@ -305,6 +305,7 @@ class Fault:
         g = np.fft.ifft2(f_g)
         g_vec = g.ravel()
         g_orig = np.real(g_vec) * 1e5 # changing to mGal
+        
         if survey_coordinates is None:
             if remove_min:
                 return g_orig-np.min(g_orig), R1
