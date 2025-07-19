@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.interpolate import splprep, splev
-from scipy.interpolate import LinearNDInterpolator
+from scipy.interpolate import RegularGridInterpolator
 import math
 import plotly.io
 import plotly.graph_objects as go
@@ -303,8 +303,8 @@ class Fault:
         G = 6.67430*10**(-11) # Nm**2kg**(-2)
         f_g = -2*np.pi*G*np.exp((-k_mag)*depth*1000.0)*R1*self.parameters['density']
         g = np.fft.ifft2(f_g)
-        g_vec = g.ravel()
-        g_orig = np.real(g_vec) * 1e5 # changing to mGal
+        #g_vec = g.ravel()
+        g_orig = np.real(g) * 1e5 # changing to mGal
         
         if survey_coordinates is None:
             if remove_min:
@@ -312,9 +312,10 @@ class Fault:
             else:
                 return g_orig, R1
         else:
-            coords = np.reshape(self.grid[:,:,:2], (np.shape(self.grid)[0]*np.shape(self.grid)[1], 2))
-            func = LinearNDInterpolator(coords, g_orig)
-            g_new = func(survey_coordinates[:,0], survey_coordinates[:,1])
+            x = np.linspace(np.min(self.grid[:,:,0]), np.max(self.grid[:,:,0]), num=np.shape(self.grid)[1])
+            y = np.linspace(np.min(self.grid[:,:,1]), np.max(self.grid[:,:,1]), num=np.shape(self.grid)[0])
+            func = RegularGridInterpolator((x, y), g_orig)
+            g_new = func(survey_coordinates[:,:2])
             if remove_min:
                 return g_new-np.min(g_new), R1
             else:
@@ -355,22 +356,22 @@ class Fault:
 
     # ------------------- Plotting Tools ---------------------------
 
-    def plot_pixels(self, filename='', survey_coordinates=None):
-        """
-        Creates a simple pixelised image of the survey. Can only be done for gridded data.
-        """
-        if self.displacement_profile is None:
-            raise ValueError("displacement profile not given")
+    # def plot_pixels(self, filename='', survey_coordinates=None):
+    #     """
+    #     Creates a simple pixelised image of the survey. Can only be done for gridded data.
+    #     """
+    #     if self.displacement_profile is None:
+    #         raise ValueError("displacement profile not given")
 
-        plt.imshow(np.reshape(self.displacement_profile, np.shape(self.grid[:,:,0])), extent=(np.min(self.grid[:,:,0]), np.max(self.grid[:,:,0]), np.max(self.grid[:,:,1]), np.min(self.grid[:,:,1])))
-        plt.colorbar(label='km')
-        if survey_coordinates is not None:
-            plt.scatter(survey_coordinates[:,0], survey_coordinates[:,1], s=1, marker='o', color='black')
-        plt.scatter(self.parameters['cx'], self.parameters['cy'], color='red', marker='x', s=2)
-        plt.xlabel('x [km]')
-        plt.ylabel('y [km]')
-        plt.savefig(filename)
-        plt.close()
+    #     plt.imshow(np.reshape(self.displacement_profile, np.shape(self.grid[:,:,0])), extent=(np.min(self.grid[:,:,1]), np.max(self.grid[:,:,1]), np.max(self.grid[:,:,0]), np.min(self.grid[:,:,0])))
+    #     plt.colorbar(label='km')
+    #     if survey_coordinates is not None:
+    #         plt.scatter(survey_coordinates[:,0], survey_coordinates[:,1], s=1, marker='o', color='black')
+    #     plt.scatter(self.parameters['cx'], self.parameters['cy'], color='red', marker='x', s=2)
+    #     plt.xlabel('y [km]')
+    #     plt.ylabel('x [km]')
+    #     plt.savefig(filename)
+    #     plt.close()
 
     def plot_3D_surface(self, survey_coordinates=None, filename='', depth=None):
         """
