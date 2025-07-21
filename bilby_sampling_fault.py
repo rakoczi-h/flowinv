@@ -8,21 +8,44 @@ from giflow.fault import Fault
 from giflow.survey import GravitySurvey
 
 
-label = "6_parameters_density"
+label = "6_parameter_dl_od_compare_1.8"
 bilby_outdir = 'outdir'
 bilby.utils.check_directory_exists_and_if_not_mkdir(bilby_outdir)
 bilby_outdir = os.path.join(bilby_outdir, label)
 bilby.utils.check_directory_exists_and_if_not_mkdir(bilby_outdir)
 
 # ----------------------- Functions -------------------------------
-def model(survey_coordinates, cx, cy, l, alpha, cz, density):
+def model(survey_coordinates, cx, cy, l, alpha, cz, DL_ratio):
     """
     Function defining the forward model.
     """
     fault = Fault(parameters = {"cx": cx, "cy": cy, "l": l, "alpha": alpha, "cz": cz,
-                                 "density": density,
-                                 "DL_ratio": 0.02,
-                                 "dip": 70*np.pi/180})
+                                 "density": 800.0,
+                                 "DL_ratio": DL_ratio,
+                                 "dip": 70*np.pi/180,
+                                "Displacement_order": 1.2})
+    X = np.linspace(-2, 2, num=50)
+    Y = np.linspace(-2, 2, num=50)
+    X, Y = np.meshgrid(X, Y)
+    X = np.expand_dims(X, axis=2)
+    Y = np.expand_dims(Y, axis=2)
+    Z = np.zeros(np.shape(X))
+    grid = np.c_[X, Y, Z]
+
+    fault.make_fault(grid=grid)
+    gz, _ = fault.forward_model(survey_coordinates = survey_coordinates.copy())
+
+    return gz
+
+def model2(survey_coordinates, cx, cy, l, alpha, cz, DL_ratio):
+    """
+    Function defining the forward model.
+    """
+    fault = Fault(parameters = {"cx": cx, "cy": cy, "l": l, "alpha": alpha, "cz": cz,
+                                 "density": 800.0,
+                                 "DL_ratio": DL_ratio,
+                                 "dip": 70*np.pi/180,
+                                "Displacement_order": 1.8})
     X = np.linspace(-2, 2, num=50)
     Y = np.linspace(-2, 2, num=50)
     X, Y = np.meshgrid(X, Y)
@@ -63,7 +86,7 @@ def prior(keys, distributions):
 # survey_coordinates = real.survey_coordinates
 
 # --------------------- Defining sampler inputs ------------------
-keys = ['cx', 'cy', 'l', 'alpha', 'cz', 'density']
+keys = ['cx', 'cy', 'l', 'alpha', 'cz', 'DL_ratio']
 sigma = 0.1
 
 # SURVEY GRID
@@ -82,12 +105,14 @@ prior_distributions = {'cx': ['Uniform', -1.0, 1.0],
                        'l': ['Uniform', 1.0, 2.0], 
                        'alpha': ['Uniform', 0.0, 2*np.pi], 
                        'cz': ['Uniform', 0.1, 0.2],
-                       'density': ['Uniform', 500.0, 1000.0]}
+                       'DL_ratio': ['Uniform', 0.001, 0.1],
+                       #'density': ['Uniform', 500.0, 1000.0]
+                       }
 priors = prior(keys, prior_distributions)
 
 # TRUTH
-truth = {'cx': 0.25, 'cy': 0.5, 'l': 1.5, 'alpha': np.pi/4, 'cz': 0.1, 'density': 800.0}
-data = model(survey_coordinates, truth['cx'], truth['cy'], truth['l'], truth['alpha'], truth['cz'], truth['density'])
+truth = {'cx': 0.25, 'cy': 0.25, 'l': 2.0, 'alpha': np.pi/2, 'cz': 0.15, 'DL_ratio': 0.02}
+data = model2(survey_coordinates, truth['cx'], truth['cy'], truth['l'], truth['alpha'], truth['cz'], truth['DL_ratio'])
 np.random.seed(seed=123) # setting the seed just for the noise
 noise = np.random.normal(loc=0.0, scale=sigma, size=np.shape(data))
 np.random.seed(seed=None)
@@ -102,7 +127,7 @@ for idx, k in enumerate(keys):
 # LIKELIHOOD
 likelihood = bilby.likelihood.GaussianLikelihood(survey_coordinates, data, model, sigma)
 
-# # -------------------- Running sampler ---------------------------
+# -------------------- Running sampler ---------------------------
 result = bilby.run_sampler(
    likelihood=likelihood,
    priors=priors,
