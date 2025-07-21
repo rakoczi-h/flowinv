@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.interpolate import splprep, splev
+from skimage.filters import window
 from scipy.interpolate import RegularGridInterpolator
 import math
 import plotly.io
@@ -269,7 +270,7 @@ class Fault:
     
     # --------------- Functions to compute survey ----------------------
 
-    def forward_model(self, num_components=50, depth=None, survey_coordinates=None, remove_min=True):
+    def forward_model(self, num_components=50, depth=None, survey_coordinates=None, remove_min=True, zero_pad=True, pad_width=[50, 50], win=None):
         """
         The fourier domain forward model. based on R.L Parker (1972)
         Takes the displacement model, depth and density contrast and turns it into a gravity signal on the surface. The surface is assume to be completely flat.
@@ -285,23 +286,52 @@ class Fault:
         """
         if self.displacement_profile is None:
             self.make_fault()
+        displacement_profile = self.displacement_profile
         if depth is None:
             depth = self.parameters["cz"]
             if depth is None:
                 raise ValueError("Need to provide the depth of the fault")
-        k_mag = self.make_k_vector()
-        if np.isnan(self.displacement_profile).any():
+        depth = depth*1000
+        if np.isnan(displacement_profile).any():
             print('Found NaN in displacement model')
-        # eq.5 in R. L. Parker (1972)
-        N = num_components
-        R1 = np.zeros(np.shape(self.displacement_profile))
-        for n in range(N):
-            f1 = np.fft.fft2((self.displacement_profile*1000.0)**(n+1)) # changing to m
+        if win is not None:
+            w = window(win, np.shape(displacement_profile))
+            displacement_profile = w*displacement_profile
+        if zero_pad:
+            displacement_profile = np.pad(displacement_profile, 
+                                               pad_width=((pad_width[0], pad_width[0]),(pad_width[1], pad_width[1])))
+            # making padded grid
+            n_x = np.shape(self.grid)[0]
+            n_y = np.shape(self.grid)[1]
+            dx = (np.max(self.grid[:,:,0])-np.min(self.grid[:,:,0]))/(n_x-1)
+            dy = (np.max(self.grid[:,:,1])-np.min(self.grid[:,:,1]))/(n_y-1)
+            X = np.linspace(np.min(self.grid[:,:,0])-dx*pad_width[0], np.max(self.grid[:,:,0])+dx*pad_width[0], num=n_x+2*pad_width[0])
+            Y = np.linspace(np.min(self.grid[:,:,1])-dy*pad_width[1], np.max(self.grid[:,:,1])+dy*pad_width[1], num=n_y+2*pad_width[1])
+            X, Y = np.meshgrid(X, Y, indexing='ij')
+            X = np.expand_dims(X, axis=2)
+            Y = np.expand_dims(Y, axis=2)
+            Z = np.zeros(np.shape(X))
+            grid = np.c_[X, Y, Z]
+        else:
+            grid = self.grid
+        if np.shape(grid[:,:,0]) != np.shape(displacement_profile):
+            raise ValueError(('The shape of the padded displacement profile and the grid do not agree.'))
+        # fig = plt.figure()
+        # ax = fig.add_subplot(projection='3d')
+        # ax.scatter(grid[:,:,0].flatten(), grid[:,:,1].flatten(), displacement_profile.flatten())
+        # plt.show()
+        k_mag = self.make_k_vector(grid=grid*1000)
+        R1 = np.zeros(np.shape(displacement_profile))
+        for n in range(num_components):
+            f1 = np.fft.fft2((displacement_profile*1000)**(n+1)) # changing to m
             r1 = np.complex128(k_mag**(n)/math.factorial(n+1)*f1) # r represent spatial domain, k represent k domain
             R1 = R1+r1
         self.fourier_domain_model = R1
-        G = 6.67430*10**(-11) # Nm**2kg**(-2)
-        f_g = -2*np.pi*G*np.exp((-k_mag)*depth*1000.0)*R1*self.parameters['density']
+        G = 6.67430*10**(-11)# Nm**2kg**(-2)
+        f_g = -2*np.pi*G*np.exp((-k_mag)*depth)*R1*self.parameters['density']
+        # plt.imshow(np.real(f_g))
+        # plt.colorbar()
+        # plt.show()
         g = np.fft.ifft2(f_g)
         #g_vec = g.ravel()
         g_orig = np.real(g) * 1e5 # changing to mGal
@@ -312,24 +342,32 @@ class Fault:
             else:
                 return g_orig, R1
         else:
-            x = np.linspace(np.min(self.grid[:,:,0]), np.max(self.grid[:,:,0]), num=np.shape(self.grid)[1])
-            y = np.linspace(np.min(self.grid[:,:,1]), np.max(self.grid[:,:,1]), num=np.shape(self.grid)[0])
+            x = np.linspace(np.min(grid[:,:,0]), np.max(grid[:,:,0]), num=np.shape(grid)[1])
+            y = np.linspace(np.min(grid[:,:,1]), np.max(grid[:,:,1]), num=np.shape(grid)[0])
             func = RegularGridInterpolator((x, y), g_orig)
-            g_new = func(survey_coordinates[:,:2])
+            g_new = func(survey_coordinates[:,:,:2].flatten())
+            g_new = np.reshape(g_new, np.shape(survey_coordinates[:,:,0]))
             if remove_min:
                 return g_new-np.min(g_new), R1
             else:
                 return g_new, R1
             
-    def make_k_vector(self):
-        X = self.grid[:,:,0]*1000.0 # changing to m
-        Y = self.grid[:,:,1]*1000.0
+    def make_k_vector(self, grid=None):
+        """
+        Parameters
+        ----------
+            grid: np.ndarray
+            Assumed to be in m.
+        """
+        if grid is None:
+            grid = self.grid*1000
+        X = grid[:,:,0]
+        Y = grid[:,:,1] 
         numrows = np.shape(X)[0]
-        numcolumns = np.shape(Y)[0]
+        numcolumns = np.shape(Y)[1]
         longx = np.max(X)-np.min(X)
         longy = np.max(Y)-np.min(Y)
         frequency = np.zeros((abs((numrows // 2) + 1), abs((numcolumns // 2) + 1)))
-
         for f in range(1, int((numrows/2) + 2)):
             for g in range(1, int((numcolumns/2) + 2)):
                 frequency[f-1, g-1] = np.sqrt(((f-1) / longx) ** 2 + ((g-1) / longy) ** 2)
