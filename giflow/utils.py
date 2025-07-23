@@ -87,3 +87,24 @@ def normalize(x, range=(0, 1), minx=None, maxx=None):
         y = scale * x + offset
     return y, scale, offset
 
+def pad_grid(grid, pad_width, square=False):
+    if isinstance(pad_width, int) or isinstance(pad_width, float):
+        pad_width = [int(pad_width)]
+    if len(pad_width) == 1:
+        pad_width = [pad_width[0], pad_width[0], pad_width[0]]
+
+    n_x = np.shape(grid)[0]
+    dx = (np.max(grid[:,:,0])-np.min(grid[:,:,0]))/(n_x-1)
+    X = np.linspace(np.min(grid[:,:,0])-dx*pad_width[0], np.max(grid[:,:,0])+dx*pad_width[0], num=n_x+2*pad_width[0])
+    if square:
+        Y = X
+    else:
+        n_y = np.shape(grid)[1]
+        dy = (np.max(grid[:,:,1])-np.min(grid[:,:,1]))/(n_y-1)
+        Y = np.linspace(np.min(grid[:,:,1])-dy*pad_width[1], np.max(grid[:,:,1])+dy*pad_width[1], num=n_y+2*pad_width[1])
+    X, Y = np.meshgrid(X, Y , indexing='ij')
+    X = np.expand_dims(X, axis=2)
+    Y = np.expand_dims(Y, axis=2)
+    Z = np.zeros(np.shape(X))
+    grid = np.c_[X, Y, Z]
+    return grid
