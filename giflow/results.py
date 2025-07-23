@@ -9,7 +9,6 @@ import matplotlib.lines as mlines
 import os
 import matplotlib.gridspec as gridspec
 import torch
-from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
 from .box import Box

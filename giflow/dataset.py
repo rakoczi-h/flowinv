@@ -41,13 +41,13 @@ class Dataset():
         self.sourcemodels = None
         self.surveys = None
 
+
     def __setattr__(self, name, value):
         if name == 'model_framework':
             if not isinstance(value, dict):
                 raise ValueError("Expected dict for model_framework.")
             value.setdefault("type", 'parameterised')
             value.setdefault("noise_scale", 0.0)
-            value.setdefault("density", 1000.0)
             value.setdefault("shape", None)
             value.setdefault("ranges", None)
             value.setdefault("varied_parameters", None)
@@ -122,42 +122,11 @@ class FaultDataset(Dataset):
     """
     Class for making a data set of faults and corresponding gravity surveys.
     """
-    def __init__(self, size: int, priors: Prior, model_framework={}, survey_framework={}):
-        self.size = size
-        self.priors = priors
-        self.model_framework = model_framework
-        self.survey_framework = survey_framework
-        self.sourcemodels = None
-        self.surveys = None
-
-    def __setattr__(self, name, value):
-        if name == 'model_framework':
-            if not isinstance(value, dict):
-                raise ValueError("Expected dict for model_framework.")
-            value.setdefault("type", 'parameterised')
-            value.setdefault("noise_scale", 0.0)
-            value.setdefault("density", 800.0)
-            value.setdefault("shape", None)
-            value.setdefault("ranges", None)
-            value.setdefault("varied_parameters", None)
-            value.setdefault("default_parameters", None)
-        if name == 'survey_framework':
-            if not isinstance(value, dict):
-                raise ValueError("Expected dict for survey_framework.")
-            value.setdefault("noise_scale", 0.0)
-            value.setdefault("ranges", [[-1,1],[-1,1],[0]])
-            value.setdefault("width_ratio",None)
-            value.setdefault("shape", [10,10])
-            value.setdefault("noise_on_location_scale", 0.0)
-            value.setdefault("randomise_centre", False)
-            if not isinstance(value["shape"], list):
-                raise ValueError("The survey shape has to be a list. Can have a single element")
-        super().__setattr__(name, value)
-
     def make_dataset_v2(self, parameters_dict=None):
         if parameters_dict is None:
             parameters_dict = self.priors.sample(size=self.size, returntype='dict') # if the parameters dictionary is not passed to the function, then the prior is sampled
-        self.model_framework['varied_parameters'] = [key for key in parameters_dict.keys()]
+        if self.model_framework['varied_parameters'] is None:
+            self.model_framework['varied_parameters'] = [key for key in parameters_dict.keys()]
 
 
         # Checking conditions for the survey grid:
