@@ -5,6 +5,7 @@ from scipy.interpolate import LinearNDInterpolator
 from .prior import Prior
 from .survey import GravitySurvey
 from .fault import Fault
+from .utils import pad_grid
 
 
 class Dataset():
@@ -153,98 +154,188 @@ class FaultDataset(Dataset):
                 raise ValueError("The survey shape has to be a list. Can have a single element")
         super().__setattr__(name, value)
 
-    def make_dataset(self, parameters_dict=None):
-        total_time = datetime.now()
+    def make_dataset_v2(self, parameters_dict=None):
         if parameters_dict is None:
             parameters_dict = self.priors.sample(size=self.size, returntype='dict') # if the parameters dictionary is not passed to the function, then the prior is sampled
         self.model_framework['varied_parameters'] = [key for key in parameters_dict.keys()]
 
-        # Making the fault grid
-        X = np.linspace(self.model_framework['ranges'][0][0], self.model_framework['ranges'][0][1], num=self.model_framework['shape'][0])
-        Y = np.linspace(self.model_framework['ranges'][1][0], self.model_framework['ranges'][1][1], num=self.model_framework['shape'][1])
-        X, Y = np.meshgrid(X, Y)
-        X_grid = np.expand_dims(X, axis=2)
-        Y_grid = np.expand_dims(Y, axis=2)
-        Z_grid = np.zeros(np.shape(X_grid))
-        grid = np.c_[X_grid, Y_grid, Z_grid]
 
-        # same some effort if we don't need to make the survey grid each time
-        same_survey_fault_grid = ((self.model_framework['ranges'] == self.survey_framework['ranges'])
-                                and (self.model_framework['shape'] == self.survey_framework['shape'])
-                                and (self.survey_framework['width_ratio'] is None))
-        if same_survey_fault_grid:
+        # Checking conditions for the survey grid:
+        if self.survey_framework['width_ratio'] is None:
+            ranges = self.survey_framework['ranges']
+            X = np.linspace(ranges[0][0], ranges[0][1], num=self.survey_framework['shape'][0])
+            Y = np.linspace(ranges[1][0], ranges[1][1], num=self.survey_framework['shape'][1])
+            X, Y = np.meshgrid(X, Y, indexing='ij')
+            X = np.expand_dims(X, axis=2)
+            Y = np.expand_dims(Y, axis=2)
             Z = np.zeros(np.shape(X))
-            survey_coordinates = np.c_[X.flatten(), Y.flatten(), Z.flatten()]
-            ranges = self.model_framework['ranges']
-        # Reading information about the setup of the survey area
-        if self.survey_framework['width_ratio'] is not None:
+            survey_coordinates = np.c_[X, Y, Z]
+            change_survey = False
+
+            # Can also make the fault grid
+            pad = int(np.shape(survey_coordinates)[0]*0.25) # padding the fault grid by 25%
+            grid = pad_grid(survey_coordinates, pad, square=True)
+        elif isinstance(self.survey_framework['width_ratio'], int) or isinstance(self.survey_framework['width_ratio'], float) or (isinstance(self.survey_framework['width_ratio'], list) and len(self.survey_framework['width_ratio']) == 1):
+            x_size = self.survey_framework['ranges'][0][1]-self.survey_framework['ranges'][0][0]
+            if (isinstance(self.survey_framework['width_ratio'], list) and len(self.survey_framework['width_ratio']) == 1):
+                self.survey_framework['width_ratio'] = self.survey_framework['width_ratio'][0]
+            y_size = x_size*self.survey_framework['width_ratio']
+            ranges = [self.survey_framework['ranges'][0], [-y_size/2, y_size/2], self.survey_framework['ranges'][2]]
+            # Making the survey grid
+            X = np.linspace(ranges[0][0], ranges[0][1], num=self.survey_framework['shape'][0])
+            Y = np.linspace(ranges[1][0], ranges[1][1], num=self.survey_framework['shape'][1])
+            X, Y = np.meshgrid(X, Y, indexing='ij')
+            X = np.expand_dims(X, axis=2)
+            Y = np.expand_dims(Y, axis=2)
+            Z = np.zeros(np.shape(X))
+            survey_coordinates = np.c_[X, Y, Z]    
+            change_survey = False
+
+            # Can also make the fault grid
+            pad = int(np.shape(survey_coordinates)[0]*0.25) # padding the fault grid by 25%
+            grid = pad_grid(survey_coordinates, pad, square=True)                                                                
+        else:
+            change_survey = True
             x_size = self.survey_framework['ranges'][0][1]-self.survey_framework['ranges'][0][0]
             width_ratio_prior = Prior(distributions = {'width_ratio': self.survey_framework['width_ratio']})
+            survey_coordinates = None
+            grid = None
 
-        faults = []
-        surveys = []
+        self.sourcemodels = []
+        self.surveys = []
         for i in range(self.size):
-            # Setting up the parameters to be input into the fault class
+            # Making the survey grid
+            if change_survey is True:
+                y_size = x_size*width_ratio_prior.sample(size=1, returntype='array')[0] # the width_ratio is defined as y/x
+                ranges = [self.survey_framework['ranges'][0], [-y_size/2, y_size/2], self.survey_framework['ranges'][2]]
+                # Making the survey grid
+                X = np.linspace(ranges[0][0], ranges[0][1], num=self.survey_framework['shape'][0])
+                Y = np.linspace(ranges[1][0], ranges[1][1], num=self.survey_framework['shape'][1])
+                X, Y = np.meshgrid(X, Y, indexing='ij')
+                X = np.expand_dims(X, axis=2)
+                Y = np.expand_dims(Y, axis=2)
+                Z = np.zeros(np.shape(X))
+                survey_coordinates = np.c_[X, Y, Z]
+
+                # Making padded fault grid
+                pad = int(np.shape(survey_coordinates)[0]*0.25) # padding the fault grid by 25%
+                grid = pad_grid(survey_coordinates, pad, square=True)
+
+            # Making the fault
             parameters = {}
             if self.model_framework['default_parameters']:
                 for key in self.model_framework['default_parameters']:
                     parameters[key] = self.model_framework['default_parameters'][key] # first the default values are loaded into the dict
             for key in self.model_framework['varied_parameters']:
                 parameters[key] = parameters_dict[key][i] # then the varied values are added
-            if self.survey_framework['randomise_centre']:
-                print('randomise centre is true')
-                parameters['cx'] = 0.0
-                parameters['cy'] = 0.0
-            # Making the fault and computing the forward model
             fault = Fault(parameters=parameters)
-            fault.make_fault(grid)
-            faults.append(fault)
-            grav, _ = fault.forward_model()
-            # Removing the large arrays from the class
-            fault.grid = None
-            fault.displacement_profile = None
-            # Now storing the right parameters
-            if self.survey_framework['randomise_centre']:
-                parameters['cx'] = parameters_dict['cx'][i]
-                parameters['cy'] = parameters_dict['cy'][i]
+            self.sourcemodels.append(fault)
 
-            if not same_survey_fault_grid: # if the 
-                # Survey
-                print('same_survey_fault_grid is false')
-                if self.survey_framework['width_ratio'] is not None:
-                    print('width_ratio is not None')
-                    y_size = x_size*width_ratio_prior.sample(size=1, returntype='array')[0] # the width_ratio is defined as y/x
-                    ranges = [self.survey_framework['ranges'][0], [-y_size/2, y_size/2], self.survey_framework['ranges'][2]]
-                else:
-                    ranges = self.survey_framework['ranges']
-                # Making the survey grid
-                X = np.linspace(ranges[0][0], ranges[0][1], num=self.survey_framework['shape'][0])
-                Y = np.linspace(ranges[1][0], ranges[1][1], num=self.survey_framework['shape'][1])
-                X, Y = np.meshgrid(X, Y)
-                Z = np.zeros(np.shape(X))
-                survey_coordinates = np.c_[X.flatten(), Y.flatten(), Z.flatten()]
-                # place the survey at the -cx, -cy location, if randomising survey placement
-            if self.survey_framework['randomise_centre']:
-                survey_coordinates[:,0] = survey_coordinates[:,0]-parameters_dict['cx'][i]
-                survey_coordinates[:,1] = survey_coordinates[:,1]-parameters_dict['cy'][i]
-                coords = np.reshape(grid[:,:,:2], (np.shape(grid)[0]*np.shape(grid)[1], 2))
-                    # if the survey coodrinates and the grid coordinates are the same, then no need to interpolate
-                func = LinearNDInterpolator(coords, grav)
-                grav = func(survey_coordinates[:,0], survey_coordinates[:,1])
-            else:
-                if not same_survey_fault_grid:
-                    coords = np.reshape(grid[:,:,:2], (np.shape(grid)[0]*np.shape(grid)[1], 2))
-                    if (np.max(survey_coordinates[:,0]) > np.max(coords[:,0])) or (np.min(survey_coordinates[:,0]) < np.min(coords[:,0])) or (np.max(survey_coordinates[:,1]) > np.max(coords[:,1])) or (np.min(survey_coordinates[:,1]) < np.min(coords[:,1])):
+            # Generating the fault
+            fault.make_fault(grid=grid)
+
+            # Computing the forward model
+            pad = 50
+            window_width = 0.1
+            gz, _ = fault.forward_model(survey_coordinates=survey_coordinates, remove_min=True, num_components=50, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+            survey = GravitySurvey(gravity=gz.flatten(), ranges=ranges, shape=self.survey_framework['shape'])
+            self.surveys.append(survey)
+        return self.sourcemodels, self.surveys
+
+
+
+    # def make_dataset(self, parameters_dict=None):
+    #     total_time = datetime.now()
+    #     if parameters_dict is None:
+    #         parameters_dict = self.priors.sample(size=self.size, returntype='dict') # if the parameters dictionary is not passed to the function, then the prior is sampled
+    #     self.model_framework['varied_parameters'] = [key for key in parameters_dict.keys()]
+
+    #     # Making the fault grid
+    #     X = np.linspace(self.model_framework['ranges'][0][0], self.model_framework['ranges'][0][1], num=self.model_framework['shape'][0])
+    #     Y = np.linspace(self.model_framework['ranges'][1][0], self.model_framework['ranges'][1][1], num=self.model_framework['shape'][1])
+    #     X, Y = np.meshgrid(X, Y)
+    #     X_grid = np.expand_dims(X, axis=2)
+    #     Y_grid = np.expand_dims(Y, axis=2)
+    #     Z_grid = np.zeros(np.shape(X_grid))
+    #     grid = np.c_[X_grid, Y_grid, Z_grid]
+
+    #     # same some effort if we don't need to make the survey grid each time
+    #     same_survey_fault_grid = ((self.model_framework['ranges'] == self.survey_framework['ranges'])
+    #                             and (self.model_framework['shape'] == self.survey_framework['shape'])
+    #                             and (self.survey_framework['width_ratio'] is None))
+    #     if same_survey_fault_grid:
+    #         Z = np.zeros(np.shape(X))
+    #         survey_coordinates = np.c_[X.flatten(), Y.flatten(), Z.flatten()]
+    #         ranges = self.model_framework['ranges']
+    #     # Reading information about the setup of the survey area
+    #     if self.survey_framework['width_ratio'] is not None:
+    #         x_size = self.survey_framework['ranges'][0][1]-self.survey_framework['ranges'][0][0]
+    #         width_ratio_prior = Prior(distributions = {'width_ratio': self.survey_framework['width_ratio']})
+
+    #     faults = []
+    #     surveys = []
+    #     for i in range(self.size):
+    #         # Setting up the parameters to be input into the fault class
+    #         parameters = {}
+    #         if self.model_framework['default_parameters']:
+    #             for key in self.model_framework['default_parameters']:
+    #                 parameters[key] = self.model_framework['default_parameters'][key] # first the default values are loaded into the dict
+    #         for key in self.model_framework['varied_parameters']:
+    #             parameters[key] = parameters_dict[key][i] # then the varied values are added
+    #         if self.survey_framework['randomise_centre']:
+    #             print('randomise centre is true')
+    #             parameters['cx'] = 0.0
+    #             parameters['cy'] = 0.0
+    #         # Making the fault and computing the forward model
+    #         fault = Fault(parameters=parameters)
+    #         fault.make_fault(grid)
+    #         faults.append(fault)
+    #         grav, _ = fault.forward_model()
+    #         # Removing the large arrays from the class
+    #         fault.grid = None
+    #         fault.displacement_profile = None
+    #         # Now storing the right parameters
+    #         if self.survey_framework['randomise_centre']:
+    #             parameters['cx'] = parameters_dict['cx'][i]
+    #             parameters['cy'] = parameters_dict['cy'][i]
+
+    #         if not same_survey_fault_grid: # if the 
+    #             # Survey
+    #             print('same_survey_fault_grid is false')
+    #             if self.survey_framework['width_ratio'] is not None:
+    #                 print('width_ratio is not None')
+    #                 y_size = x_size*width_ratio_prior.sample(size=1, returntype='array')[0] # the width_ratio is defined as y/x
+    #                 ranges = [self.survey_framework['ranges'][0], [-y_size/2, y_size/2], self.survey_framework['ranges'][2]]
+    #             else:
+    #                 ranges = self.survey_framework['ranges']
+    #             # Making the survey grid
+    #             X = np.linspace(ranges[0][0], ranges[0][1], num=self.survey_framework['shape'][0])
+    #             Y = np.linspace(ranges[1][0], ranges[1][1], num=self.survey_framework['shape'][1])
+    #             X, Y = np.meshgrid(X, Y)
+    #             Z = np.zeros(np.shape(X))
+    #             survey_coordinates = np.c_[X.flatten(), Y.flatten(), Z.flatten()]
+    #             # place the survey at the -cx, -cy location, if randomising survey placement
+    #         if self.survey_framework['randomise_centre']:
+    #             survey_coordinates[:,0] = survey_coordinates[:,0]-parameters_dict['cx'][i]
+    #             survey_coordinates[:,1] = survey_coordinates[:,1]-parameters_dict['cy'][i]
+    #             coords = np.reshape(grid[:,:,:2], (np.shape(grid)[0]*np.shape(grid)[1], 2))
+    #                 # if the survey coodrinates and the grid coordinates are the same, then no need to interpolate
+    #             func = LinearNDInterpolator(coords, grav)
+    #             grav = func(survey_coordinates[:,0], survey_coordinates[:,1])
+    #         else:
+    #             if not same_survey_fault_grid:
+    #                 coords = np.reshape(grid[:,:,:2], (np.shape(grid)[0]*np.shape(grid)[1], 2))
+    #                 if (np.max(survey_coordinates[:,0]) > np.max(coords[:,0])) or (np.min(survey_coordinates[:,0]) < np.min(coords[:,0])) or (np.max(survey_coordinates[:,1]) > np.max(coords[:,1])) or (np.min(survey_coordinates[:,1]) < np.min(coords[:,1])):
                         
-                        raise ValueError('Survey extends beyond the area of modelled gravity.')
-                        # if the survey coodrinates and the grid coordinates are the same, then no need to interpolate
-                    func = LinearNDInterpolator(coords, grav)
-                    grav = func(survey_coordinates[:,0], survey_coordinates[:,1])
-            grav  = grav - np.min(grav)
-            survey = GravitySurvey(gravity=grav, ranges=ranges, shape=self.survey_framework['shape'])
-            survey.noise_scale = Prior(distributions = {'noise_scale': self.survey_framework['noise_scale']}).sample(size=1, returntype='array')[0]
-            surveys.append(survey)
+    #                     raise ValueError('Survey extends beyond the area of modelled gravity.')
+    #                     # if the survey coodrinates and the grid coordinates are the same, then no need to interpolate
+    #                 func = LinearNDInterpolator(coords, grav)
+    #                 grav = func(survey_coordinates[:,0], survey_coordinates[:,1])
+    #         grav  = grav - np.min(grav)
+    #         survey = GravitySurvey(gravity=grav, ranges=ranges, shape=self.survey_framework['shape'])
+    #         survey.noise_scale = Prior(distributions = {'noise_scale': self.survey_framework['noise_scale']}).sample(size=1, returntype='array')[0]
+    #         surveys.append(survey)
 
-        self.sourcemodels = faults
-        self.surveys = surveys
+    #     self.sourcemodels = faults
+    #     self.surveys = surveys
 
