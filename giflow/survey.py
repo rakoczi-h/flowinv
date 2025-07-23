@@ -27,6 +27,9 @@ class GravitySurvey():
     def __init__(self, gravity=None, ranges=None, survey_coordinates=None, noise_scale=None, noise_on_location_scale=0.0, shape=None):
         self.ranges = ranges
         self.survey_coordinates = survey_coordinates
+        if self.survey_coordinates is not None:
+            if self.survey_coordinates.ndim == 3:
+                self.survey_coordinates = np.reshape(self.survey_coordinates, (np.shape(self.survey_coordinates)[0]*np.shape(self.survey_coordinates)[1], np.shape(self.survey_coordinates)[2]))
         self.noise_scale = noise_scale
         self.noise_on_location_scale = noise_on_location_scale
         self.noise = None
@@ -276,7 +279,7 @@ class GravitySurvey():
         cmap = 'plasma'
         norm = matplotlib.colors.Normalize(vmin=self.gravity.min(), vmax=self.gravity.max())
         fig, ax = plt.subplots()
-        ax.plot(self.survey_coordinates[:,0], self.survey_coordinates[:,1], 'o', markersize=2, color='black')
+        #ax.plot(self.survey_coordinates[:,0], self.survey_coordinates[:,1], 'o', markersize=2, color='black')
         ax.tricontourf(self.survey_coordinates[:,0], self.survey_coordinates[:,1], plot_data, levels=levels, cmap=cmap, norm=norm)
         ax.set(xlim=(np.min(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,0])), ylim=(np.min(self.survey_coordinates[:,1]), np.max(self.survey_coordinates[:,1])))
         ax.set(ylabel='y')
