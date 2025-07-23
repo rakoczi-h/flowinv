@@ -12,9 +12,10 @@ import torch
 import plotly.graph_objects as go
 
 from .box import Box
-from .prior import Prior
+from .fault import Fault
 from .survey import GravitySurvey
 from .plot import make_gif
+from .utils import pad_grid
 
 import plotly.io as pio
 pio.templates.default = "plotly_white"
@@ -666,3 +667,76 @@ class BoxFlowResults(FlowResults):
             os.remove(os.path.join(self.directory, im))
 
 
+class FaultFlowResults(FlowResults):
+    """
+    Child class of FlowResults for specifically handling visualisation and processing of results from inversion concerning boxes.
+    """
+    def plot_compare_surveys(self, model_framework, include_examples=False, filename='survey_compare.png'):
+        """
+        Forward models the samples from the flow and compares the forward mdoel to the input.
+        Parameters
+        ----------
+            model_framework: dict
+                The BoxDataSet attribute can just directly be passed to this.
+                Has to have keys 'ranges': list of 3 values, and 'grid_shape': list of 3 values, 'density': float
+            survey_framework: dict
+                The BoxDataSet attribute can be passed to this
+                Has to have keys 'noise_scale': float, 'ranges': [[],[],[]], 'survey_shape': float or list
+            num: int
+                Number of samples to use
+            include_examples: bool
+                Whether to plot a few individual samples.
+        """
+        if num > np.shape(self.samples)[0]:
+            num = np.shape(self.samples)[0]
+            print("Not enough samples, using {num} samples only.")
+
+        coordinates = self.survey_coordinates
+        pad = int(np.shape(coordinates)[0]*0.25) # padding the fault grid by 25%
+        grid = pad_grid(coordinates, pad, square=True)
+        target_array = np.array(self.conditional[0])
+        target = target_array
+
+        gzs = []
+        for i in range(num):
+            fault = Fault(parameterised_model=self.samples[i,:], parameter_labels=model_framework['varied_parameters'])
+            fault.make_fault(grid)
+            #gz = box.forward_model(survey_coordinates=coordinates.copy(), model_type=mode)-np.mean(target_array)
+            window_width = 0.1
+            pad = 50
+            gz, _ = fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=50, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+            if any(np.isnan(gz)):
+                print("Found NaN in simualted gravity from sample. Removing sample")
+                continue
+            if any(np.isinf(gz)):
+                print("Found inf in simualted gravity from sample. Removing sample")
+                continue
+            gzs.append(gz.flatten())
+        gzs = np.array(gzs)
+        mean = np.mean(gzs, axis=0)
+        std = np.std(gzs, axis=0)
+
+        plot_data = [target, mean, std, gzs[0,:], gzs[1,:], gzs[2,:], gzs[3,:], gzs[4,:], gzs[5,:]]
+        titles = ['Target', 'Mean', 'Std', 'Sample 1', 'Sample 2', 'Sample 3', 'Sample 4', 'Sample 5', 'Sample 6']
+        if include_examples:
+            fig, axes = plt.subplots(nrows=3, ncols=3)
+        else:
+            fig, axes = plt.subplots(nrows=1, ncols=3)
+        vmin = np.array([target.min(), mean.min()]).min()
+        vmax = np.array([target.max(), mean.max()]).max()
+        levels = np.linspace(vmin, vmax, 15)
+        cmap = 'plasma'
+        norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+        for idx, ax in enumerate(axes.flatten()):
+
+            ax.plot(coordinates[:,0], coordinates[:,1], 'o', markersize=2, color='black')
+            ax.tricontourf(coordinates[:,0], coordinates[:,1], plot_data[idx], levels=levels, cmap=cmap, norm=norm)
+            ax.set(xlim=(np.min(coordinates[:,0]), np.max(coordinates[:,0])), ylim=(np.min(coordinates[:,1]), np.max(coordinates[:,1])), aspect='equal', title=titles[idx])
+        cax = ax.inset_axes([1.1, 0.0, 0.1, 3.35])
+        plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax, label=r'microGal')
+        fig.tight_layout()
+        if self.directory is not None:
+            plt.savefig(os.path.join(self.directory, filename), transparent=False)
+        else:
+            plt.savefig(filename, transparent=False)
+        plt.close()
