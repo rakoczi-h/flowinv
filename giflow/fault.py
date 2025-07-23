@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 
 from .prior import Prior
-from .utils import points_within_area, distance_to_line_segment, normalize
+from .utils import points_within_area, distance_to_line_segment, normalize, pad_grid
 
 class Fault:
     def __init__(self, parameters: dict, grid=None, displacement_profile=None):
@@ -301,17 +301,7 @@ class Fault:
             displacement_profile = np.pad(displacement_profile, 
                                                pad_width=((pad_width[0], pad_width[0]),(pad_width[1], pad_width[1])))
             # making padded grid
-            n_x = np.shape(self.grid)[0]
-            n_y = np.shape(self.grid)[1]
-            dx = (np.max(self.grid[:,:,0])-np.min(self.grid[:,:,0]))/(n_x-1)
-            dy = (np.max(self.grid[:,:,1])-np.min(self.grid[:,:,1]))/(n_y-1)
-            X = np.linspace(np.min(self.grid[:,:,0])-dx*pad_width[0], np.max(self.grid[:,:,0])+dx*pad_width[0], num=n_x+2*pad_width[0])
-            Y = np.linspace(np.min(self.grid[:,:,1])-dy*pad_width[1], np.max(self.grid[:,:,1])+dy*pad_width[1], num=n_y+2*pad_width[1])
-            X, Y = np.meshgrid(X, Y, indexing='ij')
-            X = np.expand_dims(X, axis=2)
-            Y = np.expand_dims(Y, axis=2)
-            Z = np.zeros(np.shape(X))
-            grid = np.c_[X, Y, Z]
+            grid = pad_grid(self.grid, pad_width, square=False)
         else:
             grid = self.grid
         if np.shape(grid[:,:,0]) != np.shape(displacement_profile):
@@ -447,8 +437,9 @@ class Fault:
                           zaxis_title="z [km]"
         )
         camera = dict(
-            eye=dict(x=0.8, y=0.8, z=0.6))
+            eye=dict(x=4.0, y=4.0, z=4.0))
         fig.update_layout(scene_camera=camera)
+        fig.update_layout(scene=dict(aspectmode="data"))
         if filename[-5:] == '.html':
             fig.write_html(filename)
         elif filename[-4:] == '.png':
