@@ -223,7 +223,7 @@ class GravitySurvey():
         return snr
 
     #Plotting
-    def plot_pixels(self, filename='survey.png', include_noise=False):
+    def plot_pixels(self, filename='survey.png', include_noise=False, units=None):
         """
         Creates a simple pixelised image of the survey. Can only be done for gridded data.
         Parameters
@@ -251,11 +251,14 @@ class GravitySurvey():
         plt.xlabel('y')
         plt.ylabel('x')
         # the extent and order of coordinates has been validated
-        plt.colorbar(label=r'$\mu Gal$')
+        if units:
+            plt.colorbar(label=r'$\Delta$g'+f"{units}")
+        else:
+            plt.colorbar(label=r'$\Delta$g')
         plt.savefig(filename)
         plt.close()
 
-    def plot_contours(self, filename='survey.png', include_noise=False):
+    def plot_contours(self, filename='survey.png', include_noise=False, plot_measurement_location=False, units=None):
         """
         Creates a contour plot of the survey.
         Parameters
@@ -275,17 +278,21 @@ class GravitySurvey():
             plot_data = self.add_noise()
         else:
             plot_data = self.gravity
-        levels = np.linspace(self.gravity.min(), self.gravity.max(), 20)
+        levels = np.linspace(self.gravity.min(), self.gravity.max(), 256)
         cmap = 'plasma'
         norm = matplotlib.colors.Normalize(vmin=self.gravity.min(), vmax=self.gravity.max())
         fig, ax = plt.subplots()
-        #ax.plot(self.survey_coordinates[:,0], self.survey_coordinates[:,1], 'o', markersize=2, color='black')
+        if plot_measurement_location:
+            ax.plot(self.survey_coordinates[:,0], self.survey_coordinates[:,1], 'o', markersize=0.5, color='black')
         ax.tricontourf(self.survey_coordinates[:,0], self.survey_coordinates[:,1], plot_data, levels=levels, cmap=cmap, norm=norm)
         ax.set(xlim=(np.min(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,0])), ylim=(np.min(self.survey_coordinates[:,1]), np.max(self.survey_coordinates[:,1])))
         ax.set(ylabel='y')
         ax.set(xlabel='x')
         ax.set_aspect(aspect='equal')
-        plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=r'microGal')
+        if units:
+            plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=r'$\Delta$g'+f" [{units}]")
+        else:
+            plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=r'$\Delta$g')
         plt.savefig(filename)
         plt.close()
 
