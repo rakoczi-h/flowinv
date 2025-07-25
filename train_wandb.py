@@ -9,11 +9,11 @@ from datetime import datetime
 import wandb
 import json
 
+from giflow.box import BoxDataset
 from giflow.scaler import Scaler
 from giflow.flowmodel import FlowModel, save_flow
-from giflow.read_files import read_files
-from giflow.latent import FlowLatent
 from giflow.datareader import DataReader
+from giflow.latent import FlowLatent
 # Define sweep config
 sweep_configuration = {
     'method': 'random',
@@ -28,64 +28,72 @@ sweep_configuration = {
      }
 }
 # Initialize sweep by passing in config. (Optional) Provide a name of the project.
-sweep_id = wandb.sweep(sweep=sweep_configuration, project='fault-inversion-variable-shape-new')
+sweep_id = wandb.sweep(sweep=sweep_configuration, project='fault-python-5-parameter')
 
 
 # ------------- Directories ---------------------------------
-data_location = '/scratch/balta0/2263373r/fault/variable_shape_augmented/'  # THIS needs to be edited to give the data location
-save_dir = '/data/www.astro/2263373r/giflow/fault/variable_shape_new/' # THIS needs to be edited to give the saving location
-if not os.path.exists(save_dir):
-    os.mkdir(save_dir)
-with open(os.path.join(data_location, 'priors.pkl'), 'rb') as file:
-    priors = pkl.load(file)
-with open(os.path.join(data_location, 'survey_framework.json'), 'r') as file:
-    survey_framework = json.load(file)
+data_location = '/scratch/balta0/2263373r/fault_python/'   # THIS needs to be edited to give the data location
+
+#with open(os.path.join(data_location, 'priors.pkl'), 'rb') as file:
+#    priors = pkl.load(file)
+#with open(os.path.join(data_location, 'survey_framework.json'), 'r') as file:
+#    survey_framework = json.load(file)
 
 # ------------- Defining scalers ---------------------------
-survey_coordinates_to_include = ['survey_width_ratio', 'noise_scale'] # THIS needs to be edited if we want to include survey coordinates in the conditional
-model_parameters_to_include=['cx', 'cy', 'depth', 'l', 'alpha']
-mix_survey_order = False
-noise_scale = survey_framework['noise_scale']
+model_info_to_include = ['cx', 'cy', 'l', 'alpha', 'cz']
+survey_info_to_include = []
+
+noise_scale = 0.1
 
 datasize = 1000000
 
-dr = DataReader(filenames=[f"trainset_v3_{i}.pkl" for i in range(0, 200)], data_location=data_location, model_parameters_to_include=model_parameters_to_include, survey_coordinates_to_include=survey_coordinates_to_include, noise_scale=noise_scale, datasize=datasize)
-train_data, train_conditional = dr.read_files(noise_augment=True)
+#if noise_scale[0] == 'LogUniform':
+#    train_conditional[2] = np.log(train_conditional[2])
 
+# Reading in files
+trainsize = 500000
+dr_train = DataReader(filenames=[f"trainset_{n}.pkl" for n in range(1,6)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=trainsize)
+train_data, train_conditional = dr_train.read_files()
 
-if noise_scale[0] == 'LogUniform':
-    train_conditional[2] = np.log(train_conditional[2])
+# Scaling the data
+sc_data = Scaler(scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler()]) # Need to define the scaler for each element in the train_data list.
+sc_data.scale_data(train_data, fit = True) # Fit the scaler and store in the class
 
-scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler()]
-sc_data = Scaler(scalers=scalers)
-sc_data.scale_data(train_data, fit=True)
-
-scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler()]
-sc_conditional=Scaler(scalers=scalers)
-sc_conditional.scale_data(train_conditional, fit=True)
+sc_conditional = Scaler(scalers = [MinMaxScaler()])
+sc_conditional.scale_data(train_conditional, fit = True)
 
 scalers = {'conditional': sc_conditional, 'data': sc_data}
 
-# ------------- Reading the data ----------------------------
-valsize = 100000
+trainsize = 1500000
+dr_train = DataReader(filenames=[f"trainset_{n}.pkl" for n in range(1,16)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=trainsize)
+train_data, train_conditional = dr_train.read_files()
 
-dr = DataReader(filenames=[f"validationset_v3_{i}.pkl" for i in range(0, 20)], data_location=data_location, model_parameters_to_include=model_parameters_to_include, survey_coordinates_to_include=survey_coordinates_to_include, noise_scale=noise_scale, datasize=valsize)
-val_data, val_conditional = dr.read_files(noise_augment=True)
+valsize = 150000
+dr_train = DataReader(filenames=[f"validationset_{n}.pkl" for n in range(1,16)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=valsize)
+validation_data, validation_conditional = dr_train.read_files()
 
-
-if noise_scale[0] == 'LogUniform':
-    val_conditional[2] = np.log(val_conditional[2])
-
-device = torch.device('cuda')
 flow = FlowModel(scalers=scalers)
-train_dataset = flow.make_tensor_dataset(train_data, train_conditional, device=device, scale=True)
-validation_dataset = flow.make_tensor_dataset(val_data, val_conditional, device=device, scale=True)
+device = torch.device('cuda')
+train_dataset = flow.make_tensor_dataset(
+    train_data,
+    train_conditional,
+    device = device,
+    scale = True
+)
+
+validation_dataset = flow.make_tensor_dataset(
+    validation_data,
+    validation_conditional,
+    device = device,
+    scale = True
+)
+
 # --------------- Defining the flow ------------------------
 def main():
     wandb.init(project='combined-inversion')
 
     hyperparameters={'n_inputs': 5,
-                 'n_conditional_inputs': 2502,
+                 'n_conditional_inputs': 2500,
                  'n_transforms': wandb.config.n_transforms,
                  'n_blocks_per_transform': wandb.config.n_blocks_per_transform,
                  'n_neurons': wandb.config.n_neurons,
@@ -95,12 +103,9 @@ def main():
                  'lr': 0.001,
                  'epochs': 1500
     }
-    flow = FlowModel(hyperparameters=hyperparameters, datasize=datasize, scalers=scalers)
+    flow = FlowModel(hyperparameters=hyperparameters, datasize=trainsize, scalers=scalers)
     flow.data_location = data_location
     flow.construct()
-
-    train_size = datasize
-    val_size = valsize
 
     flowmodel = flow.flowmodel
     optimiser = torch.optim.Adam(flow.flowmodel.parameters(), lr=flow.hyperparameters['lr'])
