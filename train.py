@@ -48,15 +48,15 @@ validation_data, validation_conditional = dr_train.read_files()
 hyperparameters = {
         'n_inputs': 5, # the total number of parameters in the source model, including any additional information we chose to include
         'n_conditional_inputs': 2500, # the total number of values in the conditional
-        'n_transforms': 6,
-        'n_blocks_per_transform': 2,
+        'n_transforms': 16,
+        'n_blocks_per_transform': 4,
         'n_neurons': 16,
         # The parameters below define some settings for the training
-        'batch_size': 1000,
+        'batch_size': 5000,
         'batch_norm': True,
         'lr': 0.001,
         'epochs': 3000,
-        'early_stopping': True # if set True, the training stops when the validation loss stops decreasing
+        'early_stopping': False # if set True, the training stops when the validation loss stops decreasing
 }
 
 # Construct the flow
