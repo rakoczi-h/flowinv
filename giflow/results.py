@@ -239,7 +239,7 @@ class FlowResults:
                 hist_kwargs={'density' : True}
             )
         if self.true_parameters is not None:
-            values = self.true_parameters[0]
+            values = self.true_parameters
             corner.overplot_lines(fig, values, color="black")
             corner.overplot_points(fig, values[None], marker="s", color="black")
         plt.legend(
