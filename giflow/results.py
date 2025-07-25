@@ -184,7 +184,7 @@ class FlowResults:
                 The length of the list is the same as the dimensions, and each element in the list is [minimum, maximum] bounds.
         """
         _, ndim = other_samples.shape
-        colors = ['#377eb8', '#ff7f00']
+        colors = ['cornflowerblue', 'sandybrown']
 
         n = 2
         samples_list = [other_samples, self.samples]
