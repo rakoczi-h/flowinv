@@ -10,12 +10,6 @@ from giflow.prior import Prior
 start_time = datetime.now()
 # Specifying directories
 
-save = '/scratch/balta0/2263373r/fault_python/'
-if not os.path.exists(save):
-    os.mkdir(save)
-
-n = int(sys.argv[1])
-
 
 # Priors
 distributions = {'cx': ['Uniform', -1.0, 1.0],

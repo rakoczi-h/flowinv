@@ -1,6 +1,7 @@
 import numpy as np
 from datetime import datetime
 from scipy.interpolate import LinearNDInterpolator
+import matplotlib.pyplot as plt
 
 from .prior import Prior
 from .survey import GravitySurvey
@@ -127,8 +128,9 @@ class FaultDataset(Dataset):
             parameters_dict = self.priors.sample(size=self.size, returntype='dict') # if the parameters dictionary is not passed to the function, then the prior is sampled
         if self.model_framework['varied_parameters'] is None:
             self.model_framework['varied_parameters'] = [key for key in parameters_dict.keys()]
+        
 
-
+        window_pad_percentage = 1.0
         # Checking conditions for the survey grid:
         if self.survey_framework['width_ratio'] is None:
             ranges = self.survey_framework['ranges']
@@ -142,7 +144,7 @@ class FaultDataset(Dataset):
             change_survey = False
 
             # Can also make the fault grid
-            pad = int(np.shape(survey_coordinates)[0]*0.25) # padding the fault grid by 25%
+            pad = int(np.shape(survey_coordinates)[0]*window_pad_percentage) # padding the fault grid by 25%
             grid = pad_grid(survey_coordinates, pad, square=True)
         elif isinstance(self.survey_framework['width_ratio'], int) or isinstance(self.survey_framework['width_ratio'], float) or (isinstance(self.survey_framework['width_ratio'], list) and len(self.survey_framework['width_ratio']) == 1):
             x_size = self.survey_framework['ranges'][0][1]-self.survey_framework['ranges'][0][0]
@@ -161,8 +163,8 @@ class FaultDataset(Dataset):
             change_survey = False
 
             # Can also make the fault grid
-            pad = int(np.shape(survey_coordinates)[0]*0.25) # padding the fault grid by 25%
-            grid = pad_grid(survey_coordinates, pad, square=True)                                                                
+            pad = int(np.shape(survey_coordinates)[0]*window_pad_percentage) # padding the fault grid by 25%
+            grid = pad_grid(survey_coordinates, pad, square=True)                                                   
         else:
             change_survey = True
             x_size = self.survey_framework['ranges'][0][1]-self.survey_framework['ranges'][0][0]
@@ -187,7 +189,7 @@ class FaultDataset(Dataset):
                 survey_coordinates = np.c_[X, Y, Z]
 
                 # Making padded fault grid
-                pad = int(np.shape(survey_coordinates)[0]*0.25) # padding the fault grid by 25%
+                pad = int(np.shape(survey_coordinates)[0]*window_pad_percentage) # padding the fault grid by 25%
                 grid = pad_grid(survey_coordinates, pad, square=True)
 
             # Making the fault
@@ -202,11 +204,11 @@ class FaultDataset(Dataset):
 
             # Generating the fault
             fault.make_fault(grid=grid)
-
+            fault.displacement_profile[fault.displacement_profile>fault.parameters['cz']] = fault.parameters['cz']
             # Computing the forward model
-            pad = 50
+            pad = np.shape(grid)[0]
             window_width = 0.1
-            gz, _ = fault.forward_model(survey_coordinates=survey_coordinates, remove_min=True, num_components=50, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+            gz, _ = fault.forward_model(survey_coordinates=survey_coordinates, remove_min=True, num_components=100, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
             survey = GravitySurvey(gravity=gz.flatten(), ranges=ranges, shape=self.survey_framework['shape'])
             self.surveys.append(survey)
         return self.sourcemodels, self.surveys
