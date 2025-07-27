@@ -5,11 +5,11 @@ import pickle as pkl
 import json
 import pandas as pd
 
-from giflow.results import FlowResults
+from giflow.results import FaultFlowResults
 from giflow.flowmodel import FlowModel
 from giflow.datareader import DataReader
 
-flow_location = '/data/www.astro/2263373r/fault_python_version/5_parameter_test/run_2025-07-23 09:25:27.125074/'
+flow_location = '/data/www.astro/2263373r/fault_python_version/5_parameter_test/run_2025-07-25 10:29:28.702713/'
 
 #Reading the flow
 device = torch.device('cuda')
@@ -38,13 +38,21 @@ test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=devi
 
 with open(os.path.join(data, 'trainset_1.pkl'), 'rb') as file:
     dt_test = pkl.load(file)
-print(dt_test.sourcemodels[0].parameters)
+for s in dt_test.surveys:
+    s.make_survey()
 
+model_framework = {
+    "type": 'parameterised',
+    "shape": [50,50],
+    "ranges": [[-2.0, 2.0], [-2.0, 2.0], [0.0]],
+    'default_parameters': {'DL_ratio': 0.02, 'dip': 70*np.pi/180, 'density': 800.0},
+    'varied_parameters': ['cx', 'cy', 'l', 'alpha', 'cz']
+}
 ## --------------- TESTING -------------------
-## P-P plot
-#flow.pp_test(validation_dataset=pp_dataset,
-#             parameter_labels=labels)
-#
+# P-P plot
+flow.pp_test(validation_dataset=pp_dataset,
+             parameter_labels=labels)
+
 
 # Generating results for some test data
 results = []
@@ -53,12 +61,12 @@ for i in range(testsize):
                                                          num=2000) # number of samples we want to draw
     samples = np.array([s[:,0] for s in samples]).T
     print(np.shape(samples))
-    result = FlowResults(samples=samples,
+    result = FaultFlowResults(samples=samples,
                             conditional=[test_conditional[j][i] for j in range(len(test_conditional))],
                             log_probabilities=log_probabilities,
                             true_parameters=np.array([td[i,0] for td in test_data]).T,
                             parameter_labels=labels,
-                            survey_coordinates=dt_test.surveys[0].survey_coordinates
+                            survey_coordinates=np.reshape(dt_test.surveys[0].survey_coordinates, (dt_test.surveys[0].shape[0], dt_test.surveys[0].shape[1], 3))
                            )
     results.append(result)
 
@@ -97,3 +105,6 @@ bilby_samples = np.hstack(bilby_samples)
 print(np.shape(bilby_samples))
 result.overlaid_corner(bilby_samples, ['Nested Sampling', 'Normalising Flow'], parameter_labels=labels, filename='bilby_compare.png')
 
+
+for i, result in enumerate(results):
+    result.plot_compare_surveys(model_framework=model_framework, include_examples=True, filename='survey_compare.png')

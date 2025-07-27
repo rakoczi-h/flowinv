@@ -50,7 +50,7 @@ hyperparameters = {
         'n_conditional_inputs': 2500, # the total number of values in the conditional
         'n_transforms': 16,
         'n_blocks_per_transform': 4,
-        'n_neurons': 16,
+        'n_neurons': 32,
         # The parameters below define some settings for the training
         'batch_size': 5000,
         'batch_norm': True,
