@@ -12,6 +12,9 @@ from giflow.prior import Prior
 start_time = datetime.now()
 # Specifying directories
 
+n = int(sys.argv[1])
+
+save = '/scratch/balta0/2263373r/fault_python/real_inversion/'
 
 # Priors
 distributions = {'cx': ['Uniform', -1.0, 1.0],
@@ -37,7 +40,7 @@ model_framework = {
 survey_framework = {
     "shape": [50,50],
     "ranges": [[-0.5, 0.5],[-0.5, 0.5],[0]],
-    "noise_scale": 0.1,
+    "noise_scale": None,
     "noise_on_location_scale": 0.0,
     "width_ratio" : ['Uniform', 0.1, 1.0],
     #"width_ratio": None
@@ -45,7 +48,7 @@ survey_framework = {
 
 
 # Training data
-size = 1000 # Only making a small batch here, in reality we will likely need more data than this.
+size = 10000 # Only making a small batch here, in reality we will likely need more data than this.
 dt_train = FaultDataset(
    priors = priors,
    size = size,
@@ -54,13 +57,13 @@ dt_train = FaultDataset(
 )
 dt_train.make_dataset_v2()
 
-print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1e9)
-print(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss)
+print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1e6) # in GB on linux
+print(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss/1e6)
 
-#filename = os.path.join(save, f"trainset_{n}.pkl")
-#with open(filename, 'wb') as file:
-#    pkl.dump(dt_train, file)
-# 
+filename = os.path.join(save, f"trainset_{n}.pkl")
+with open(filename, 'wb') as file:
+    pkl.dump(dt_train, file)
+ 
 print(f"Dataset made. Time taken: {datetime.now()-start_time}")
 
 
