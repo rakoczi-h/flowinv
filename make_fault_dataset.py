@@ -1,8 +1,10 @@
 import os
 import sys
+import resource
 import pickle as pkl
 import numpy as np
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 from giflow.dataset import FaultDataset
 from giflow.prior import Prior
@@ -14,9 +16,12 @@ start_time = datetime.now()
 # Priors
 distributions = {'cx': ['Uniform', -1.0, 1.0],
                  'cy': ['Uniform', -1.0, 1.0],
-                 'l': ['Uniform', 1.0, 2.0],
+                 'l': ['Uniform', 1.0, 5.0],
                  'cz': ['Uniform', 0.01, 0.2],
-                 'alpha': ['Uniform', 0.0, 2*np.pi]}
+                 'alpha': ['Uniform', 0.0, 2*np.pi],
+                 'density': ['Uniform', 500.0, 1000.0],
+                 'DL_ratio': ['Uniform', 0.01, 0.05]
+                 }
 priors = Prior(distributions=distributions)
 
 # Defining the source model framework
@@ -24,38 +29,39 @@ model_framework = {
     "type": 'parameterised',
     "shape": [50,50],
     "ranges": [[-2.0, 2.0], [-2.0, 2.0], [0.0]],
-    'default_parameters': {'DL_ratio': 0.02, 'dip': 70*np.pi/180}
-    'default_parameters': {'DL_ratio': 0.02, 'dip': 70*np.pi/180, 'density': 800.0},
-    'varied_parameters': ['cx', 'cy', 'cz', 'l', 'alpha']
+    'default_parameters': {'dip': 70*np.pi/180},
+    'varied_parameters': ['cx', 'cy', 'cz', 'l', 'alpha', 'density', 'DL_ratio']
 }
 
 # Defining the gravimetry survey framework
 survey_framework = {
     "shape": [50,50],
-    "ranges": [[-2, 2],[-2, 2],[0]],
+    "ranges": [[-0.5, 0.5],[-0.5, 0.5],[0]],
     "noise_scale": 0.1,
     "noise_on_location_scale": 0.0,
-    "randomise_centre" : False,
-    "width_ratio" : None
+    "width_ratio" : ['Uniform', 0.1, 1.0],
+    #"width_ratio": None
 }
 
 
+# Training data
+size = 1000 # Only making a small batch here, in reality we will likely need more data than this.
+dt_train = FaultDataset(
+   priors = priors,
+   size = size,
+   survey_framework = survey_framework,
+   model_framework = model_framework
+)
+dt_train.make_dataset_v2()
 
-## Training data
-#size = 100000 # Only making a small batch here, in reality we will likely need more data than this.
-#dt_train = FaultDataset(
-#    priors = priors,
-#    size = size,
-#    survey_framework = survey_framework,
-#    model_framework = model_framework
-#)
-#dt_train.make_dataset()
-#
+print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1e9)
+print(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss)
+
 #filename = os.path.join(save, f"trainset_{n}.pkl")
 #with open(filename, 'wb') as file:
 #    pkl.dump(dt_train, file)
-#
-#print(f"Dataset made. Time taken: {datetime.now()-start_time}")
+# 
+print(f"Dataset made. Time taken: {datetime.now()-start_time}")
 
 
 
