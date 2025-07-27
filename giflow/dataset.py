@@ -130,7 +130,7 @@ class FaultDataset(Dataset):
             self.model_framework['varied_parameters'] = [key for key in parameters_dict.keys()]
         
 
-        window_pad_percentage = 1.0
+        window_pad_percentage = 0.5
         # Checking conditions for the survey grid:
         if self.survey_framework['width_ratio'] is None:
             ranges = self.survey_framework['ranges']
@@ -207,6 +207,7 @@ class FaultDataset(Dataset):
             fault.displacement_profile[fault.displacement_profile>fault.parameters['cz']] = fault.parameters['cz']
             # Computing the forward model
             pad = np.shape(grid)[0]
+
             window_width = 0.1
             gz, _ = fault.forward_model(survey_coordinates=survey_coordinates, remove_min=True, num_components=100, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
             survey = GravitySurvey(gravity=gz.flatten(), ranges=ranges, shape=self.survey_framework['shape'])
