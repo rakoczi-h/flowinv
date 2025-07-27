@@ -90,16 +90,14 @@ class Fault:
 
             if max_displacement == 0:
                 print('There is no displacement.')
-
             # Using the spline method
             n = 100 # must be even
             xyboundary = self.make_angular_bend_curve(xyboundary[:,0], xyboundary[:,1], n)
             displaced_gridpoints = points_within_area(xyboundary, grid)
-            
             points_inside = grid[displaced_gridpoints]
             if not points_inside.size:
                 self.displacement_profile = self.grid[:,:,2]
-                return self.displacement_profile
+                continue
             # dividing it up into two sides
             xyboundary_a = xyboundary[:int(n/2),:]
             xyboundary_b = xyboundary[int(n/2):,:]
@@ -127,7 +125,6 @@ class Fault:
             else:
                 dz2 = np.tan(dip)*distance_to_trace
                 dz = np.min(np.array([dz1, dz2]), axis=0)
-
             Z[displaced_gridpoints] = Z[displaced_gridpoints] + dz
         self.displacement_profile = np.reshape(Z, original_shape)
         
@@ -384,22 +381,22 @@ class Fault:
 
     # ------------------- Plotting Tools ---------------------------
 
-    # def plot_pixels(self, filename='', survey_coordinates=None):
-    #     """
-    #     Creates a simple pixelised image of the survey. Can only be done for gridded data.
-    #     """
-    #     if self.displacement_profile is None:
-    #         raise ValueError("displacement profile not given")
+    def plot_pixels(self, filename='', survey_coordinates=None):
+        """
+        Creates a simple pixelised image of the survey. Can only be done for gridded data.
+        """
+        if self.displacement_profile is None:
+            raise ValueError("displacement profile not given")
 
-    #     plt.imshow(np.reshape(self.displacement_profile, np.shape(self.grid[:,:,0])), extent=(np.min(self.grid[:,:,1]), np.max(self.grid[:,:,1]), np.max(self.grid[:,:,0]), np.min(self.grid[:,:,0])))
-    #     plt.colorbar(label='km')
-    #     if survey_coordinates is not None:
-    #         plt.scatter(survey_coordinates[:,0], survey_coordinates[:,1], s=1, marker='o', color='black')
-    #     plt.scatter(self.parameters['cx'], self.parameters['cy'], color='red', marker='x', s=2)
-    #     plt.xlabel('y [km]')
-    #     plt.ylabel('x [km]')
-    #     plt.savefig(filename)
-    #     plt.close()
+        plt.imshow(np.reshape(self.displacement_profile, np.shape(self.grid[:,:,0])), extent=(np.min(self.grid[:,:,1]), np.max(self.grid[:,:,1]), np.max(self.grid[:,:,0]), np.min(self.grid[:,:,0])))
+        plt.colorbar(label='km')
+        if survey_coordinates is not None:
+            plt.scatter(survey_coordinates[:,0], survey_coordinates[:,1], s=1, marker='o', color='black')
+        plt.scatter(self.parameters['cy'], self.parameters['cx'], color='red', marker='x', s=2)
+        plt.xlabel('y [km]')
+        plt.ylabel('x [km]')
+        plt.savefig(filename)
+        plt.close()
 
     def plot_3D_surface(self, survey_coordinates=None, filename='', depth=None):
         """
@@ -436,8 +433,8 @@ class Fault:
                           yaxis_title="y [km]",
                           zaxis_title="z [km]"
         )
-        camera = dict(
-            eye=dict(x=4.0, y=4.0, z=4.0))
+        # camera = dict(
+        #     eye=dict(x=4.0, y=4.0, z=4.0))
         fig.update_layout(scene_camera=camera)
         fig.update_layout(scene=dict(aspectmode="data"))
         if filename[-5:] == '.html':
