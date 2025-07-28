@@ -65,7 +65,7 @@ class Dataset():
         super().__setattr__(name, value)
 
 
-    def make_data_for_network(self, survey_info_to_include=[], model_info_to_include=[], add_noise=True):
+    def make_data_for_network(self, survey_info_to_include=[], model_info_to_include=[], add_noise=True, noise_seed=None, noise_distribution=None):
         """
         Parameters
         ----------
@@ -95,8 +95,11 @@ class Dataset():
         if add_noise:
             noise = []
             for i in range(self.size):
+                if noise_distribution:
+                    noise_scale = noise_distribution.sample(size=1, returntype='array')
+                    self.surveys[i].noise_scale = noise_scale[0]
                 if self.surveys[i].noise is None:
-                    self.surveys[i].make_noise()
+                    self.surveys[i].make_noise(seed=noise_seed)
                 noise.append(self.surveys[i].noise)
             conditional_gz = conditional_gz+noise
 
@@ -115,7 +118,8 @@ class Dataset():
                 conditional.append(np.expand_dims(np.array([((self.surveys[i].ranges[0][1]-self.surveys[i].ranges[0][0])/(self.surveys[i].ranges[1][1]-self.surveys[i].ranges[1][0])) for i in range(self.size)]), axis=1))
             if any([l=='noise_scale' for l in survey_info_to_include]):
                 conditional.append(np.expand_dims(np.array([self.surveys[i].noise_scale for i in range(self.size)]), axis=1))
-
+            if any([l=='density' for l in survey_info_to_include]):
+                conditional.append(np.expand_dims(np.array([self.sourcemodels[i].parameters['density'] for i in range(self.size)]), axis=1))
         return data, conditional
 
 
@@ -123,7 +127,7 @@ class FaultDataset(Dataset):
     """
     Class for making a data set of faults and corresponding gravity surveys.
     """
-    def make_dataset_v2(self, parameters_dict=None):
+    def make_dataset_v2(self, parameters_dict=None, augment=True, augment_dims=['density', 'cz'], augment_num=5):
         if parameters_dict is None:
             parameters_dict = self.priors.sample(size=self.size, returntype='dict') # if the parameters dictionary is not passed to the function, then the prior is sampled
         if self.model_framework['varied_parameters'] is None:
@@ -174,7 +178,14 @@ class FaultDataset(Dataset):
 
         self.sourcemodels = []
         self.surveys = []
-        for i in range(self.size):
+        if augment:
+            num_iters = int(self.size/(augment_num**len(augment_dims)))
+        else:
+            num_iters = self.size
+        if num_iters == 0:
+            num_iters = 1
+
+        for i in range(num_iters):
             # Making the survey grid
             if change_survey is True:
                 y_size = x_size*width_ratio_prior.sample(size=1, returntype='array')[0] # the width_ratio is defined as y/x
@@ -200,18 +211,40 @@ class FaultDataset(Dataset):
             for key in self.model_framework['varied_parameters']:
                 parameters[key] = parameters_dict[key][i] # then the varied values are added
             fault = Fault(parameters=parameters)
-            self.sourcemodels.append(fault)
+
 
             # Generating the fault
             fault.make_fault(grid=grid)
             fault.displacement_profile[fault.displacement_profile>fault.parameters['cz']] = fault.parameters['cz']
             # Computing the forward model
             pad = np.shape(grid)[0]
-
             window_width = 0.1
-            gz, _ = fault.forward_model(survey_coordinates=survey_coordinates, remove_min=True, num_components=100, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
-            survey = GravitySurvey(gravity=gz.flatten(), ranges=ranges, shape=self.survey_framework['shape'])
-            self.surveys.append(survey)
+            if augment:
+                if any([l=='density' for l in augment_dims]):
+                    densities = parameters_dict['density'][i*augment_num:(i*augment_num+augment_num)]
+                else:
+                    densities = None
+                if any([l=='cz' for l in augment_dims]):
+                    depths = parameters_dict['cz'][i*augment_num:(i*augment_num+augment_num)]
+                else:
+                    depths = None
+                _, k_mag, R1, grid = fault.forward_model(remove_min=True, num_components=100, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+                gzs, depths, densities = fault.forward_from_fourier(k_mag, R1, grid, densities=densities, depths=depths, survey_coordinates=survey_coordinates, remove_min=True)
+                for j, gz in enumerate(gzs):
+                    fault.parameters['density'] = densities[j]
+                    fault.parameters['cz'] = depths[j]
+                    survey = GravitySurvey(gravity=gz.flatten(), ranges=ranges, shape=self.survey_framework['shape'])
+                    self.sourcemodels.append(Fault(parameters=fault.parameters.copy())) # addig a copy of the fault object, with only its parameters
+                    self.surveys.append(survey)
+            else:
+                gz, _, _, _ = fault.forward_model(survey_coordinates=survey_coordinates, remove_min=True, num_components=100, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+                fault.displacement_profile = None
+                fault.grid = None
+                survey = GravitySurvey(gravity=gz.flatten(), ranges=ranges, shape=self.survey_framework['shape'])
+                self.sourcemodels.append(fault)
+                self.surveys.append(survey)
+        self.sourcemodels = self.sourcemodels[:self.size]
+        self.surveys = self.surveys[:self.size]
         return self.sourcemodels, self.surveys
 
 
