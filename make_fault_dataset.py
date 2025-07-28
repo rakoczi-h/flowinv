@@ -12,6 +12,8 @@ from giflow.prior import Prior
 start_time = datetime.now()
 # Specifying directories
 
+
+
 n = int(sys.argv[1])
 
 save = '/scratch/balta0/2263373r/fault_python/real_inversion/'
@@ -55,16 +57,28 @@ dt_train = FaultDataset(
    survey_framework = survey_framework,
    model_framework = model_framework
 )
-dt_train.make_dataset_v2()
+dt_train.make_dataset_v2(augment=True)
 
-print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1e6) # in GB on linux
-print(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss/1e6)
 
 filename = os.path.join(save, f"trainset_{n}.pkl")
 with open(filename, 'wb') as file:
     pkl.dump(dt_train, file)
- 
-print(f"Dataset made. Time taken: {datetime.now()-start_time}")
+
+
+# Validation data
+size = 1000 # Only making a small batch here, in reality we will likely need more data than this.
+dt_train = FaultDataset(
+   priors = priors,
+   size = size,
+   survey_framework = survey_framework,
+   model_framework = model_framework
+)
+dt_train.make_dataset_v2(augment=True)
+
+
+filename = os.path.join(save, f"validationset_{n}.pkl")
+with open(filename, 'wb') as file:
+    pkl.dump(dt_train, file)
 
 
 

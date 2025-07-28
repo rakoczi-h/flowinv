@@ -36,7 +36,7 @@ test_data, test_conditional = dr_test.read_files()
 
 test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
 
-with open(os.path.join(data, 'trainset_1.pkl'), 'rb') as file:
+with open(os.path.join(data, 'testset_1.pkl'), 'rb') as file:
     dt_test = pkl.load(file)
 for s in dt_test.surveys:
     s.make_survey()
