@@ -130,7 +130,7 @@ class GravitySurvey():
             raise ValueError('The given shape cannot be interpreted')
         return survey_coordinates
 
-    def make_noise(self, noise_scale=None):
+    def make_noise(self, noise_scale=None, seed=None):
         """
         Generates an array of gaussian noise based on the given noise_scale.
         Parameters
@@ -142,6 +142,7 @@ class GravitySurvey():
             noise: np.ndarray
                 Same number of elements ad survey points in the class. Contains simulated noise with the desired standard deviation.
         """
+        np.random.seed(seed)
         if noise_scale is not None:
             self.noise_scale = noise_scale
         else:
@@ -149,6 +150,7 @@ class GravitySurvey():
                 raise ValueError("noise scale was not added as an input or attribute to the class.")
         num_points = self.get_number_of_surveypoints()
         self.noise = np.random.normal(loc=0.0, scale=self.noise_scale, size=num_points)
+        np.random.seed(None)
         return self.noise
 
     def make_noise_on_location(self, noise_on_location_scale=None):

@@ -78,7 +78,7 @@ class DataReader():
         return dt
 
 
-    def read_files(self, noise_augment=False, noise_augment_factor=2):
+    def read_files(self, noise_augment=False, noise_augment_factor=2, noise_seed=None, noise_distribution=None):
         """
         Function that read the files defined by data_location and filenames in the class. This is specific for data files describing faults.               Parameters
         ----------
@@ -100,7 +100,7 @@ class DataReader():
                 dt = pkl.load(file)
                 # Reading files containing FaultDataset objects
                 if isinstance(dt, FaultDataset):
-                    td, tc = dt.make_data_for_network(survey_info_to_include=self.survey_info_to_include, model_info_to_include=self.model_info_to_include, add_noise=True)   # these objects have corresponding method to format the data that is compatible with training
+                    td, tc = dt.make_data_for_network(survey_info_to_include=self.survey_info_to_include, model_info_to_include=self.model_info_to_include, add_noise=True, noise_seed=noise_seed, noise_distribution=noise_distribution)   # these objects have corresponding method to format the data that is compatible with training
                     train_data.append(td)
                     train_conditional.append(tc)
                     # Noise augmentation
@@ -109,7 +109,7 @@ class DataReader():
                             raise ValueError('Need to provide the noise scale to the class')
                         for i in range(noise_augment_factor-1):
                             self.regenerate_noise(dt)
-                            td, tc = dt.make_data_for_network(survey_info_to_include=self.survey_info_to_include, model_info_to_include=self.model_info_to_include, add_noise=True)
+                            td, tc = dt.make_data_for_network(survey_info_to_include=self.survey_info_to_include, model_info_to_include=self.model_info_to_include, add_noise=True, noise_seed=noise_seed, noise_distribution=noise_distribution)
                             train_data.append(td)
                             train_conditional.append(tc)
                 # Reading files containing dictionaries
