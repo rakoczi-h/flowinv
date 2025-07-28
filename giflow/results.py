@@ -707,7 +707,7 @@ class FaultFlowResults(FlowResults):
             fault.make_fault(grid)
             window_width = 0.1
             pad = 50
-            gz, _ = fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=50, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+            gz, _, _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=50, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
             if any(np.isnan(gz.flatten())):
                 print("Found NaN in simualted gravity from sample. Removing sample")
                 continue
@@ -717,7 +717,7 @@ class FaultFlowResults(FlowResults):
             gzs.append(gz.flatten())
         gzs = np.array(gzs)
         mean = np.mean(gzs, axis=0)
-        print(mean)
+
         std = np.std(gzs, axis=0)
 
         plot_data = [target, mean, std, gzs[0,:], gzs[1,:], gzs[2,:], gzs[3,:], gzs[4,:], gzs[5,:]]
@@ -741,6 +741,88 @@ class FaultFlowResults(FlowResults):
             plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax, label=r'$\Delta$g'+f" [{units}]")
         else:
             plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax, label=r'$\Delta$g')
+        fig.tight_layout()
+        if self.directory is not None:
+            plt.savefig(os.path.join(self.directory, filename), transparent=False)
+        else:
+            plt.savefig(filename, transparent=False)
+        plt.close()
+
+    def plot_compare_surveys_v2(self, model_framework, filename='survey_compare.png', units=None, noise_scale=0.0):
+        """
+        Forward models the samples from the flow and compares the forward mdoel to the input.
+        Parameters
+        ----------
+            model_framework: dict
+                The BoxDataSet attribute can just directly be passed to this.
+                Has to have keys 'ranges': list of 3 values, and 'grid_shape': list of 3 values, 'density': float
+            survey_framework: dict
+                The BoxDataSet attribute can be passed to this
+                Has to have keys 'noise_scale': float, 'ranges': [[],[],[]], 'survey_shape': float or list
+            num: int
+                Number of samples to use
+            include_examples: bool
+                Whether to plot a few individual samples.
+        """
+        num = 200
+        if num > np.shape(self.samples)[0]:
+            num = np.shape(self.samples)[0]
+            print("Not enough samples, using {num} samples only.")
+
+        coordinates = self.survey_coordinates
+        pad = int(np.shape(coordinates)[0]*0.25) # padding the fault grid by 25%
+        grid = pad_grid(coordinates, pad, square=True)
+        parameters = dict.fromkeys(model_framework['varied_parameters'])
+        for j, k in enumerate(model_framework['varied_parameters']):
+            parameters[k] = self.true_parameters[j]
+        fault = Fault(parameters=parameters)
+        fault.make_fault(grid)
+        window_width = 0.1
+        pad = 50
+        np.random.seed(123)
+        target, _ , _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=50, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+        target = target.flatten()
+        noise = np.random.normal(loc=0.0, scale=noise_scale, size=np.shape(target))
+        target = target + noise
+        np.random.seed(None)
+
+        gzs = []
+        for i in range(num):
+            parameters = dict.fromkeys(model_framework['varied_parameters'])
+            for j, k in enumerate(model_framework['varied_parameters']):
+                parameters[k] = self.samples[i,j]
+            fault = Fault(parameters=parameters)
+            fault.make_fault(grid)
+            gz, _ , _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=50, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+            if any(np.isnan(gz.flatten())):
+                print("Found NaN in simualted gravity from sample. Removing sample")
+                continue
+            if any(np.isinf(gz.flatten())):
+                print("Found inf in simualted gravity from sample. Removing sample")
+                continue
+            gzs.append(gz.flatten())
+        gzs = np.array(gzs)
+        mean = np.mean(gzs, axis=0)
+        noisy_mean = mean + noise
+        std = np.std(gzs, axis=0)
+
+        plot_data = [target, noisy_mean, mean, std]
+        titles = ['Target', 'Noisy Mean', 'Mean', 'Std']
+        fig, axes = plt.subplots(nrows=1, ncols=4)
+        vmin = np.array([target.min(), noisy_mean.min()]).min()
+        vmax = np.array([target.max(), noisy_mean.max()]).max()
+        levels = np.linspace(vmin, vmax, 15)
+        cmap = 'plasma'
+        norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+        for idx, ax in enumerate(axes.flatten()):
+            #ax.plot(coordinates[:,:,0], coordinates[:,:,1], 'o', markersize=2, color='black')
+            ax.tricontourf(coordinates[:,:,0].flatten(), coordinates[:,:,1].flatten(), plot_data[idx], cmap=cmap, norm=norm)
+            ax.set(xlim=(np.min(coordinates[:,:,0]), np.max(coordinates[:,:,0])), ylim=(np.min(coordinates[:,:,1]), np.max(coordinates[:,:,1])), aspect='equal', title=titles[idx])
+        cax = ax.inset_axes([-5.0, -0.5, 3.0, 0.1])
+        if units:
+            plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax, label=r'$\Delta$g'+f" [{units}]", orientation='horizontal')
+        else:
+            plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax, label=r'$\Delta$g', orientation='horizontal')
         fig.tight_layout()
         if self.directory is not None:
             plt.savefig(os.path.join(self.directory, filename), transparent=False)
