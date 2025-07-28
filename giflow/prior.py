@@ -28,7 +28,7 @@ class Prior():
                         if not isinstance(value[key][0], (float, int)):
                             raise ValueError("When only giving a single value for a distribution it needs to be a float or an int")
                     else:
-                        if isinstance(value[key][0], str) and value[key][0] != 'Uniform' and value[key][0] != 'Normal':
+                        if isinstance(value[key][0], str) and value[key][0] != 'Uniform' and value[key][0] != 'Normal' and value[key][0] != 'LogUniform':
                             raise ValueError('Only Uniform or Normal distributions can be given.')
                 else:
                     if not isinstance(value[key], (float, int)):
@@ -63,6 +63,8 @@ class Prior():
                     s = np.ones(size)*self.distributions[key][0]
                 elif self.distributions[key][0] == 'Uniform':
                     s = np.random.uniform(low=self.distributions[key][1], high=self.distributions[key][2], size=size)
+                elif self.distributions[key][0] == 'LogUniform':
+                    s = np.exp(np.random.uniform(low=self.distributions[key][1], high=self.distributions[key][2], size=size))
                 elif self.distributions[key][0] == 'Normal':
                     s = np.random.normal(loc=self.distributions[key][1], scale=self.distributions[key][2], size=size)
                 else:
