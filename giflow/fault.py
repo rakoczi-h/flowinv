@@ -281,6 +281,7 @@ class Fault:
                 [survey_points, 3] the survey coordiants in 3 dimensions, in the order of x, y z
                 if not given, then the same grid is used as for the fault.
         """
+        start_time = datetime.now()
         if self.displacement_profile is None:
             self.make_fault()
         displacement_profile = self.displacement_profile
@@ -303,31 +304,21 @@ class Fault:
             grid = self.grid
         if np.shape(grid[:,:,0]) != np.shape(displacement_profile):
             raise ValueError(('The shape of the padded displacement profile and the grid do not agree.'))
-        # fig = plt.figure()
-        # ax = fig.add_subplot(projection='3d')
-        # ax.scatter(grid[:,:,0].flatten(), grid[:,:,1].flatten(), displacement_profile.flatten())
-        # plt.show()
         k_mag = self.make_k_vector(grid=grid*1000)
         R1 = np.zeros(np.shape(displacement_profile))
         for n in range(num_components):
             f1 = np.fft.fft2((displacement_profile*1000)**(n+1)) # changing to m
             r1 = np.complex128(k_mag**(n)/math.factorial(n+1)*f1) # r represent spatial domain, k represent k domain
             R1 = R1+r1
-        self.fourier_domain_model = R1
         G = 6.67430*10**(-11)# Nm**2kg**(-2)
         f_g = -2*np.pi*G*np.exp((-k_mag)*depth)*R1*self.parameters['density']
-        # plt.imshow(np.real(f_g))
-        # plt.colorbar()
-        # plt.show()
         g = np.fft.ifft2(f_g)
-        #g_vec = g.ravel()
         g_orig = np.real(g) * 1e5 # changing to mGal
-        
         if survey_coordinates is None:
             if remove_min:
-                return g_orig-np.min(g_orig), R1
+                return g_orig-np.min(g_orig), k_mag, R1, grid
             else:
-                return g_orig, R1
+                return g_orig, k_mag, R1, grid
         else:
             x = np.linspace(np.min(grid[:,:,0]), np.max(grid[:,:,0]), num=np.shape(grid)[1])
             y = np.linspace(np.min(grid[:,:,1]), np.max(grid[:,:,1]), num=np.shape(grid)[0])
@@ -335,9 +326,9 @@ class Fault:
             g_new = func(survey_coordinates[:,:,:2].flatten())
             g_new = np.reshape(g_new, np.shape(survey_coordinates[:,:,0]))
             if remove_min:
-                return g_new-np.min(g_new), R1
+                return g_new-np.min(g_new), k_mag, R1, grid
             else:
-                return g_new, R1
+                return g_new, k_mag, R1, grid
             
     def make_k_vector(self, grid=None):
         """
@@ -377,7 +368,41 @@ class Fault:
         frequencytotal = frequencytotal[:, :-1]
         frequencytotal = frequencytotal * (2 * np.pi)
         return frequencytotal
-    
+
+    def forward_from_fourier(self, k_mag, R1, grid, survey_coordinates=None, depths=None, densities=None, remove_min=True):
+        G = 6.67430*10**(-11)# Nm**2kg**(-2)
+        if depths is None:
+            depths = [self.parameters['cz']]
+        if densities is None:
+            densities = [self.parameters['density']]
+        outputs = []
+        dep_output = []
+        den_output = []
+        for d in depths:
+            for rho in densities:
+                f_g = -2*np.pi*G*np.exp((-k_mag)*d*1000)*R1*rho
+                g = np.fft.ifft2(f_g)
+                g_orig = np.real(g) * 1e5 # changing to mGal
+                if survey_coordinates is None:
+                    if remove_min:
+                        outputs.append(g_orig-np.min(g_orig))
+                    else:
+                        outputs.append(g_orig)
+                else:
+                    x = np.linspace(np.min(grid[:,:,0]), np.max(grid[:,:,0]), num=np.shape(grid)[1])
+                    y = np.linspace(np.min(grid[:,:,1]), np.max(grid[:,:,1]), num=np.shape(grid)[0])
+                    func = RegularGridInterpolator((x, y), g_orig)
+                    g_new = func(survey_coordinates[:,:,:2].flatten())
+                    g_new = np.reshape(g_new, np.shape(survey_coordinates[:,:,0]))
+
+                dep_output.append(d)
+                den_output.append(rho)
+                if remove_min:
+                    outputs.append(g_new-np.min(g_new))
+                else:
+                    outputs.append(g_new)
+        return outputs, dep_output, den_output
+
 
     # ------------------- Plotting Tools ---------------------------
 
