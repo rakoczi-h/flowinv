@@ -248,7 +248,7 @@ class GravitySurvey():
         if self.survey_coordinates is None:
             extent = (self.ranges[0][0], self.ranges[0][1], self.ranges[1][1], self.ranges[1][0])
         else:
-            extent = (np.min(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,1]), np.min(self.survey_coordinates[:,1]))
+            extent = (np.min(self.survey_coordinates[:,1]), np.max(self.survey_coordinates[:,1]), np.max(self.survey_coordinates[:,0]), np.min(self.survey_coordinates[:,0]))
         plt.imshow(np.reshape(plot_data, self.shape), extent=extent)
         plt.xlabel('y')
         plt.ylabel('x')
