@@ -96,8 +96,8 @@ class Dataset():
             noise = []
             for i in range(self.size):
                 if noise_distribution:
-                    noise_scale = noise_distribution.sample(size=1, returntype='array')
-                    self.surveys[i].noise_scale = noise_scale[0]
+                    noise_scale = noise_distribution.sample(size=1, returntype='array')[0]
+                    self.surveys[i].noise_scale = noise_scale
                 if self.surveys[i].noise is None:
                     self.surveys[i].make_noise(seed=noise_seed)
                 noise.append(self.surveys[i].noise)
@@ -115,9 +115,10 @@ class Dataset():
                 if any([l==label for l in survey_info_to_include]):
                     conditional.append(np.array([self.surveys[i].ranges[idx] for i in range(self.size)]))
             if any([c=='survey_width_ratio' for c in survey_info_to_include]):
-                conditional.append(np.expand_dims(np.array([((self.surveys[i].ranges[0][1]-self.surveys[i].ranges[0][0])/(self.surveys[i].ranges[1][1]-self.surveys[i].ranges[1][0])) for i in range(self.size)]), axis=1))
+                conditional.append(np.array([((self.surveys[i].ranges[0][1]-self.surveys[i].ranges[0][0])/(self.surveys[i].ranges[1][1]-self.surveys[i].ranges[1][0])) for i in range(self.size)]))
             if any([l=='noise_scale' for l in survey_info_to_include]):
-                conditional.append(np.expand_dims(np.array([self.surveys[i].noise_scale for i in range(self.size)]), axis=1))
+                conditional.append(np.array([self.surveys[i].noise_scale for i in range(self.size)]))
+
             if any([l=='density' for l in survey_info_to_include]):
                 conditional.append(np.expand_dims(np.array([self.sourcemodels[i].parameters['density'] for i in range(self.size)]), axis=1))
         return data, conditional
