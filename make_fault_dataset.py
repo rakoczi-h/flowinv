@@ -21,7 +21,7 @@ save = '/scratch/balta0/2263373r/fault_python/real_inversion/'
 # Priors
 distributions = {'cx': ['Uniform', -1.0, 1.0],
                  'cy': ['Uniform', -1.0, 1.0],
-                 'l': ['Uniform', 1.0, 5.0],
+                 'l': ['Uniform', 1.0, 4.0],
                  'cz': ['Uniform', 0.01, 0.2],
                  'alpha': ['Uniform', 0.0, 2*np.pi],
                  'density': ['Uniform', 500.0, 1000.0],
@@ -32,8 +32,6 @@ priors = Prior(distributions=distributions)
 # Defining the source model framework
 model_framework = {
     "type": 'parameterised',
-    "shape": [50,50],
-    "ranges": [[-2.0, 2.0], [-2.0, 2.0], [0.0]],
     'default_parameters': {'dip': 70*np.pi/180},
     'varied_parameters': ['cx', 'cy', 'cz', 'l', 'alpha', 'density', 'DL_ratio']
 }
@@ -49,39 +47,71 @@ survey_framework = {
 }
 
 
-# Training data
-size = 10000 # Only making a small batch here, in reality we will likely need more data than this.
+## Training data
+#size = 10000 # Only making a small batch here, in reality we will likely need more data than this.
+#dt_train = FaultDataset(
+#   priors = priors,
+#   size = size,
+#   survey_framework = survey_framework,
+#   model_framework = model_framework
+#)
+#dt_train.make_dataset_v2(augment=True, augment_dims=['density'])
+#
+#
+## print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1e6)
+## print(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss/1e6)
+#
+#filename = os.path.join(save, f"trainset_{n}.pkl")
+#with open(filename, 'wb') as file:
+#    pkl.dump(dt_train, file)
+#
+##print(f"Time taken: {datetime.now()-start_time}")
+#
+## Validation data
+#size = 1000 # Only making a small batch here, in reality we will likely need more data than this.
+#dt_train = FaultDataset(
+#   priors = priors,
+#   size = size,
+#   survey_framework = survey_framework,
+#   model_framework = model_framework
+#)
+#dt_train.make_dataset_v2(augment=True, augment_dims=['density'])
+#
+#
+#filename = os.path.join(save, f"validationset_{n}.pkl")
+#with open(filename, 'wb') as file:
+#    pkl.dump(dt_train, file)
+
+# PP data
+size = 100 # Only making a small batch here, in reality we will likely need more data than this.
 dt_train = FaultDataset(
    priors = priors,
    size = size,
    survey_framework = survey_framework,
    model_framework = model_framework
 )
-dt_train.make_dataset_v2(augment=True)
+dt_train.make_dataset_v2(augment=False)
 
 
-filename = os.path.join(save, f"trainset_{n}.pkl")
+filename = os.path.join(save, f"ppset_{n}.pkl")
 with open(filename, 'wb') as file:
     pkl.dump(dt_train, file)
 
 
-# Validation data
-size = 1000 # Only making a small batch here, in reality we will likely need more data than this.
+# Test data
+size = 10 # Only making a small batch here, in reality we will likely need more data than this.
 dt_train = FaultDataset(
    priors = priors,
    size = size,
    survey_framework = survey_framework,
    model_framework = model_framework
 )
-dt_train.make_dataset_v2(augment=True)
+dt_train.make_dataset_v2(augment=False)
 
 
-filename = os.path.join(save, f"validationset_{n}.pkl")
+filename = os.path.join(save, f"testset_{n}.pkl")
 with open(filename, 'wb') as file:
     pkl.dump(dt_train, file)
-
-
-
 
 ## Test data
 #size = 1
