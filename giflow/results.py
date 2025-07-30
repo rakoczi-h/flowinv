@@ -764,26 +764,23 @@ class FaultFlowResults(FlowResults):
             include_examples: bool
                 Whether to plot a few individual samples.
         """
-        num = 200
+        num = 100
         if num > np.shape(self.samples)[0]:
             num = np.shape(self.samples)[0]
             print("Not enough samples, using {num} samples only.")
 
         coordinates = self.survey_coordinates
-        pad = int(np.shape(coordinates)[0]*0.25) # padding the fault grid by 25%
+        pad = int(np.shape(coordinates)[0]*0.5) # padding the fault grid by 25%
         grid = pad_grid(coordinates, pad, square=True)
-        parameters = dict.fromkeys(model_framework['varied_parameters'])
-        for j, k in enumerate(model_framework['varied_parameters']):
-            parameters[k] = self.true_parameters[j]
-        fault = Fault(parameters=parameters)
-        fault.make_fault(grid)
+
         window_width = 0.1
         pad = 50
         np.random.seed(123)
-        target, _ , _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=50, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
-        target = target.flatten()
+        target = np.array(self.conditional[0])
+        #target, _ , _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=50, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+        #target = target.flatten()
         noise = np.random.normal(loc=0.0, scale=noise_scale, size=np.shape(target))
-        target = target + noise
+        #target = target + noise
         np.random.seed(None)
 
         gzs = []
@@ -791,9 +788,15 @@ class FaultFlowResults(FlowResults):
             parameters = dict.fromkeys(model_framework['varied_parameters'])
             for j, k in enumerate(model_framework['varied_parameters']):
                 parameters[k] = self.samples[i,j]
+            parameters['density'] = self.conditional[3][0]
+            # discard invalid samples
+            if parameters['alpha'] < 0 or parameters['alpha'] > 2*np.pi:
+                continue
+            if parameters ['DL_ratio'] < 0.0:
+                continue
             fault = Fault(parameters=parameters)
             fault.make_fault(grid)
-            gz, _ , _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=50, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+            gz, _ , _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=100, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
             if any(np.isnan(gz.flatten())):
                 print("Found NaN in simualted gravity from sample. Removing sample")
                 continue
@@ -808,21 +811,42 @@ class FaultFlowResults(FlowResults):
 
         plot_data = [target, noisy_mean, mean, std]
         titles = ['Target', 'Noisy Mean', 'Mean', 'Std']
-        fig, axes = plt.subplots(nrows=1, ncols=4)
+        fig, axes = plt.subplots(nrows=1, ncols=4, figsize=(10,5))
         vmin = np.array([target.min(), noisy_mean.min()]).min()
         vmax = np.array([target.max(), noisy_mean.max()]).max()
-        levels = np.linspace(vmin, vmax, 15)
+        levels = np.linspace(vmin, vmax, 5)
         cmap = 'plasma'
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+
+        vmin = np.array([std.min(), std.min()]).min()
+        vmax = np.array([std.max(), std.max()]).max()
+        levels2 = np.linspace(vmin, vmax, 5)
+        norm2 = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+
         for idx, ax in enumerate(axes.flatten()):
-            #ax.plot(coordinates[:,:,0], coordinates[:,:,1], 'o', markersize=2, color='black')
-            ax.tricontourf(coordinates[:,:,0].flatten(), coordinates[:,:,1].flatten(), plot_data[idx], cmap=cmap, norm=norm)
-            ax.set(xlim=(np.min(coordinates[:,:,0]), np.max(coordinates[:,:,0])), ylim=(np.min(coordinates[:,:,1]), np.max(coordinates[:,:,1])), aspect='equal', title=titles[idx])
-        cax = ax.inset_axes([-5.0, -0.5, 3.0, 0.1])
+            if idx == 3:
+                ax.tricontourf(coordinates[:,:,0].flatten(), coordinates[:,:,1].flatten(), plot_data[idx], cmap=cmap, norm=norm2)
+                ax.tricontour(coordinates[:,:,0].flatten(), coordinates[:,:,1].flatten(), plot_data[idx], norm=norm2, colors='black', levels=levels2, linewidths=0.2)
+            else:
+                ax.tricontourf(coordinates[:,:,0].flatten(), coordinates[:,:,1].flatten(), plot_data[idx], cmap=cmap, norm=norm)
+                ax.tricontour(coordinates[:,:,0].flatten(), coordinates[:,:,1].flatten(), plot_data[idx], norm=norm, colors='black', levels=levels, linewidths=0.2)
+            ax.set(xlim=(np.min(coordinates[:,:,0]), np.max(coordinates[:,:,0])), ylim=(np.min(coordinates[:,:,1]), np.max(coordinates[:,:,1])), aspect='equal')
+            ax.set_title(titles[idx], fontsize=14)
+            ax.set_xlabel('x [km]', fontsize=12)
+            if idx == 0:
+                ax.set_ylabel('y [km]', fontsize=12)
+            if idx > 0:
+                ax.get_yaxis().set_visible(False)
+        cax = ax.inset_axes([-3.6, -0.4, 3.4, 0.1])
+        cax_2 = ax.inset_axes([0.0, -0.4, 1.0, 0.1])
+        cbar = plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax,  orientation='horizontal')
+        cbar2 = plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), cax=cax_2, orientation='horizontal')
         if units:
-            plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax, label=r'$\Delta$g'+f" [{units}]", orientation='horizontal')
+            cbar.set_label(label=r'$\Delta$g'+f" [{units}]", size =12)
+            cbar2.set_label(label=r'$\Delta$g'+f" [{units}]", size =12)
         else:
-            plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax, label=r'$\Delta$g', orientation='horizontal')
+            cbar.set_label(label=r'$\Delta$g', size =12)
+            cbar2.set_label(label=r'$\Delta$g', size =12)
         fig.tight_layout()
         if self.directory is not None:
             plt.savefig(os.path.join(self.directory, filename), transparent=False)
