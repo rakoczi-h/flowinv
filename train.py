@@ -1,5 +1,5 @@
 import os
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, QuantileTransformer
 import torch
 import pickle as pkl
 import numpy as np
@@ -63,8 +63,8 @@ hyperparameters = {
         'n_inputs': 6, # the total number of parameters in the source model, including any additional information we chose to include
         'n_conditional_inputs': 2503, # the total number of values in the conditional
         'n_transforms': 16,
-        'n_blocks_per_transform': 4,
-        'n_neurons': 16,
+        'n_blocks_per_transform': 8,
+        'n_neurons': 32,
         # The parameters below define some settings for the training
         'batch_size': 5000,
         'batch_norm': True,

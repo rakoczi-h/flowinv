@@ -47,25 +47,25 @@ survey_framework = {
 }
 
 
-## Training data
-#size = 10000 # Only making a small batch here, in reality we will likely need more data than this.
-#dt_train = FaultDataset(
-#   priors = priors,
-#   size = size,
-#   survey_framework = survey_framework,
-#   model_framework = model_framework
-#)
-#dt_train.make_dataset_v2(augment=True, augment_dims=['density'])
-#
-#
-## print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1e6)
-## print(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss/1e6)
-#
-#filename = os.path.join(save, f"trainset_{n}.pkl")
-#with open(filename, 'wb') as file:
-#    pkl.dump(dt_train, file)
-#
-##print(f"Time taken: {datetime.now()-start_time}")
+# Training data
+size = 10000 # Only making a small batch here, in reality we will likely need more data than this.
+dt_train = FaultDataset(
+   priors = priors,
+   size = size,
+   survey_framework = survey_framework,
+   model_framework = model_framework
+)
+dt_train.make_dataset_v2(augment=True, augment_dims=['density'])
+
+
+# print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1e6)
+# print(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss/1e6)
+
+filename = os.path.join(save, f"trainset_{n}.pkl")
+with open(filename, 'wb') as file:
+    pkl.dump(dt_train, file)
+
+#print(f"Time taken: {datetime.now()-start_time}")
 #
 ## Validation data
 #size = 1000 # Only making a small batch here, in reality we will likely need more data than this.
@@ -82,52 +82,61 @@ survey_framework = {
 #with open(filename, 'wb') as file:
 #    pkl.dump(dt_train, file)
 
-# PP data
-size = 100 # Only making a small batch here, in reality we will likely need more data than this.
-dt_train = FaultDataset(
-   priors = priors,
-   size = size,
-   survey_framework = survey_framework,
-   model_framework = model_framework
-)
-dt_train.make_dataset_v2(augment=False)
-
-
-filename = os.path.join(save, f"ppset_{n}.pkl")
-with open(filename, 'wb') as file:
-    pkl.dump(dt_train, file)
-
-
-# Test data
-size = 10 # Only making a small batch here, in reality we will likely need more data than this.
-dt_train = FaultDataset(
-   priors = priors,
-   size = size,
-   survey_framework = survey_framework,
-   model_framework = model_framework
-)
-dt_train.make_dataset_v2(augment=False)
-
-
-filename = os.path.join(save, f"testset_{n}.pkl")
-with open(filename, 'wb') as file:
-    pkl.dump(dt_train, file)
-
+## PP data
+#size = 100 # Only making a small batch here, in reality we will likely need more data than this.
+#dt_train = FaultDataset(
+#   priors = priors,
+#   size = size,
+#   survey_framework = survey_framework,
+#   model_framework = model_framework
+#)
+#dt_train.make_dataset_v2(augment=False)
+#
+#
+#filename = os.path.join(save, f"ppset_{n}.pkl")
+#with open(filename, 'wb') as file:
+#    pkl.dump(dt_train, file)
+#
+#
 ## Test data
-#size = 1
+#size = 10 # Only making a small batch here, in reality we will likely need more data than this.
+#dt_train = FaultDataset(
+#   priors = priors,
+#   size = size,
+#   survey_framework = survey_framework,
+#   model_framework = model_framework
+#)
+#dt_train.make_dataset_v2(augment=False)
+#
+#
+#filename = os.path.join(save, f"testset_{n}.pkl")
+#with open(filename, 'wb') as file:
+#    pkl.dump(dt_train, file)
+
+
+#survey_framework = {
+#    "shape": [50,50],
+#    "ranges": [[-0.5, 0.5],[-0.1, 0.1],[0]],
+#    "noise_scale": None,
+#    "noise_on_location_scale": 0.0,
+#    #"width_ratio" : ['Uniform', 0.1, 1.0],
+#    "width_ratio": None
+#}
+## Test data
+#size = 6
 #dt_train = FaultDataset(
 #    priors = priors,
 #    size = size,
 #    survey_framework = survey_framework,
 #    model_framework = model_framework
 #)
-#parameters_dict = {'cx': [0.25], 'cy': [0.5], 'l': [1.5], 'alpha': [np.pi/4], 'cz': [0.1]}
-#dt_train.make_dataset(parameters_dict=parameters_dict)
+#parameters_dict = {'cx': [0.0, 0.0, 0.5, 0.5, 0.0, 0.0], 'cy': [0.0, 0.0, 0.0, 0.0, 0.5, 0.5], 'l': [4.0, 4.0, 3.0, 3.0, 2.0, 2.0], 'alpha': [0.0, 350*np.pi/180, np.pi/2, np.pi/2, 0.0, 0.0], 'cz': [0.1, 0.1, 0.2, 0.2, 0.05, 0.05], 'DL_ratio': [0.02, 0.02, 0.02, 0.02, 0.02, 0.02], 'density': [800.0, 800.0, 800.0, 600.0, 600.0, 600.0]}
+#dt_train.make_dataset_v2(parameters_dict=parameters_dict, augment=False)
 #
 #filename = os.path.join(save, f"testset_1.pkl")
 #with open(filename, 'wb') as file:
 #    pkl.dump(dt_train, file)
 #
 #print(f"Dataset made. Time taken: {datetime.now()-start_time}")
-
-
+#
+#
