@@ -8,7 +8,6 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-from .prior import Prior
 from .utils import points_within_area, distance_to_line_segment, normalize, pad_grid
 
 class Fault:
@@ -26,15 +25,17 @@ class Fault:
                 for key in value.keys():
                     if not key in default_keys:
                         raise ValueError('At least one of the keys in parameters is not recognised.')
-                for df in ['cx', 'cy', 'alpha', 'l']:
-                    value.setdefault(df, None)
+                value.setdefault("cx", 0.25)
+                value.setdefault("cy", 0.25)
+                value.setdefault("alpha", np.pi/4)
+                value.setdefault("l", 1.5)
                 value.setdefault("DL_ratio", 0.02)
                 value.setdefault("dip", 70/180*np.pi)
                 value.setdefault("sym_factor", 0.2)
                 value.setdefault("Extent_ratio", 1.5)
                 value.setdefault("Displacement_order", 1.2)
                 value.setdefault("Blend_order", 1.2)
-                value.setdefault("cz", 0.0)
+                value.setdefault("cz", 0.1)
                 value.setdefault("density", 800.0)
                 for i, key in enumerate(default_keys):
                     super().__setattr__(key, value[key])
