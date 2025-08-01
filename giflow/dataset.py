@@ -115,7 +115,9 @@ class Dataset():
                 if any([l==label for l in survey_info_to_include]):
                     conditional.append(np.array([self.surveys[i].ranges[idx] for i in range(self.size)]))
             if any([c=='survey_width_ratio' for c in survey_info_to_include]):
-                conditional.append(np.array([((self.surveys[i].ranges[0][1]-self.surveys[i].ranges[0][0])/(self.surveys[i].ranges[1][1]-self.surveys[i].ranges[1][0])) for i in range(self.size)]))
+
+                #conditional.append(np.expand_dims(np.array([((self.surveys[i].ranges[0][1]-self.surveys[i].ranges[0][0])/(self.surveys[i].ranges[1][1]-self.surveys[i].ranges[1][0]))[0] for i in range(self.size)]), axis=1))
+                conditional.append(np.expand_dims(np.array([((self.surveys[i].ranges[0][1]-self.surveys[i].ranges[0][0])/(self.surveys[i].ranges[1][1]-self.surveys[i].ranges[1][0])) for i in range(self.size)]), axis=1))
             if any([l=='noise_scale' for l in survey_info_to_include]):
                 conditional.append(np.array([self.surveys[i].noise_scale for i in range(self.size)]))
 
@@ -133,7 +135,6 @@ class FaultDataset(Dataset):
             parameters_dict = self.priors.sample(size=self.size, returntype='dict') # if the parameters dictionary is not passed to the function, then the prior is sampled
         if self.model_framework['varied_parameters'] is None:
             self.model_framework['varied_parameters'] = [key for key in parameters_dict.keys()]
-        
 
         window_pad_percentage = 0.5
         # Checking conditions for the survey grid:
@@ -164,12 +165,12 @@ class FaultDataset(Dataset):
             X = np.expand_dims(X, axis=2)
             Y = np.expand_dims(Y, axis=2)
             Z = np.zeros(np.shape(X))
-            survey_coordinates = np.c_[X, Y, Z]    
+            survey_coordinates = np.c_[X, Y, Z]
             change_survey = False
 
             # Can also make the fault grid
             pad = int(np.shape(survey_coordinates)[0]*window_pad_percentage) # padding the fault grid by 25%
-            grid = pad_grid(survey_coordinates, pad, square=True)                                                   
+            grid = pad_grid(survey_coordinates, pad, square=True)
         else:
             change_survey = True
             x_size = self.survey_framework['ranges'][0][1]-self.survey_framework['ranges'][0][0]
@@ -189,7 +190,7 @@ class FaultDataset(Dataset):
         for i in range(num_iters):
             # Making the survey grid
             if change_survey is True:
-                y_size = x_size*width_ratio_prior.sample(size=1, returntype='array')[0] # the width_ratio is defined as y/x
+                y_size = x_size*width_ratio_prior.sample(size=1, returntype='array')[0][0] # the width_ratio is defined as y/x
                 ranges = [self.survey_framework['ranges'][0], [-y_size/2, y_size/2], self.survey_framework['ranges'][2]]
                 # Making the survey grid
                 X = np.linspace(ranges[0][0], ranges[0][1], num=self.survey_framework['shape'][0])
@@ -234,6 +235,7 @@ class FaultDataset(Dataset):
                 for j, gz in enumerate(gzs):
                     fault.parameters['density'] = densities[j]
                     fault.parameters['cz'] = depths[j]
+
                     survey = GravitySurvey(gravity=gz.flatten(), ranges=ranges, shape=self.survey_framework['shape'])
                     self.sourcemodels.append(Fault(parameters=fault.parameters.copy())) # addig a copy of the fault object, with only its parameters
                     self.surveys.append(survey)
