@@ -131,7 +131,7 @@ class FaultDataset(Dataset):
     """
     Class for making a data set of faults and corresponding gravity surveys.
     """
-    def make_dataset_v2(self, parameters_dict=None, augment=True, augment_dims=['density', 'cz'], augment_num=5):
+    def make_dataset(self, parameters_dict=None, augment=False, augment_dims=['density', 'cz'], augment_num=5):
         if parameters_dict is None:
             parameters_dict = self.priors.sample(size=self.size, returntype='dict') # if the parameters dictionary is not passed to the function, then the prior is sampled
         if self.model_framework['varied_parameters'] is None:
