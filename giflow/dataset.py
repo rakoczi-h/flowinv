@@ -101,7 +101,8 @@ class Dataset():
             for i in range(self.size):
                 if noise_distribution:
                     noise_scale = noise_distribution.sample(size=1, returntype='array')[0]
-                    self.surveys[i].noise_scale = noise_scale
+                    self.surveys[i].noise_scale = noise_scale[0]
+                print(self.surveys[i].noise_scale)
                 if self.surveys[i].noise is None:
                     self.surveys[i].make_noise(seed=noise_seed)
                 noise.append(self.surveys[i].noise)
@@ -131,13 +132,14 @@ class FaultDataset(Dataset):
     """
     Class for making a data set of faults and corresponding gravity surveys.
     """
-    def make_dataset(self, parameters_dict=None, augment=False, augment_dims=['density', 'cz'], augment_num=5):
+    def make_dataset(self, parameters_dict=None, augment=False, augment_dims=['density', 'cz'], augment_num=5, window=True, pad=False, num_components=50):
         if parameters_dict is None:
             parameters_dict = self.priors.sample(size=self.size, returntype='dict') # if the parameters dictionary is not passed to the function, then the prior is sampled
         if self.model_framework['varied_parameters'] is None:
             self.model_framework['varied_parameters'] = [key for key in parameters_dict.keys()]
 
-        window_pad_percentage = 0.5
+        if window:
+            window_pad_percentage = 0.5
         # Checking conditions for the survey grid:
         if self.survey_framework['width_ratio'] is None:
             ranges = self.survey_framework['ranges']
@@ -151,8 +153,11 @@ class FaultDataset(Dataset):
             change_survey = False
 
             # Can also make the fault grid
-            pad = int(np.shape(survey_coordinates)[0]*window_pad_percentage) # padding the fault grid by 25%
-            grid = pad_grid(survey_coordinates, pad, square=True)
+            if window:
+                pad = int(np.shape(survey_coordinates)[0]*window_pad_percentage) # padding the fault grid by 25%
+                grid = pad_grid(survey_coordinates, pad, square=True)
+            else:
+                grid = survey_coordinates
         elif isinstance(self.survey_framework['width_ratio'], int) or isinstance(self.survey_framework['width_ratio'], float) or (isinstance(self.survey_framework['width_ratio'], list) and len(self.survey_framework['width_ratio']) == 1):
             x_size = self.survey_framework['ranges'][0][1]-self.survey_framework['ranges'][0][0]
             if (isinstance(self.survey_framework['width_ratio'], list) and len(self.survey_framework['width_ratio']) == 1):
@@ -170,8 +175,11 @@ class FaultDataset(Dataset):
             change_survey = False
 
             # Can also make the fault grid
-            pad = int(np.shape(survey_coordinates)[0]*window_pad_percentage) # padding the fault grid by 25%
-            grid = pad_grid(survey_coordinates, pad, square=True)
+            if window:
+                pad = int(np.shape(survey_coordinates)[0]*window_pad_percentage) # padding the fault grid by 25%
+                grid = pad_grid(survey_coordinates, pad, square=True)
+            else:
+                grid = survey_coordinates
         else:
             change_survey = True
             x_size = self.survey_framework['ranges'][0][1]-self.survey_framework['ranges'][0][0]
@@ -203,8 +211,11 @@ class FaultDataset(Dataset):
                 survey_coordinates = np.c_[X, Y, Z]
 
                 # Making padded fault grid
-                pad = int(np.shape(survey_coordinates)[0]*window_pad_percentage) # padding the fault grid by 25%
-                grid = pad_grid(survey_coordinates, pad, square=True)
+                if window:
+                    pad = int(np.shape(survey_coordinates)[0]*window_pad_percentage) # padding the fault grid by 25%
+                    grid = pad_grid(survey_coordinates, pad, square=True)
+                else:
+                    grid = survey_coordinates
 
             # Making the fault
             parameters = {}
@@ -231,7 +242,10 @@ class FaultDataset(Dataset):
                     depths = parameters_dict['cz'][i*augment_num:(i*augment_num+augment_num)]
                 else:
                     depths = None
-                _, k_mag, R1, grid = fault.forward_model(remove_min=True, num_components=100, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+                if window:
+                    _, k_mag, R1, grid = fault.forward_model(remove_min=True, num_components=num_components, zero_pad=pad, pad_width=[pad, pad],  win=('tukey', window_width))
+                else:
+                    _, k_mag, R1, grid = fault.forward_model(remove_min=True, num_components=num_components, zero_pad=pad, pad_width=[pad, pad],  win=None)
                 gzs, depths, densities = fault.forward_from_fourier(k_mag, R1, grid, densities=densities, depths=depths, survey_coordinates=survey_coordinates, remove_min=True)
                 for j, gz in enumerate(gzs):
                     fault.parameters['density'] = densities[j]
@@ -241,7 +255,10 @@ class FaultDataset(Dataset):
                     self.sourcemodels.append(Fault(parameters=fault.parameters.copy())) # addig a copy of the fault object, with only its parameters
                     self.surveys.append(survey)
             else:
-                gz, _, _, _ = fault.forward_model(survey_coordinates=survey_coordinates, remove_min=True, num_components=100, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+                if window:
+                    gz, _, _, _ = fault.forward_model(survey_coordinates=survey_coordinates, remove_min=True, num_components=num_components, zero_pad=pad, pad_width=[pad, pad],  win=('tukey', window_width))
+                else:
+                    gz, _, _, _ = fault.forward_model(survey_coordinates=survey_coordinates, remove_min=True, num_components=num_components, zero_pad=pad, pad_width=[pad, pad],  win=None)
                 fault.displacement_profile = None
                 fault.grid = None
                 survey = GravitySurvey(gravity=gz.flatten(), ranges=ranges, shape=self.survey_framework['shape'])
