@@ -9,7 +9,7 @@ from giflow.results import FaultFlowResults
 from giflow.flowmodel import FlowModel
 from giflow.datareader import DataReader
 from giflow.prior import Prior
-flow_location = '/data/www.astro/2263373r/fault_python_version/real_inversion/run_2025-07-31 14:23:46.356947/'
+flow_location = '/data/www.astro/2263373r/fault_python_version/synthetic_inversion/run_2025-08-05 13:58:08.936596/'
 
 
 #Reading the flow
@@ -21,10 +21,14 @@ flow.save_location = flow_location
 data = flow.data_location
 
 # ------------------- DATA -------------------------
-model_info_to_include = ['cx', 'cy', 'cz', 'l', 'alpha', 'DL_ratio']
-labels = [r'$c_x$', r'$c_y$', r'$c_z$', r'$l$', r'$\alpha$', r'$\gamma$']
-survey_info_to_include = ['survey_width_ratio', 'noise_scale', 'density']
-noise_distribution = Prior(distributions={'noise_scale': ['LogUniform', 1e-5, 2.0]})
+#model_info_to_include = ['cx', 'cy', 'cz', 'l', 'alpha', 'DL_ratio']
+#labels = [r'$c_x$', r'$c_y$', r'$c_z$', r'$l$', r'$\alpha$', r'$\gamma$']
+#survey_info_to_include = ['survey_width_ratio', 'noise_scale', 'density']
+#noise_distribution = Prior(distributions={'noise_scale': ['LogUniform', 1e-5, 2.0]})
+model_info_to_include = ['cx', 'cy', 'cz', 'l', 'alpha']
+labels = [r'$c_x$', r'$c_y$', r'$c_z$', r'$l$', r'$\alpha$']
+survey_info_to_include = []
+noise_distribution = Prior(distributions={'noise_scale': [0.1]})
 # Reading in files
 ppsize = 100
 dr_pp = DataReader(filenames="ppset_0.pkl", data_location=data, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=ppsize)
@@ -38,7 +42,7 @@ pp_dataset = flow.make_tensor_dataset(pp_data, pp_conditional, device=device, sc
 testsize = 10
 dr_test = DataReader(filenames="testset_0.pkl", data_location=data, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=testsize)
 test_data, test_conditional = dr_test.read_files(noise_distribution=noise_distribution, noise_seed=123)
-noise_scale = test_conditional[2]
+#noise_scale = test_conditional[2]
 
 if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
     test_conditional[2] = np.log(test_conditional[2])
@@ -59,7 +63,7 @@ model_framework = {
     "type": 'parameterised',
     "shape": [50,50],
     'default_parameters': {'dip': 70*np.pi/180},
-    'varied_parameters': ['cx', 'cy', 'cz', 'l', 'alpha', 'DL_ratio']
+    'varied_parameters': model_info_to_include
 }
 # --------------- TESTING -------------------
 # P-P plot
@@ -81,9 +85,9 @@ for i in range(testsize):
                             survey_coordinates=np.reshape(dt_test.surveys[i].survey_coordinates, (dt_test.surveys[i].shape[0], dt_test.surveys[i].shape[1], 3))
                            )
     results.append(result)
-    result.directory = os.path.join(flow_location, f"testcase_set_2_{i}/")
+    result.directory = os.path.join(flow_location, f"testcase_{i}/")
     # plotting the surveys we are inverting
-    #dt_test.surveys[i].plot_contours(filename=os.path.join(result.directory, "survey_contours.png"))
+    dt_test.surveys[i].plot_contours(filename=os.path.join(result.directory, "survey_contours.png"))
     #dt_test.surveys[i].plot_pixels(filename=os.path.join(result.directory, "survey.png"))
 
 # CORNER PLOTS                              
@@ -118,5 +122,5 @@ for i, result in enumerate(results):
 #
 
 for i, result in enumerate(results):
-    result.plot_compare_surveys_samples(model_framework=model_framework, noise_scale=noise_scale[i], filename='survey_compare_samples.png')
-    #result.plot_compare_surveys_v2(model_framework=model_framework, noise_scale=noise_scale[i], filename='survey_compare.png')
+    #result.plot_compare_surveys_samples(model_framework=model_framework, noise_scale=0.1, filename='survey_compare_samples.png')
+    result.plot_compare_surveys(model_framework=model_framework, filename='survey_compare.png')

@@ -13,7 +13,7 @@ start_time = datetime.now()
 n = int(sys.argv[1])
 
 # Specifying directories
-save = '/scratch/balta0/2263373r/fault_python/synthetic_inversion_v2/'
+save = '/scratch/balta0/2263373r/fault_python/synthetic_inversion_v3/'
 if not os.path.exists(save):
     os.mkdir(save)
 
@@ -47,69 +47,69 @@ survey_framework = {
 
 
 # Training data
-size = 10000 # Only making a small batch here, in reality we will likely need more data than this.
-dt_train = FaultDataset(
-   priors = priors,
-   size = size,
-   survey_framework = survey_framework,
-   model_framework = model_framework
-)
-dt_train.make_dataset(augment=False)
-
-
-filename = os.path.join(save, f"trainset_{n}.pkl")
-with open(filename, 'wb') as file:
-    pkl.dump(dt_train, file)
-
-print(f"Memory use in gb: ", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1e6+resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss/1e6)
-print(f"Time taken: {datetime.now()-start_time}")
-
-
-# Validation data
-size = 1000 # Only making a small batch here, in reality we will likely need more data than this.
-dt_train = FaultDataset(
-   priors = priors,
-   size = size,
-   survey_framework = survey_framework,
-   model_framework = model_framework
-)
-dt_train.make_dataset(augment=False)
-
-
-filename = os.path.join(save, f"validationset_{n}.pkl")
-with open(filename, 'wb') as file:
-    pkl.dump(dt_train, file)
-
-## PP data
-#size = 100 # Only making a small batch here, in reality we will likely need more data than this.
+#size = 10000 # Only making a small batch here, in reality we will likely need more data than this.
 #dt_train = FaultDataset(
 #   priors = priors,
 #   size = size,
 #   survey_framework = survey_framework,
 #   model_framework = model_framework
 #)
-#dt_train.make_dataset(augment=False)
+#dt_train.make_dataset(augment=False, window=False, pad=False, num_components=50)
 #
 #
-#filename = os.path.join(save, f"ppset_{n}.pkl")
+#filename = os.path.join(save, f"trainset_{n}.pkl")
 #with open(filename, 'wb') as file:
 #    pkl.dump(dt_train, file)
 #
+#print(f"Memory use in gb: ", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1e6+resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss/1e6)
+#print(f"Time taken: {datetime.now()-start_time}")
 #
-## Test data
-#size = 10 # Only making a small batch here, in reality we will likely need more data than this.
+#
+## Validation data
+#size = 1000 # Only making a small batch here, in reality we will likely need more data than this.
 #dt_train = FaultDataset(
 #   priors = priors,
 #   size = size,
 #   survey_framework = survey_framework,
 #   model_framework = model_framework
 #)
-#dt_train.make_dataset(augment=False)
+#dt_train.make_dataset(augment=False, window=False, pad=False, num_components=50)
 #
 #
-#filename = os.path.join(save, f"testset_{n}.pkl")
+#filename = os.path.join(save, f"validationset_{n}.pkl")
 #with open(filename, 'wb') as file:
 #    pkl.dump(dt_train, file)
+
+# PP data
+size = 100 # Only making a small batch here, in reality we will likely need more data than this.
+dt_train = FaultDataset(
+   priors = priors,
+   size = size,
+   survey_framework = survey_framework,
+   model_framework = model_framework
+)
+dt_train.make_dataset(augment=False, window=False, pad=False, num_components=50)
+
+
+filename = os.path.join(save, f"ppset_{n}.pkl")
+with open(filename, 'wb') as file:
+    pkl.dump(dt_train, file)
+
+
+# Test data
+size = 10 # Only making a small batch here, in reality we will likely need more data than this.
+dt_train = FaultDataset(
+   priors = priors,
+   size = size,
+   survey_framework = survey_framework,
+   model_framework = model_framework
+)
+dt_train.make_dataset(augment=False, window=False, pad=False, num_components=50)
+
+
+filename = os.path.join(save, f"testset_{n}.pkl")
+with open(filename, 'wb') as file:
+    pkl.dump(dt_train, file)
 
 
 #survey_framework = {
@@ -121,14 +121,14 @@ with open(filename, 'wb') as file:
 #    "width_ratio": None
 #}
 ## Test data
-#size = 6
+#size = 1
 #dt_train = FaultDataset(
 #    priors = priors,
 #    size = size,
 #    survey_framework = survey_framework,
 #    model_framework = model_framework
 #)
-#parameters_dict = {'cx': [0.0, 0.0, 0.5, 0.5, 0.0, 0.0], 'cy': [0.0, 0.0, 0.0, 0.0, 0.5, 0.5], 'l': [4.0, 4.0, 3.0, 3.0, 2.0, 2.0], 'alpha': [0.0, 350*np.pi/180, np.pi/2, np.pi/2, 0.0, 0.0], 'cz': [0.1, 0.1, 0.2, 0.2, 0.05, 0.05], 'DL_ratio': [0.02, 0.02, 0.02, 0.02, 0.02, 0.02], 'density': [800.0, 800.0, 800.0, 600.0, 600.0, 600.0]}
+#parameters_dict = {'cx': [0.25], 'cy': [0.25], 'l': [1.5], 'alpha': [np.pi/4], 'cz': [0.1]}
 #dt_train.make_dataset(parameters_dict=parameters_dict, augment=False)
 #
 #filename = os.path.join(save, f"testset_1.pkl")
@@ -136,5 +136,5 @@ with open(filename, 'wb') as file:
 #    pkl.dump(dt_train, file)
 #
 #print(f"Dataset made. Time taken: {datetime.now()-start_time}")
-#
-#
+##
+##
