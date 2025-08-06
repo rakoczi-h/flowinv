@@ -120,10 +120,10 @@ class DataReader():
                 # Reading files containing FaultDataset objects
                 if isinstance(dt, Dataset):
                     # these objects have corresponding method to format the data that is compatible with training
-                    td, tc = dt.make_data_for_network(survey_info_to_include=self.survey_info_to_include, 
-                                                      model_info_to_include=self.model_info_to_include, 
-                                                      add_noise=True, 
-                                                      noise_seed=noise_seed, 
+                    td, tc = dt.make_data_for_network(survey_info_to_include=self.survey_info_to_include,
+                                                      model_info_to_include=self.model_info_to_include,
+                                                      add_noise=True,
+                                                      noise_seed=noise_seed,
                                                       noise_distribution=noise_distribution)
                     train_data.append(td)
                     train_conditional.append(tc)
@@ -135,8 +135,8 @@ class DataReader():
                             self.regenerate_noise(dt)
                             td, tc = dt.make_data_for_network(survey_info_to_include=self.survey_info_to_include,
                                                             model_info_to_include=self.model_info_to_include,
-                                                            add_noise=True, 
-                                                            noise_seed=noise_seed, 
+                                                            add_noise=True,
+                                                            noise_seed=noise_seed,
                                                             noise_distribution=noise_distribution)
                             train_data.append(td)
                             train_conditional.append(tc)
