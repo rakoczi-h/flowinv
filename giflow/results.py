@@ -704,6 +704,8 @@ class FaultFlowResults(FlowResults):
             parameters = dict.fromkeys(model_framework['varied_parameters'])
             for j, k in enumerate(model_framework['varied_parameters']):
                 parameters[k] = self.samples[i,j]
+            if parameters['alpha'] < 0 or parameters['alpha'] > 2*np.pi:
+                continue
             fault = Fault(parameters=parameters)
             fault.make_fault(grid)
             window_width = 0.1
@@ -749,7 +751,7 @@ class FaultFlowResults(FlowResults):
             plt.savefig(filename, transparent=False)
         plt.close()
 
-    def plot_compare_surveys_v2(self, model_framework, filename='survey_compare.png', units=None, noise_scale=0.0):
+    def plot_compare_surveys_v2(self, model_framework, filename='survey_compare.png', units=None, noise_scale=0.0, window=False):
         """
         Forward models the samples from the flow and compares the forward mdoel to the input.
         Parameters
@@ -771,17 +773,16 @@ class FaultFlowResults(FlowResults):
             print("Not enough samples, using {num} samples only.")
 
         coordinates = self.survey_coordinates
-        pad = int(np.shape(coordinates)[0]*0.5) # padding the fault grid by 25%
-        grid = pad_grid(coordinates, pad, square=True)
-
-        window_width = 0.1
+        if window:
+            pad = int(np.shape(coordinates)[0]*0.5) # padding the fault grid by 25%
+            grid = pad_grid(coordinates, pad, square=True)
+            window_width = 0.1
+        else:
+            grid = coordinates
         pad = 50
         np.random.seed(123)
         target = np.array(self.conditional[0])
-        #target, _ , _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=50, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
-        #target = target.flatten()
         noise = np.random.normal(loc=0.0, scale=noise_scale, size=np.shape(target))
-        #target = target + noise
         np.random.seed(None)
 
         gzs = []
@@ -789,7 +790,7 @@ class FaultFlowResults(FlowResults):
             parameters = dict.fromkeys(model_framework['varied_parameters'])
             for j, k in enumerate(model_framework['varied_parameters']):
                 parameters[k] = self.samples[i,j]
-            parameters['density'] = self.conditional[3][0]
+            parameters = parameters | model_framework['default_parameters']
             # discard invalid samples
             if parameters['alpha'] < 0 or parameters['alpha'] > 2*np.pi:
                 continue
@@ -797,7 +798,10 @@ class FaultFlowResults(FlowResults):
                 continue
             fault = Fault(parameters=parameters)
             fault.make_fault(grid)
-            gz, _ , _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=100, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+            if window:
+                gz, _ , _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=100, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+            else:
+                gz, _ , _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=100, zero_pad=True, pad_width=[pad, pad])
             if any(np.isnan(gz.flatten())):
                 print("Found NaN in simualted gravity from sample. Removing sample")
                 continue
@@ -893,7 +897,7 @@ class FaultFlowResults(FlowResults):
             parameters = dict.fromkeys(model_framework['varied_parameters'])
             for j, k in enumerate(model_framework['varied_parameters']):
                 parameters[k] = self.samples[i,j]
-            parameters['density'] = self.conditional[3][0]
+            parameters = parameters | model_framework['default_parameters']
             # discard invalid samples
             if parameters['alpha'] < 0 or parameters['alpha'] > 2*np.pi:
                 continue
