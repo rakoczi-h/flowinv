@@ -8,56 +8,49 @@ from giflow.fault import Fault
 from giflow.survey import GravitySurvey
 
 
-label = "6_parameter_dl_od_compare_1.8"
+label = "6_parameter_dip_45"
 bilby_outdir = 'outdir'
 bilby.utils.check_directory_exists_and_if_not_mkdir(bilby_outdir)
 bilby_outdir = os.path.join(bilby_outdir, label)
 bilby.utils.check_directory_exists_and_if_not_mkdir(bilby_outdir)
 
 # ----------------------- Functions -------------------------------
-def model(survey_coordinates, cx, cy, l, alpha, cz, DL_ratio):
+def model(survey_coordinates, cx, cy, l, alpha, cz, DL_ratio, dip):
     """
     Function defining the forward model.
     """
     fault = Fault(parameters = {"cx": cx, "cy": cy, "l": l, "alpha": alpha, "cz": cz,
                                  "density": 800.0,
                                  "DL_ratio": DL_ratio,
-                                 "dip": 70*np.pi/180,
+                                 "dip": dip,
                                 "Displacement_order": 1.2})
-    X = np.linspace(-2, 2, num=50)
-    Y = np.linspace(-2, 2, num=50)
-    X, Y = np.meshgrid(X, Y)
-    X = np.expand_dims(X, axis=2)
-    Y = np.expand_dims(Y, axis=2)
-    Z = np.zeros(np.shape(X))
-    grid = np.c_[X, Y, Z]
 
-    fault.make_fault(grid=grid)
-    gz, _ = fault.forward_model(survey_coordinates = survey_coordinates.copy())
+    fault.make_fault(grid=survey_coordinates)
+    gz, _, _, _= fault.forward_model(zero_pad=False, win=None)
 
-    return gz
+    return gz.flatten()
 
-def model2(survey_coordinates, cx, cy, l, alpha, cz, DL_ratio):
-    """
-    Function defining the forward model.
-    """
-    fault = Fault(parameters = {"cx": cx, "cy": cy, "l": l, "alpha": alpha, "cz": cz,
-                                 "density": 800.0,
-                                 "DL_ratio": DL_ratio,
-                                 "dip": 70*np.pi/180,
-                                "Displacement_order": 1.8})
-    X = np.linspace(-2, 2, num=50)
-    Y = np.linspace(-2, 2, num=50)
-    X, Y = np.meshgrid(X, Y)
-    X = np.expand_dims(X, axis=2)
-    Y = np.expand_dims(Y, axis=2)
-    Z = np.zeros(np.shape(X))
-    grid = np.c_[X, Y, Z]
+# def model2(survey_coordinates, cx, cy, l, alpha, cz, DL_ratio):
+#     """
+#     Function defining the forward model.
+#     """
+#     fault = Fault(parameters = {"cx": cx, "cy": cy, "l": l, "alpha": alpha, "cz": cz,
+#                                  "density": 800.0,
+#                                  "DL_ratio": DL_ratio,
+#                                  "dip": 70*np.pi/180,
+#                                 "Displacement_order": 1.8})
+#     X = np.linspace(-2, 2, num=50)
+#     Y = np.linspace(-2, 2, num=50)
+#     X, Y = np.meshgrid(X, Y)
+#     X = np.expand_dims(X, axis=2)
+#     Y = np.expand_dims(Y, axis=2)
+#     Z = np.zeros(np.shape(X))
+#     grid = np.c_[X, Y, Z]
 
-    fault.make_fault(grid=grid)
-    gz, _ = fault.forward_model(survey_coordinates = survey_coordinates.copy())
+#     fault.make_fault(grid=grid)
+#     gz, _ = fault.forward_model(survey_coordinates = survey_coordinates.copy())
 
-    return gz
+#     return gz
 
 def prior(keys, distributions):
     """
@@ -86,18 +79,18 @@ def prior(keys, distributions):
 # survey_coordinates = real.survey_coordinates
 
 # --------------------- Defining sampler inputs ------------------
-keys = ['cx', 'cy', 'l', 'alpha', 'cz', 'DL_ratio']
+keys = ['cx', 'cy', 'l', 'alpha', 'cz', 'DL_ratio', 'dip']
 sigma = 0.1
 
 # SURVEY GRID
 survey_shape = [50, 50]
 X = np.linspace(-2, 2, num=survey_shape[0])
 Y = np.linspace(-2, 2, num=survey_shape[1])
-X, Y = np.meshgrid(X, Y)
+X, Y = np.meshgrid(X, Y, indexing='ij')
 X = np.expand_dims(X, axis=2)
 Y = np.expand_dims(Y, axis=2)
 Z = np.zeros(np.shape(X))
-survey_coordinates = np.c_[X.flatten(), Y.flatten(), Z.flatten()]
+survey_coordinates = np.c_[X, Y, Z]
 
 # PRIOR
 prior_distributions = {'cx': ['Uniform', -1.0, 1.0],
@@ -106,18 +99,19 @@ prior_distributions = {'cx': ['Uniform', -1.0, 1.0],
                        'alpha': ['Uniform', 0.0, 2*np.pi], 
                        'cz': ['Uniform', 0.1, 0.2],
                        'DL_ratio': ['Uniform', 0.001, 0.1],
+                       'dip': ['Uniform', 20*np.pi/180, 70*np.pi/180]
                        #'density': ['Uniform', 500.0, 1000.0]
                        }
 priors = prior(keys, prior_distributions)
 
 # TRUTH
-truth = {'cx': 0.25, 'cy': 0.25, 'l': 2.0, 'alpha': np.pi/2, 'cz': 0.15, 'DL_ratio': 0.02}
-data = model2(survey_coordinates, truth['cx'], truth['cy'], truth['l'], truth['alpha'], truth['cz'], truth['DL_ratio'])
+truth = {'cx': 0.25, 'cy': 0.25, 'l': 1.5, 'alpha': np.pi/4, 'cz': 0.15, 'DL_ratio': 0.02, 'dip': 45*np.pi/180}
+data = model(survey_coordinates, truth['cx'], truth['cy'], truth['l'], truth['alpha'], truth['cz'], truth['DL_ratio'], truth['dip'])
 np.random.seed(seed=123) # setting the seed just for the noise
 noise = np.random.normal(loc=0.0, scale=sigma, size=np.shape(data))
 np.random.seed(seed=None)
 data = data+noise
-survey = GravitySurvey(gravity=data, shape=survey_shape, survey_coordinates = survey_coordinates)
+survey = GravitySurvey(gravity=data, shape=survey_shape, survey_coordinates = np.reshape(survey_coordinates, (2500, 3)))
 survey.plot_pixels(filename=os.path.join(bilby_outdir, 'survey.png'))
 
 injection_parameters = dict.fromkeys(keys)
