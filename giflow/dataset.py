@@ -132,7 +132,7 @@ class FaultDataset(Dataset):
     """
     Class for making a data set of faults and corresponding gravity surveys.
     """
-    def make_dataset(self, parameters_dict=None, augment=False, augment_dims=['density', 'cz'], augment_num=5, window=True, pad=False, num_components=50):
+    def make_dataset(self, parameters_dict=None, augment=False, augment_dims=['density', 'cz'], augment_num=5, window=True, zero_pad=False, num_components=50):
         if parameters_dict is None:
             parameters_dict = self.priors.sample(size=self.size, returntype='dict') # if the parameters dictionary is not passed to the function, then the prior is sampled
         if self.model_framework['varied_parameters'] is None:
@@ -243,9 +243,9 @@ class FaultDataset(Dataset):
                 else:
                     depths = None
                 if window:
-                    _, k_mag, R1, grid = fault.forward_model(remove_min=True, num_components=num_components, zero_pad=pad, pad_width=[pad, pad],  win=('tukey', window_width))
+                    _, k_mag, R1, grid = fault.forward_model(remove_min=True, num_components=num_components, zero_pad=zero_pad, pad_width=[pad, pad],  win=('tukey', window_width))
                 else:
-                    _, k_mag, R1, grid = fault.forward_model(remove_min=True, num_components=num_components, zero_pad=pad, pad_width=[pad, pad],  win=None)
+                    _, k_mag, R1, grid = fault.forward_model(remove_min=True, num_components=num_components, zero_pad=zero_pad, pad_width=[pad, pad],  win=None)
                 gzs, depths, densities = fault.forward_from_fourier(k_mag, R1, grid, densities=densities, depths=depths, survey_coordinates=survey_coordinates, remove_min=True)
                 for j, gz in enumerate(gzs):
                     fault.parameters['density'] = densities[j]
@@ -256,9 +256,9 @@ class FaultDataset(Dataset):
                     self.surveys.append(survey)
             else:
                 if window:
-                    gz, _, _, _ = fault.forward_model(survey_coordinates=survey_coordinates, remove_min=True, num_components=num_components, zero_pad=pad, pad_width=[pad, pad],  win=('tukey', window_width))
+                    gz, _, _, _ = fault.forward_model(survey_coordinates=survey_coordinates, remove_min=True, num_components=num_components, zero_pad=zero_pad, pad_width=[pad, pad],  win=('tukey', window_width))
                 else:
-                    gz, _, _, _ = fault.forward_model(survey_coordinates=survey_coordinates, remove_min=True, num_components=num_components, zero_pad=pad, pad_width=[pad, pad],  win=None)
+                    gz, _, _, _ = fault.forward_model(survey_coordinates=survey_coordinates, remove_min=True, num_components=num_components, zero_pad=zero_pad, pad_width=[pad, pad],  win=None)
                 fault.displacement_profile = None
                 fault.grid = None
                 survey = GravitySurvey(gravity=gz.flatten(), ranges=ranges, shape=self.survey_framework['shape'])
