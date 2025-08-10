@@ -6,6 +6,7 @@ import corner
 import matplotlib.pyplot as plt
 import matplotlib.colors
 import matplotlib.lines as mlines
+from matplotlib import cm
 import os
 import matplotlib.gridspec as gridspec
 import torch
@@ -223,7 +224,7 @@ class FlowResults:
 
         CORNER_KWARGS = dict(
         smooth=0.9,
-        show_titles=False,
+        show_titles=True,
         label_kwargs=dict(fontsize=20),
         title_kwargs=dict(fontsize=20),
         quantiles=[0.16, 0.5, 0.84],
@@ -360,7 +361,6 @@ class BoxFlowResults(FlowResults):
         cmap = 'plasma'
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
         for idx, ax in enumerate(axes.flatten()):
-            print(titles[idx])
             ax.plot(coordinates[:,0], coordinates[:,1], 'o', markersize=2, color='black')
             ax.tricontourf(coordinates[:,0], coordinates[:,1], plot_data[idx], levels=levels, cmap=cmap, norm=norm)
             ax.set(xlim=(np.min(coordinates[:,0]), np.max(coordinates[:,0])), ylim=(np.min(coordinates[:,1]), np.max(coordinates[:,1])), aspect='equal', title=titles[idx])
@@ -373,7 +373,85 @@ class BoxFlowResults(FlowResults):
             plt.savefig(filename, transparent=False)
         plt.close()
 
-    def plot_compare_voxel_slices(self, slice_coords=[1,3,5], filename='sliced_voxels.png', plot_truth=False, normalisation=None, model_framework=None, aspect=[1.0, 1.0, 1.0]):
+    def plot_voxel_volumes(self, model_framework, filename='3d_voxel_plot.png'):
+        x, y, z = np.indices([i+1 for i in model_framework['grid_shape']])
+        x = x*(model_framework['ranges'][0][1]-model_framework['ranges'][0][0])+model_framework['ranges'][0][0]
+        y = y*(model_framework['ranges'][1][1]-model_framework['ranges'][1][0])+model_framework['ranges'][1][0]
+        z = z*(model_framework['ranges'][2][1]-model_framework['ranges'][2][0])+model_framework['ranges'][2][0]
+
+        norm = plt.Normalize(vmin=-1500, vmax=0)
+        cmap = plt.cm.plasma
+        color_shape = (model_framework['grid_shape'][0], model_framework['grid_shape'][1], model_framework['grid_shape'][2], 4)
+
+
+        true_array = np.reshape(self.true_parameters, model_framework['grid_shape'])
+        true_colors = cmap(norm(self.true_parameters.flatten()))
+        true_colors = np.reshape(true_colors, color_shape)
+        norm_true = plt.Normalize(vmin=-1000.0, vmax=-800.0)
+        normalised_true = np.abs(1-norm_true(true_array))
+        normalised_true[normalised_true<0] = 0
+        normalised_true[normalised_true>1] = 1
+        true_colors[...,-1] = normalised_true
+        true_array = (true_array < -800.0)
+
+        mean_array = np.reshape(np.mean(self.samples, axis=0), model_framework['grid_shape'])
+        mean_colors = cmap(norm(mean_array))
+        mean_colors = np.reshape(mean_colors, color_shape)
+        norm_mean = plt.Normalize(vmin=-300, vmax=0.0)
+        normalised_mean= np.abs(1-norm_mean(mean_array))
+        normalised_mean[normalised_mean<0] = 0
+        normalised_mean[normalised_mean>1] = 1
+        mean_colors[...,-1] = normalised_mean
+        mean_array = (mean_array < 0.0)
+
+
+        mode_array = np.reshape(self.samples[np.argmax(self.log_probabilities), :], model_framework['grid_shape'])
+        mode_colors = cmap(norm(mode_array))
+        mode_colors = np.reshape(mode_colors, color_shape)
+        norm_mode = plt.Normalize(vmin=-1000.0, vmax=-800.0)
+        normalised_mode = np.abs(1-norm_mode(mode_array))
+        normalised_mode[normalised_mode<0] = 0
+        normalised_mode[normalised_mode>1] = 1
+        mode_colors[...,-1] = normalised_mode
+        mode_array = (mode_array < -800.0)
+
+
+
+        fig = plt.figure(figsize=(5,15))
+        ax = fig.add_subplot(3,1,1, projection='3d')
+        im = ax.voxels(x, y, z, true_array, facecolors=true_colors)
+        ax.set(xlabel='x [m]', ylabel='y [m]', zlabel='z [m]')
+        ax.set_title('Target', fontsize=16, y=0.95)
+        ax.set_aspect('equal')
+        ax.view_init(elev=30, azim=-70)
+
+        ax = fig.add_subplot(3,1,2, projection='3d')
+        ax.voxels(x, y, z, mean_array, facecolors=mean_colors)
+        ax.set(xlabel='x [m]', ylabel='y [m]', zlabel='z [m]')
+        ax.set_title('Mean', fontsize=16, y=0.95)
+        ax.set_aspect('equal')
+        ax.view_init(elev=30, azim=-70)
+
+        ax = fig.add_subplot(3,1,3, projection='3d')
+        ax.voxels(x, y, z, mode_array, facecolors=mode_colors)
+        ax.set(xlabel='x [m]', ylabel='y [m]', zlabel='z [m]')
+        ax.set_title('Mode', fontsize=16, y=0.95)
+        ax.set_aspect('equal')
+        ax.view_init(elev=30, azim=-70)
+
+        l, b, w, h = ax.get_position().bounds
+
+        cbar_ax = fig.add_axes([l, b-0.02, w, 0.01])
+        m = cm.ScalarMappable(cmap=cmap, norm=norm)
+        fig.colorbar(mappable=m, cax=cbar_ax, cmap=cmap, norm=norm, orientation='horizontal')
+        cbar_ax.set_xlabel(f"\u03C1 [kg/$m^{3}$]",fontsize=14)
+        cbar_ax.tick_params(labelsize=12, labelrotation=45)
+
+        plt.savefig(os.path.join(self.directory, filename))
+        plt.close()
+
+
+    def plot_compare_voxel_slices(self, slice_coords=[1,3,5], filename='sliced_voxels.png', plot_truth=False, normalisation=None, model_framework=None, aspect=[1.0, 1.0, 1.0], filter_noise=False):
         """Makes a comparison plot consisting of slices of the voxelspace.
         Each column is slices along a different direction (x, y, z).
         Each row is a different slice, with increasing coordinates.
@@ -457,7 +535,7 @@ class BoxFlowResults(FlowResults):
             shift_idx = 1
             plot_data = np.zeros((9, len(slice_coords), d, d))
 
-        print(np.shape(plot_data))
+
 
         # Mean
         mean_model = np.mean(samples, axis=0)
@@ -477,6 +555,13 @@ class BoxFlowResults(FlowResults):
         # Mode
         mode_model = samples[np.argmax(self.log_probabilities), :]
         mode_model = np.flip(np.reshape(mode_model, (d,d,d), order='F'))
+        if filter_noise:
+            if model_framework:
+                noise_level = model_framework['noise_scale']
+            else:
+                raise ValueError('Need to give the function to model_framework for filtering')
+            mode_model[np.abs(mode_model)<noise_level] = 0.0
+            mode_model[mode_model>0.0] = 0.0
         plot_data[0, 2-shift_idx, :, :] = np.rot90(mode_model[s1_1, :, :], axes=(0,1), k=3)
         plot_data[3, 2-shift_idx, :, :] = np.rot90(mode_model[s1_2, :, :], axes=(0,1), k=3)
         plot_data[6, 2-shift_idx, :, :] = np.rot90(mode_model[s1_3, :, :], axes=(0,1), k=3)
