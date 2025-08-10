@@ -20,21 +20,21 @@ sweep_configuration = {
     'metric': {'goal': 'minimize', 'name': 'val_loss'},
     'parameters':
     {
-        'n_transforms': {'min': 1, 'max' : 15},
+        'n_transforms': {'min': 1, 'max' : 16},
         'n_blocks_per_transform': {'min' : 1, 'max' : 10},
-        'n_neurons': {'min' : 10, 'max': 80},
+        'n_neurons': {'min' : 16, 'max': 128},
         'batch_size': {'min' : 1000, 'max': 10000}
      }
 }
 # Initialize sweep by passing in config. (Optional) Provide a name of the project.
-sweep_id = wandb.sweep(sweep=sweep_configuration, project='combined-inversion-2')
+sweep_id = wandb.sweep(sweep=sweep_configuration, project='parameterised-inversion-4-paper')
 
 
 # ------------- Directories ---------------------------------
-data_location = '/scratch/balta0/2263373r/giflow/4_paper/combined/' # THIS needs to be edited to give the data location
+data_location = '/scratch/balta1/2263373r/4_paper/parameterised/' # THIS needs to be edited to give the data location
 
 # ------------- Reading the data ----------------------------
-survey_coordinates_to_include = ['x', 'y', 'noise_scale'] # THIS needs to be edited if we want to include survey coordinates in the conditional
+survey_coordinates_to_include = [] # THIS needs to be edited if we want to include survey coordinates in the conditional
 model_info_to_include=[]
 mix_survey_order = False
 
@@ -56,7 +56,7 @@ scalers = [MinMaxScaler()]
 sc_data = Scaler(scalers=scalers)
 sc_data.scale_data(train_data, fit=True)
 
-scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler()]
+scalers = [MinMaxScaler()]
 sc_conditional=Scaler(scalers=scalers)
 sc_conditional.scale_data(train_conditional, fit=True)
 
@@ -67,7 +67,7 @@ def main():
     wandb.init(project='combined-inversion')
     device = torch.device('cuda')
     hyperparameters={'n_inputs': 7,
-                 'n_conditional_inputs': 193,
+                 'n_conditional_inputs': 64,
                  'n_transforms': wandb.config.n_transforms,
                  'n_blocks_per_transform': wandb.config.n_blocks_per_transform,
                  'n_neurons': wandb.config.n_neurons,
@@ -75,7 +75,7 @@ def main():
                  'batch_size': wandb.config.batch_size,
                  'early_stopping': False,
                  'lr': 0.001,
-                 'epochs': 1500
+                 'epochs': 1000
     }
     flow = FlowModel(hyperparameters=hyperparameters, datasize=datasize, scalers=scalers)
     flow.data_location = data_location
@@ -86,8 +86,9 @@ def main():
 
     flowmodel = flow.flowmodel
     optimiser = torch.optim.Adam(flow.flowmodel.parameters(), lr=flow.hyperparameters['lr'])
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimiser, mode='min', factor=0.05, patience=100, cooldown=10,
-                                                       min_lr=1e-6, verbose=True)
+    #scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimiser, mode='min', factor=0.05, patience=100, cooldown=10,
+    #                                                   min_lr=1e-6, verbose=True)
+    scheduler = None
 
     train_dataset = flow.make_tensor_dataset(train_data, train_conditional, device=device, scale=True)
     validation_dataset = flow.make_tensor_dataset(val_data, val_conditional, device=device, scale=True)

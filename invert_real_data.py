@@ -20,8 +20,8 @@ def rescale_bilby_samples(bilby_parameter_dict, parameters_to_rescale, scale_fac
     return bilby_parameter_dict
 
 
-flow_location = '/data/www.astro/2263373r/giflow/4_paper/narrow_volume/combined/run_2025-01-23 12:10:10.004675/'
-save_location = os.path.join(flow_location, 'qinetiq_data_gridordering/')
+flow_location = '/data/www.astro/2263373r/giflow/4_paper/narrow_volume/voxelised_noisy/run_2024-09-28 21:31:40.559861/'
+save_location = os.path.join(flow_location, 'qinetiq_data_gridordering_4_paper/')
 if not os.path.exists(save_location):
     os.mkdir(save_location)
 # -------------------- Reading in other results
@@ -30,11 +30,12 @@ if not os.path.exists(save_location):
 
 with open("/scratch/balta1/2263373r/4_paper/real_bunker.pkl", 'rb') as file:
     dt_real = pkl.load(file)
-#truth = dt_real.boxes[0].voxelised_model
-dt_real.boxes[0].translate_to_parameterised_model()
-truth = dt_real.boxes[0].parameterised_model
-truth[:6] = truth[:6]*70
-print(truth)
+
+truth = dt_real.boxes[0].voxelised_model # + np.random.normal(loc=0.0, scale=500, size=np.shape(dt_real.boxes[0].voxelised_model))
+#dt_real.boxes[0].translate_to_parameterised_model()
+#truth = dt_real.boxes[0].parameterised_model
+#truth[:6] = truth[:6]*70
+
 
 # -------------------- Reading the flow --------------------------
 device = torch.device('cuda')
@@ -69,7 +70,6 @@ grav = -1*np.array(df['grav'])
 grav = grav - np.min(grav)
 
 noise_scale = 2.0149/70.0
-
 print("Noise scale:", noise_scale)
 print("Priors:", priors.distributions)
 
@@ -89,7 +89,7 @@ survey.gravity = reordered_grav
 survey.noise_scale = noise_scale
 survey.survey_coordinates = reordered_coordinates
 
-data = {'x': survey.survey_coordinates[:,0], 'y': survey.survey_coordinates[:,1], 'grav': survey.gravity}
+data = {'x': survey.survey_coordinates[:,0], 'y': survey.survey_coordinates[:,1], 'grav': survey.gravity, 'noise_scale': survey.noise_scale}
 
 df = pd.DataFrame(data=data)
 df.to_csv(path_or_buf='/scratch/balta1/2263373r/4_paper/qinetiq_data_4_paper_inv_ready.csv')
@@ -111,8 +111,8 @@ test_conditional_tensor = torch.from_numpy(test_conditional_tensor.astype(np.flo
 
 #test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
 # --------------------- Results --------------------------
-for i in range(10):
-    samples, log_probabilities = flow.sample_and_logprob(test_conditional_tensor, num=2000)
+for i in range(20):
+    samples, log_probabilities = flow.sample_and_logprob(test_conditional_tensor, num=100000)
 
 # Translating into voxelised model 
 #samples_translated = []
@@ -141,18 +141,18 @@ for i in range(10):
     result.directory = save_location
 #result.rescale(scaling_factor=scale_factor, parameters_to_rescale=['px', 'py', 'pz', 'lx', 'ly', 'lz'])
 
-    samples[:,:6] = samples[:,:6]*70
-    print(prior_bounds)
+    #samples[:,:6] = samples[:,:6]*70
     result.samples = samples
-    result.corner_plot(filename="corner_plot_prior_bounds.png", prior_bounds=prior_bounds)
-    js = result.get_js_divergence(prior_samples)
-    print(js)
+    result.plot_voxel_volumes(model_framework=dt_test.model_framework, filename=f"3d_voxel_plot_{i}_v3.png")
+    #result.corner_plot(filename="corner_plot_prior_bounds.png", prior_bounds=prior_bounds)
+    #js = result.get_js_divergence(prior_samples)
+    #print(js)
     #result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
 
     #result.plot_compare_voxel_slices_pygimli(li_result, filename=f"compare_voxel_slices_{i}.png", normalisation=[-1000.0, 0.0], slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=True, model_framework=dt_test.model_framework)
-    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices_{i}.png", slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=True, normalisation=[-1000.0, 500.0], model_framework=dt_test.model_framework, aspect=[1.0, 0.5, 0.5])
+    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices_{i}_v3.png", slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=True, normalisation=[-1000.0, 500.0], model_framework=dt_test.model_framework, aspect=[1.0, 0.5, 0.5], filter_noise=True)
 
-#result.plot_3D_statistics(model_framework=dt_test.model_framework)
+    #result.plot_3D_statistics(model_framework=dt_test.model_framework, filename=f"3D_statistics_{i}.html")
 
 
 #result.plot_3D_samples(model_framework=dt_test.model_framework, num_to_plot=2000, mode='cumulativemean', filename='3D_cumulativemean.gif')
