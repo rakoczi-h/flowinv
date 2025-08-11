@@ -97,16 +97,20 @@ class Dataset():
         conditional_coordinates = np.array([self.surveys[i].survey_coordinates for i in range(self.size)])
 
         if add_noise:
-            noise = []
+            conditional_gz = []
             for i in range(self.size):
                 if noise_distribution:
                     noise_scale = noise_distribution.sample(size=1, returntype='array')[0]
                     self.surveys[i].noise_scale = noise_scale[0]
-                print(self.surveys[i].noise_scale)
                 if self.surveys[i].noise is None:
                     self.surveys[i].make_noise(seed=noise_seed)
-                noise.append(self.surveys[i].noise)
-            conditional_gz = conditional_gz+noise
+
+                gz = self.surveys[i].gravity+self.surveys[i].noise
+                gz = gz - np.min(gz)
+                conditional_gz.append(gz)
+            conditional_gz = np.array(conditional_gz)
+        else:
+            conditional_gz = np.array([self.surveys[i].gravity for i in range(self.size)])
 
         conditional = [conditional_gz]
 
