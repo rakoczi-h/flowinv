@@ -242,11 +242,13 @@ class FaultDataset(Dataset):
                     depths = parameters_dict['cz'][i*augment_num:(i*augment_num+augment_num)]
                 else:
                     depths = None
+                start_time = datetime.now()
                 if window:
-                    _, k_mag, R1, grid = fault.forward_model(remove_min=True, num_components=num_components, zero_pad=zero_pad, pad_width=[pad, pad],  win=('tukey', window_width))
+                    _, k_mag, R1, grid_new = fault.forward_model(remove_min=True, num_components=num_components, zero_pad=zero_pad, pad_width=[pad, pad],  win=('tukey', window_width))
                 else:
-                    _, k_mag, R1, grid = fault.forward_model(remove_min=True, num_components=num_components, zero_pad=zero_pad, pad_width=[pad, pad],  win=None)
-                gzs, depths, densities = fault.forward_from_fourier(k_mag, R1, grid, densities=densities, depths=depths, survey_coordinates=survey_coordinates, remove_min=True)
+                    _, k_mag, R1, grid_new = fault.forward_model(remove_min=True, num_components=num_components, zero_pad=zero_pad, pad_width=[pad, pad],  win=None)
+                start_time = start_time.now()
+                gzs, depths, densities = fault.forward_from_fourier(k_mag, R1, grid_new, densities=densities, depths=depths, survey_coordinates=survey_coordinates, remove_min=True)
                 for j, gz in enumerate(gzs):
                     fault.parameters['density'] = densities[j]
                     fault.parameters['cz'] = depths[j]
