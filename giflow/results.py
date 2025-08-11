@@ -115,7 +115,7 @@ class FlowResults:
         return js
 
 
-    def corner_plot(self, filename='corner.png', prior_bounds=None):
+    def corner_plot(self, filename='corner.png', prior_bounds=None, units=None):
         """Makes a simple corner plot with a single set of posterior samples.
         Parameter
         ---------
@@ -134,10 +134,22 @@ class FlowResults:
             plot_range = prior_bounds
         if self.parameter_labels is None:
             labels = [f"q{x}" for x in range(self.nparameters)]
+            titles = self.parameter_labels
         else:
             labels = self.parameter_labels
+            titles = self.parameter_labels
+
+        if units:
+            if len(units) == len(labels):
+                labels = [l+' '+units[i] for i, l in enumerate(labels)]
+            if len(units) == 1:
+                labels = [l+' '+units[0] for l in labels]
+            if isinstance(units, str):
+                labels = [l+' '+units for l in labels]
+
         CORNER_KWARGS = dict(smooth=0.9,
                             show_titles=True,
+                            titles = titles,
                             label_kwargs=dict(fontsize=20),
                             title_kwargs=dict(fontsize=20),
                             quantiles=[0.16, 0.5, 0.84],
@@ -151,7 +163,7 @@ class FlowResults:
                             labels=labels)
 
 
-        figure = corner.corner(self.samples, **CORNER_KWARGS, color='#ff7f00')
+        figure = corner.corner(self.samples, **CORNER_KWARGS, color='sandybrown')
         if self.true_parameters is not None:
             values = self.true_parameters
             corner.overplot_lines(figure, values, color="black")
