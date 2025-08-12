@@ -32,10 +32,6 @@ dr_train = DataReader(filenames=[f"trainset_{n}.pkl" for n in range(0,50)], data
 train_data, train_conditional = dr_train.read_files(noise_distribution=noise_distribution)
 
 
-for tc in train_conditional:
-    print(np.shape(tc))
-print(np.min(train_conditional[0]))
-
 if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
     train_conditional[2] = np.log(train_conditional[2])
 
@@ -48,15 +44,15 @@ sc_conditional.scale_data(train_conditional, fit = True)
 
 scalers = {'conditional': sc_conditional, 'data': sc_data}
 
-trainsize = 1500000
-dr_train = DataReader(filenames=[f"trainset_{n}.pkl" for n in range(0,150)], data_location=data, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=trainsize)
+trainsize = 1000000
+dr_train = DataReader(filenames=[f"trainset_{n}.pkl" for n in range(0,100)], data_location=data, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=trainsize)
 train_data, train_conditional = dr_train.read_files(noise_distribution=noise_distribution)
 
 if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
     train_conditional[2] = np.log(train_conditional[2])
 
-valsize = 150000
-dr_train = DataReader(filenames=[f"validationset_{n}.pkl" for n in range(0,150)], data_location=data, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=valsize)
+valsize = 100000
+dr_train = DataReader(filenames=[f"validationset_{n}.pkl" for n in range(0,100)], data_location=data, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=valsize)
 validation_data, validation_conditional = dr_train.read_files(noise_distribution=noise_distribution)
 
 if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
@@ -67,9 +63,9 @@ if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
 hyperparameters = {
         'n_inputs': 7, # the total number of parameters in the source model, including any additional information we chose to include
         'n_conditional_inputs': 2502, # the total number of values in the conditional
-        'n_transforms': 16,
-        'n_blocks_per_transform': 8,
-        'n_neurons': 32,
+        'n_transforms': 8,
+        'n_blocks_per_transform': 2,
+        'n_neurons': 8,
         # The parameters below define some settings for the training
         'batch_size': 5000,
         'batch_norm': True,
