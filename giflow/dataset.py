@@ -107,7 +107,7 @@ class Dataset():
                     self.surveys[i].make_noise(seed=noise_seed)
 
                 gz = self.surveys[i].gravity+self.surveys[i].noise
-                gz = gz - np.min(gz)
+                #gz = gz - np.min(gz)
                 conditional_gz.append(gz)
             conditional_gz = np.array(conditional_gz)
         else:
