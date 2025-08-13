@@ -13,7 +13,7 @@ start_time = datetime.now()
 n = int(sys.argv[1])
 
 # Specifying directories
-save = './inversion_dataset_10_dim/'
+save = '/scratch/balta0/2263373r/fault_python/real_inversion/'
 if not os.path.exists(save):
     os.mkdir(save)
 
@@ -25,17 +25,17 @@ distributions = {'cx': ['Uniform', -1.0, 1.0],
                  'alpha': ['Uniform', 0.0, 2*np.pi],
                  'density': ['Uniform', 500.0, 1000.0],
                  'DL_ratio': ['Uniform', 0.01, 0.05],
-                 'dip': ['Uniform', 30*np.pi/180, 80*np.pi/180],
-                 'Blend_order': ['Uniform', 0.3, 1.8],
-                  'Displacement_order': ['Uniform', 1.2, 2.4]
+                 #'dip': ['Uniform', 30*np.pi/180, 80*np.pi/180],
+                 #'Blend_order': ['Uniform', 0.3, 1.8],
+                  #'Displacement_order': ['Uniform', 1.2, 2.4]
                  }
 priors = Prior(distributions=distributions)
 
 # Defining the source model framework
 model_framework = {
     "type": 'parameterised',
-    'default_parameters': None,
-    'varied_parameters': ['cx', 'cy', 'cz', 'l', 'alpha', 'density', 'DL_ratio', 'dip', 'Blend_order', 'Displacement_order']
+    'default_parameters': {'dip': 70*np.pi/180, 'Displacement_order': 1.2, 'Blend_order': 1.2},
+    'varied_parameters': ['cx', 'cy', 'cz', 'l', 'alpha', 'density', 'DL_ratio']
 }
 
 # Defining the gravimetry survey framework
@@ -44,20 +44,20 @@ survey_framework = {
     "ranges": [[-2.0, 2.0],[-2.0, 2.0],[0]],
     "noise_scale": None,
     "noise_on_location_scale": 0.0,
-    #"width_ratio" : ['Uniform', 0.1, 1.0],
-    "width_ratio": None
+    "width_ratio" : ['Uniform', 0.1, 1.0],
+    #"width_ratio": None
 }
 
 
 #Training data
-size = 1000 # Only making a small batch here, in reality we will likely need more data than this.
+size = 10000 # Only making a small batch here, in reality we will likely need more data than this.
 dt_train = FaultDataset(
   priors = priors,
   size = size,
   survey_framework = survey_framework,
   model_framework = model_framework
 )
-dt_train.make_dataset(augment=True, augment_dims=['density', 'depth'], augment_num=10, window=True, zero_pad=True, num_components=100)
+dt_train.make_dataset(augment=True, augment_dims=['density'], augment_num=10, window=True, zero_pad=True, num_components=100)
 
 
 #filename = os.path.join(save, f"trainset_{n}.pkl")
@@ -68,15 +68,15 @@ print(f"Memory use in gb: ", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/
 print(f"Time taken: {datetime.now()-start_time}")
 
 
-# # Validation data
-# size = 1000 # Only making a small batch here, in reality we will likely need more data than this.
-# dt_train = FaultDataset(
-#   priors = priors,
-#   size = size,
-#   survey_framework = survey_framework,
-#   model_framework = model_framework
-# )
-# dt_train.make_dataset(augment=True, augment_dims=['density'], augment_num=10, window=True, zero_pad=True, num_components=100)
+# Validation data
+size = 1000 # Only making a small batch here, in reality we will likely need more data than this.
+dt_train = FaultDataset(
+  priors = priors,
+  size = size,
+  survey_framework = survey_framework,
+  model_framework = model_framework
+)
+dt_train.make_dataset(augment=True, augment_dims=['density'], augment_num=10, window=True, zero_pad=True, num_components=100)
 
 
 # filename = os.path.join(save, f"validationset_{n}.pkl")
