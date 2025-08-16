@@ -395,13 +395,13 @@ class Fault:
                     func = RegularGridInterpolator((x, y), g_orig)
                     g_new = func(survey_coordinates[:,:,:2].flatten())
                     g_new = np.reshape(g_new, np.shape(survey_coordinates[:,:,0]))
-
+                    if remove_min:
+                        outputs.append(g_new-np.min(g_new))
+                    else:
+                        outputs.append(g_new)
                 dep_output.append(d)
                 den_output.append(rho)
-                if remove_min:
-                    outputs.append(g_new-np.min(g_new))
-                else:
-                    outputs.append(g_new)
+
         return outputs, dep_output, den_output
 
 
