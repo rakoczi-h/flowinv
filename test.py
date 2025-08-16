@@ -4,12 +4,13 @@ import os
 import pickle as pkl
 import json
 import pandas as pd
+import json
 
 from giflow.results import FaultFlowResults
 from giflow.flowmodel import FlowModel
 from giflow.datareader import DataReader
 from giflow.prior import Prior
-flow_location = '/data/www.astro/2263373r/fault_python_version/synthetic_inversion/run_2025-08-05 13:58:08.936596/'
+flow_location = '/data/www.astro/2263373r/fault_python_version/real_inversion_12_param/run_2025-08-14 09:45:20.364071/'
 
 
 #Reading the flow
@@ -25,14 +26,16 @@ data = flow.data_location
 #labels = [r'$c_x$', r'$c_y$', r'$c_z$', r'$l$', r'$\alpha$', r'$\gamma$']
 #survey_info_to_include = ['survey_width_ratio', 'noise_scale', 'density']
 #noise_distribution = Prior(distributions={'noise_scale': ['LogUniform', 1e-5, 2.0]})
-model_info_to_include = ['cx', 'cy', 'cz', 'l', 'alpha']
-labels = [r'$c_x$', r'$c_y$', r'$c_z$', r'$l$', r'$\alpha$']
-survey_info_to_include = []
-noise_distribution = Prior(distributions={'noise_scale': [0.1]})
+model_info_to_include = ['cx', 'cy', 'l', 'alpha', 'cz', 'DL_ratio', 'dip', 'density', 'Displacement_order', 'Blend_order', 'sym_factor', 'Extent_ratio']
+survey_info_to_include = ['survey_width_ratio', 'noise_scale']
+labels = [r'$c_x$', r'$c_y$', r'$l$', r'$\alpha$', r'$c_z$', r'$\gamma$', r'$\beta$', r'$\rho$', r'$o_d$', r'$o_b$', r'$a$', r'$E$']
+
+noise_distribution = Prior(distributions={'noise_scale': ['LogUniform', 1e-5, 1.0]})
 # Reading in files
 ppsize = 100
 dr_pp = DataReader(filenames="ppset_0.pkl", data_location=data, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=ppsize)
 pp_data, pp_conditional = dr_pp.read_files(noise_distribution=noise_distribution, noise_seed=123)
+
 
 if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
     pp_conditional[2] = np.log(pp_conditional[2])
@@ -49,9 +52,6 @@ if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
 
 
 
-
-
-
 test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
 
 with open(os.path.join(data, 'testset_0.pkl'), 'rb') as file:
@@ -59,23 +59,29 @@ with open(os.path.join(data, 'testset_0.pkl'), 'rb') as file:
 for s in dt_test.surveys:
     s.make_survey()
 
-model_framework = {
-    "type": 'parameterised',
-    "shape": [50,50],
-    'default_parameters': {'dip': 70*np.pi/180},
-    'varied_parameters': model_info_to_include
-}
+with open(os.path.join(data, 'model_framework.json'), 'r') as file:
+    model_framework = json.load(file)
+
+with open(os.path.join(data, 'survey_framework.json'), 'r') as file:
+    survey_framework = json.load(file)
+
+with open(os.path.join(data, 'prior.pkl'), 'rb') as file:
+    priors = pkl.load(file)
+
+prior_bounds = [priors.distributions[k][1:] for k in model_info_to_include]
+
 # --------------- TESTING -------------------
 # P-P plot
 flow.pp_test(validation_dataset=pp_dataset,
-            parameter_labels=labels)
+            parameter_labels=labels,
+            num_params=12)
 
 
 # Generating results for some test data
 results = []
 for i in range(testsize):
     samples, log_probabilities = flow.sample_and_logprob(test_dataset.tensors[1][i], # the conditional
-                                                         num=2000) # number of samples we want to draw
+                                                         num=10000) # number of samples we want to draw
     samples = np.array([s[:,0] for s in samples]).T
     result = FaultFlowResults(samples=samples,
                             conditional=[test_conditional[j][i] for j in range(len(test_conditional))],
@@ -91,8 +97,9 @@ for i in range(testsize):
     #dt_test.surveys[i].plot_pixels(filename=os.path.join(result.directory, "survey.png"))
 
 # CORNER PLOTS                              
-for i, result in enumerate(results):
-    result.corner_plot(filename="corner_plot.png")
+#for i, result in enumerate(results):
+#    result.corner_plot(filename="corner_plot.png")
+#    result.corner_plot(filename="corner_plot_prior.png", prior_bounds=prior_bounds)
 
 # VOXELISED MODEL COMPARISON
 #dt_test.model_framework['ranges'] = [[-0.75, 0.75], [-0.75, 0.75], [-1.5, 0.0]]
@@ -122,5 +129,5 @@ for i, result in enumerate(results):
 #
 
 for i, result in enumerate(results):
-    #result.plot_compare_surveys_samples(model_framework=model_framework, noise_scale=0.1, filename='survey_compare_samples.png')
-    result.plot_compare_surveys(model_framework=model_framework, filename='survey_compare.png')
+    result.plot_compare_surveys_samples(model_framework=model_framework, model_info_to_include=model_info_to_include, filename='survey_compare_samples.png', priors=None)
+    result.plot_compare_surveys_v2(model_framework=model_framework, filename='survey_compare.png', priors=None, units='mGal', window=('tukey', 0.1))

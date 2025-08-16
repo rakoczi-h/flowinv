@@ -13,33 +13,35 @@ from giflow.datareader import DataReader
 from giflow.prior import Prior
 
 # Defining directories
-data = '/scratch/balta0/2263373r/fault_python/real_inversion/' # where our training and validation that are located
-save = '/data/www.astro/2263373r/fault_python_version/real_inversion/' # where we want to save our outputs
+data = '/scratch/balta0/2263373r/fault_python/inversion_dataset_12_dim/' # where our training and validation that are located
+save = '/data/www.astro/2263373r/fault_python_version/real_inversion_12_param/' # where we want to save our outputs
 save = os.path.join(save, f"run_{datetime.now()}/")
 
-if not os.path.exists(save):
-    os.mkdir(save)
+#if not os.path.exists(save):
+#    os.mkdir(save)
 
 # ------------------- DATA ------------------------
-model_info_to_include = ['cx', 'cy', 'l', 'alpha', 'cz', 'DL_ratio']
-survey_info_to_include = ['survey_width_ratio', 'noise_scale', 'density']
-noise_distribution = Prior(distributions={'noise_scale': ['LogUniform', 1e-5, 1.0]})
 
+model_info_to_include = ['cx', 'cy', 'l', 'alpha', 'cz', 'DL_ratio', 'dip', 'density', 'Displacement_order', 'Blend_order', 'sym_factor', 'Extent_ratio']
+survey_info_to_include = ['survey_width_ratio', 'noise_scale']
+noise_distribution = Prior(distributions={'noise_scale': ['LogUniform', 1e-5, 1.0]})
 
 # Reading in files
 trainsize = 500000
 dr_train = DataReader(filenames=[f"trainset_{n}.pkl" for n in range(0,50)], data_location=data, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=trainsize)
 train_data, train_conditional = dr_train.read_files(noise_distribution=noise_distribution)
 
+for i in range(len(model_info_to_include)):
+    print(model_info_to_include[i], np.min(train_data[i]), np.max(train_data[i]))
 
 if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
     train_conditional[2] = np.log(train_conditional[2])
 
 # Scaling the data
-sc_data = Scaler(scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler()]) # Need to define the scaler for each element in the train_data list.
+sc_data = Scaler(scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler()]) # Need to define the scaler for each element in the train_data list.
 sc_data.scale_data(train_data, fit = True) # Fit the scaler and store in the class
 
-sc_conditional = Scaler(scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler()])
+sc_conditional = Scaler(scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler()])
 sc_conditional.scale_data(train_conditional, fit = True)
 
 scalers = {'conditional': sc_conditional, 'data': sc_data}
@@ -61,15 +63,15 @@ if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
 # ------------------ FLOW --------------------------
 # Defining the flow parameters
 hyperparameters = {
-        'n_inputs': 6, # the total number of parameters in the source model, including any additional information we chose to include
-        'n_conditional_inputs': 2503, # the total number of values in the conditional
+        'n_inputs': 12, # the total number of parameters in the source model, including any additional information we chose to include
+        'n_conditional_inputs': 2502, # the total number of values in the conditional
         'n_transforms': 16,
         'n_blocks_per_transform': 8,
         'n_neurons': 32,
         # The parameters below define some settings for the training
         'batch_size': 5000,
         'batch_norm': True,
-        'lr': 0.001,
+        'lr': 0.0001,
         'epochs': 3000,
         'early_stopping': False # if set True, the training stops when the validation loss stops decreasing
 }
