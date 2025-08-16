@@ -431,12 +431,12 @@ class FlowModel():
         truths = validation_dataset.tensors[0][:int(num_cases)].cpu().numpy()
         truths = self.scalers['data'].inv_scale_data(truths)
         if len(truths) > num_params:
-            indices = np.random.randint(np.shape(truths)[1], size=num_params)
+            indices = np.random.randint(len(truths), size=num_params)
         else:
             num_params = len(truths)
             indices = np.arange(0, num_params)
-        print(indices)
-        if parameter_labels == None:
+
+        if parameter_labels == None or len(parameter_labels)>num_params:
             parameter_labels = [f"q{x}" for x in range(num_params)] # number of parameters to get the posterior for (will be 512)
         posteriors = []
         injections = []
