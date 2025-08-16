@@ -684,7 +684,7 @@ class FaultFlowResults(FlowResults):
     """
     Child class of FlowResults for specifically handling visualisation and processing of results from inversion concerning boxes.
     """
-    def plot_compare_surveys(self, model_framework, include_examples=False, filename='survey_compare.png', units=None):
+    def plot_compare_surveys(self, model_framework, include_examples=False, filename='survey_compare.png', units=None, priors=None):
         """
         Forward models the samples from the flow and compares the forward mdoel to the input.
         Parameters
@@ -716,8 +716,12 @@ class FaultFlowResults(FlowResults):
             parameters = dict.fromkeys(model_framework['varied_parameters'])
             for j, k in enumerate(model_framework['varied_parameters']):
                 parameters[k] = self.samples[i,j]
-            if parameters['alpha'] < 0 or parameters['alpha'] > 2*np.pi:
-                continue
+            if model_framework['default_parameters']:
+                parameters = parameters | model_framework['default_parameters']
+            if priors:
+                if any([(parameters[k] > priors.distributions[k][-1] or parameters[k] < priors.distributions[k][1]) for k in priors.keys]):
+                    print('outside prior')
+                    continue
             fault = Fault(parameters=parameters)
             fault.make_fault(grid)
             window_width = 0.1
@@ -763,7 +767,7 @@ class FaultFlowResults(FlowResults):
             plt.savefig(filename, transparent=False)
         plt.close()
 
-    def plot_compare_surveys_v2(self, model_framework, filename='survey_compare.png', units=None, noise_scale=0.0, window=False):
+    def plot_compare_surveys_v2(self, model_framework, filename='survey_compare.png', units=None, noise_scale=0.0, window=False, priors=None):
         """
         Forward models the samples from the flow and compares the forward mdoel to the input.
         Parameters
@@ -802,12 +806,12 @@ class FaultFlowResults(FlowResults):
             parameters = dict.fromkeys(model_framework['varied_parameters'])
             for j, k in enumerate(model_framework['varied_parameters']):
                 parameters[k] = self.samples[i,j]
-            parameters = parameters | model_framework['default_parameters']
-            # discard invalid samples
-            if parameters['alpha'] < 0 or parameters['alpha'] > 2*np.pi:
-                continue
-            if parameters ['DL_ratio'] < 0.0:
-                continue
+            if model_framework['default_parameters']:
+                parameters = parameters | model_framework['default_parameters']
+            if priors:
+                if any([(parameters[k] > priors.distributions[k][-1] or parameters[k] < priors.distributions[k][1]) for k in priors.keys]):
+                    print('outside prior')
+                    continue
             fault = Fault(parameters=parameters)
             fault.make_fault(grid)
             if window:
@@ -871,7 +875,7 @@ class FaultFlowResults(FlowResults):
             plt.savefig(filename, transparent=False)
         plt.close()
 
-    def plot_compare_surveys_samples(self, model_framework, filename='survey_compare.png', units=None, noise_scale=0.0):
+    def plot_compare_surveys_samples(self, model_info_to_include, model_framework, filename='survey_compare.png', units=None, noise_scale=0.0, priors=None):
         """
         Forward models the samples from the flow and compares the forward mdoel to the input.
         Parameters
@@ -906,15 +910,20 @@ class FaultFlowResults(FlowResults):
 
         gzs = []
         for i in range(num):
-            parameters = dict.fromkeys(model_framework['varied_parameters'])
-            for j, k in enumerate(model_framework['varied_parameters']):
+            parameters = dict.fromkeys(model_info_to_include)
+            for j, k in enumerate(model_info_to_include):
                 parameters[k] = self.samples[i,j]
-            parameters = parameters | model_framework['default_parameters']
-            # discard invalid samples
-            if parameters['alpha'] < 0 or parameters['alpha'] > 2*np.pi:
-                continue
-            if parameters ['DL_ratio'] < 0.0:
-                continue
+            if model_framework['default_parameters']:
+                parameters = parameters | model_framework['default_parameters']
+            if priors:
+                if any([parameters[k] > priors.distributions[k][2] for k in priors.keys]):
+                    print(parameters)
+                    print('higher than prior')
+                    continue
+                elif any([parameters[k] < priors.distributions[k][1] for k in priors.keys]):
+                    print(parameters[k])
+                    print('lower than prior')
+                    continue
             fault = Fault(parameters=parameters)
             fault.make_fault(grid)
             fault.displacement_profile[fault.displacement_profile>fault.parameters['cz']] = fault.parameters['cz']
