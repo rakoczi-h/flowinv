@@ -163,6 +163,8 @@ class FlowModel():
         iters_no_improve = 0
         min_val_loss = np.inf
         start_train = datetime.now()
+        kl_means = []
+        js_means = []
         for i in range(self.hyperparameters['epochs']):
             start_epoch = datetime.now()
             train_loss, val_loss = self.train_iter(optimiser, validation_loader, train_loader)
@@ -189,10 +191,15 @@ class FlowModel():
                 self.flowmodel.eval()
                 latent_samples, latent_logprobs = self.forward_and_logprob(validation_dataset)
                 latent_state = FlowLatent(latent_samples, log_probabilities=latent_logprobs)
-                latent_state.get_kl_divergence_statistics()
+                kl = latent_state.get_kl_divergence_statistics()
                 js_values = None
                 if prior is not None:
                     js_values, js_mean = self.js_test(validation_dataset, prior=prior)
+                js_means.append(js_mean)
+                kl_means.append(kl['mean'])
+                data = {'kl': np.array(kl_means), 'js': np.array(js_means)}
+                df_jskl = pd.DataFrame(data)
+                df_jskl.to_csv(os.path.join(self.save_location, 'divergences.csv'))
                 self.plot_flow_diagnostics(latent_state, timestamp=start_test-start_train, js=js_values)
                 end_test = datetime.now()
                 print(f"Finished testing, time taken: \t {end_test-start_test}")
