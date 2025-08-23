@@ -10,7 +10,7 @@ from giflow.results import FaultFlowResults
 from giflow.flowmodel import FlowModel
 from giflow.datareader import DataReader
 from giflow.prior import Prior
-flow_location = '/data/www.astro/2263373r/fault_python_version/real_inversion_12_param/run_2025-08-14 09:45:20.364071/'
+flow_location = '/data/www.astro/2263373r/fault_python_version/real_inversion_12_param/run_2025-08-22 08:04:02.080989/'
 
 
 #Reading the flow
@@ -34,7 +34,7 @@ noise_distribution = Prior(distributions={'noise_scale': ['LogUniform', 1e-5, 1.
 # Reading in files
 ppsize = 100
 dr_pp = DataReader(filenames="ppset_0.pkl", data_location=data, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=ppsize)
-pp_data, pp_conditional = dr_pp.read_files(noise_distribution=noise_distribution, noise_seed=123)
+pp_data, pp_conditional = dr_pp.read_files(noise_distribution=noise_distribution)
 
 
 if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
@@ -45,7 +45,6 @@ pp_dataset = flow.make_tensor_dataset(pp_data, pp_conditional, device=device, sc
 testsize = 10
 dr_test = DataReader(filenames="testset_0.pkl", data_location=data, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=testsize)
 test_data, test_conditional = dr_test.read_files(noise_distribution=noise_distribution, noise_seed=123)
-#noise_scale = test_conditional[2]
 
 if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
     test_conditional[2] = np.log(test_conditional[2])
@@ -61,7 +60,7 @@ for s in dt_test.surveys:
 
 with open(os.path.join(data, 'model_framework.json'), 'r') as file:
     model_framework = json.load(file)
-
+model_framework['varied_parameters'] = model_info_to_include
 with open(os.path.join(data, 'survey_framework.json'), 'r') as file:
     survey_framework = json.load(file)
 
@@ -97,37 +96,10 @@ for i in range(testsize):
     #dt_test.surveys[i].plot_pixels(filename=os.path.join(result.directory, "survey.png"))
 
 # CORNER PLOTS                              
-#for i, result in enumerate(results):
-#    result.corner_plot(filename="corner_plot.png")
-#    result.corner_plot(filename="corner_plot_prior.png", prior_bounds=prior_bounds)
-
-# VOXELISED MODEL COMPARISON
-#dt_test.model_framework['ranges'] = [[-0.75, 0.75], [-0.75, 0.75], [-1.5, 0.0]]
-#dt_test.model_framework['grid_shape'] = [10, 10, 10]
-#
-#for i, result in enumerate(results):
-#    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices.png",
-#                                     plot_truth=True,
-#                                     normalisation=[-2500.0, 500.0],
-#                                     model_framework=dt_test.model_framework,
-#                                     slice_coords=[1, 4, 8])
-
-
-## Comparison with bilby
-#
-#bilby_loc = '/data/www.astro/2263373r/fault_python_version/bilby/5_parameter_test/5_parameter_test_result.json'
-#
-#with open(bilby_loc, 'rb') as file:
-#    bilby_results = json.load(file)
-#    bilby_results = bilby_results['posterior']['content']
-#bilby_samples = []
-#for k in model_info_to_include:
-#    bilby_samples.append(np.expand_dims(bilby_results[k], axis=1))
-#bilby_samples = np.hstack(bilby_samples)
-#print(np.shape(bilby_samples))
-#result.overlaid_corner(bilby_samples, ['Nested Sampling', 'Normalising Flow'], parameter_labels=labels, filename='bilby_compare.png')
-#
+for i, result in enumerate(results):
+    result.corner_plot(filename="corner_plot.png")
+    result.corner_plot(filename="corner_plot_prior.png", prior_bounds=prior_bounds)
 
 for i, result in enumerate(results):
-    result.plot_compare_surveys_samples(model_framework=model_framework, model_info_to_include=model_info_to_include, filename='survey_compare_samples.png', priors=None)
-    result.plot_compare_surveys_v2(model_framework=model_framework, filename='survey_compare.png', priors=None, units='mGal', window=('tukey', 0.1))
+    result.plot_compare_surveys_samples(model_framework=model_framework, model_info_to_include=model_info_to_include, filename='survey_compare_samples.png', priors=priors, noise_scale=np.exp(result.conditional[2]))
+    result.plot_compare_surveys(model_framework=model_framework, filename='survey_compare.png', priors=priors, units='mGal', window=('tukey', 0.1), noise_scale=np.exp(result.conditional[2]))

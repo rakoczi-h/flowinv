@@ -32,7 +32,7 @@ sweep_id = wandb.sweep(sweep=sweep_configuration, project='fault-python-5-parame
 
 
 # ------------- Directories ---------------------------------
-data_location = '/scratch/balta0/2263373r/fault_python/'   # THIS needs to be edited to give the data location
+data_location = '/scratch/balta0/2263373r/fault_python/synthetic_inversion_data/'   # THIS needs to be edited to give the data location
 
 #with open(os.path.join(data_location, 'priors.pkl'), 'rb') as file:
 #    priors = pkl.load(file)
@@ -42,8 +42,8 @@ data_location = '/scratch/balta0/2263373r/fault_python/'   # THIS needs to be ed
 # ------------- Defining scalers ---------------------------
 model_info_to_include = ['cx', 'cy', 'l', 'alpha', 'cz']
 survey_info_to_include = []
+noise_distribution = Prior(distributions={'noise_scale': [0.1]})
 
-noise_scale = 0.1
 
 datasize = 1000000
 
@@ -52,8 +52,8 @@ datasize = 1000000
 
 # Reading in files
 trainsize = 500000
-dr_train = DataReader(filenames=[f"trainset_{n}.pkl" for n in range(1,6)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=trainsize)
-train_data, train_conditional = dr_train.read_files()
+dr_train = DataReader(filenames=[f"trainset_{n}.pkl" for n in range(1,50)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=trainsize)
+train_data, train_conditional = dr_train.read_files(noise_distribution=noise_distribution)
 
 # Scaling the data
 sc_data = Scaler(scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler()]) # Need to define the scaler for each element in the train_data list.
@@ -65,12 +65,12 @@ sc_conditional.scale_data(train_conditional, fit = True)
 scalers = {'conditional': sc_conditional, 'data': sc_data}
 
 trainsize = 1500000
-dr_train = DataReader(filenames=[f"trainset_{n}.pkl" for n in range(1,16)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=trainsize)
-train_data, train_conditional = dr_train.read_files()
+dr_train = DataReader(filenames=[f"trainset_{n}.pkl" for n in range(1,150)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=trainsize)
+train_data, train_conditional = dr_train.read_files(noise_distribution=noise_distribution)
 
 valsize = 150000
-dr_train = DataReader(filenames=[f"validationset_{n}.pkl" for n in range(1,16)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=valsize)
-validation_data, validation_conditional = dr_train.read_files()
+dr_train = DataReader(filenames=[f"validationset_{n}.pkl" for n in range(1,150)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=valsize)
+validation_data, validation_conditional = dr_train.read_files(noise_distribution=noise_distribution)
 
 flow = FlowModel(scalers=scalers)
 device = torch.device('cuda')
