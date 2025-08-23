@@ -684,90 +684,7 @@ class FaultFlowResults(FlowResults):
     """
     Child class of FlowResults for specifically handling visualisation and processing of results from inversion concerning boxes.
     """
-    def plot_compare_surveys(self, model_framework, include_examples=False, filename='survey_compare.png', units=None, priors=None):
-        """
-        Forward models the samples from the flow and compares the forward mdoel to the input.
-        Parameters
-        ----------
-            model_framework: dict
-                The BoxDataSet attribute can just directly be passed to this.
-                Has to have keys 'ranges': list of 3 values, and 'grid_shape': list of 3 values, 'density': float
-            survey_framework: dict
-                The BoxDataSet attribute can be passed to this
-                Has to have keys 'noise_scale': float, 'ranges': [[],[],[]], 'survey_shape': float or list
-            num: int
-                Number of samples to use
-            include_examples: bool
-                Whether to plot a few individual samples.
-        """
-        num = 200
-        if num > np.shape(self.samples)[0]:
-            num = np.shape(self.samples)[0]
-            print("Not enough samples, using {num} samples only.")
-
-        coordinates = self.survey_coordinates
-        pad = int(np.shape(coordinates)[0]*0.25) # padding the fault grid by 25%
-        grid = pad_grid(coordinates, pad, square=True)
-        target_array = np.array(self.conditional[0])
-        target = target_array
-
-        gzs = []
-        for i in range(num):
-            parameters = dict.fromkeys(model_framework['varied_parameters'])
-            for j, k in enumerate(model_framework['varied_parameters']):
-                parameters[k] = self.samples[i,j]
-            if model_framework['default_parameters']:
-                parameters = parameters | model_framework['default_parameters']
-            if priors:
-                if any([(parameters[k] > priors.distributions[k][-1] or parameters[k] < priors.distributions[k][1]) for k in priors.keys]):
-                    print('outside prior')
-                    continue
-            fault = Fault(parameters=parameters)
-            fault.make_fault(grid)
-            window_width = 0.1
-            pad = 50
-            gz, _, _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=50, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
-            if any(np.isnan(gz.flatten())):
-                print("Found NaN in simualted gravity from sample. Removing sample")
-                continue
-            if any(np.isinf(gz.flatten())):
-                print("Found inf in simualted gravity from sample. Removing sample")
-                continue
-            gzs.append(gz.flatten())
-        gzs = np.array(gzs)
-        mean = np.mean(gzs, axis=0)
-
-        std = np.std(gzs, axis=0)
-
-        plot_data = [target, mean, std, gzs[0,:], gzs[1,:], gzs[2,:], gzs[3,:], gzs[4,:], gzs[5,:]]
-        titles = ['Target', 'Mean', 'Std', 'Sample 1', 'Sample 2', 'Sample 3', 'Sample 4', 'Sample 5', 'Sample 6']
-        if include_examples:
-            fig, axes = plt.subplots(nrows=3, ncols=3)
-        else:
-            fig, axes = plt.subplots(nrows=1, ncols=3)
-        vmin = np.array([target.min(), mean.min()]).min()
-        vmax = np.array([target.max(), mean.max()]).max()
-        levels = np.linspace(vmin, vmax, 15)
-        cmap = 'plasma'
-        norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
-        for idx, ax in enumerate(axes.flatten()):
-
-            #ax.plot(coordinates[:,:,0], coordinates[:,:,1], 'o', markersize=2, color='black')
-            ax.tricontourf(coordinates[:,:,0].flatten(), coordinates[:,:,1].flatten(), plot_data[idx], cmap=cmap, norm=norm)
-            ax.set(xlim=(np.min(coordinates[:,:,0]), np.max(coordinates[:,:,0])), ylim=(np.min(coordinates[:,:,1]), np.max(coordinates[:,:,1])), aspect='equal', title=titles[idx])
-        cax = ax.inset_axes([1.1, 0.0, 0.1, 3.35])
-        if units:
-            plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax, label=r'$\Delta$g'+f" [{units}]")
-        else:
-            plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax, label=r'$\Delta$g')
-        fig.tight_layout()
-        if self.directory is not None:
-            plt.savefig(os.path.join(self.directory, filename), transparent=False)
-        else:
-            plt.savefig(filename, transparent=False)
-        plt.close()
-
-    def plot_compare_surveys_v2(self, model_framework, filename='survey_compare.png', units=None, noise_scale=0.0, window=False, priors=None):
+    def plot_compare_surveys(self, model_framework, filename='survey_compare.png', units=None, noise_scale=0.0, window=False, priors=None):
         """
         Forward models the samples from the flow and compares the forward mdoel to the input.
         Parameters
@@ -809,8 +726,9 @@ class FaultFlowResults(FlowResults):
             if model_framework['default_parameters']:
                 parameters = parameters | model_framework['default_parameters']
             if priors:
-                if any([(parameters[k] > priors.distributions[k][-1] or parameters[k] < priors.distributions[k][1]) for k in priors.keys]):
-                    print('outside prior')
+                if any([parameters[k] > priors.distributions[k][2] for k in priors.keys]):
+                    continue
+                elif any([parameters[k] < priors.distributions[k][1] for k in priors.keys]):
                     continue
             fault = Fault(parameters=parameters)
             fault.make_fault(grid)
@@ -875,7 +793,7 @@ class FaultFlowResults(FlowResults):
             plt.savefig(filename, transparent=False)
         plt.close()
 
-    def plot_compare_surveys_samples(self, model_info_to_include, model_framework, filename='survey_compare.png', units=None, noise_scale=0.0, priors=None):
+    def plot_compare_surveys_samples(self, model_framework, filename='survey_compare.png', units=None, window=False, noise_scale=0.0, priors=None):
         """
         Forward models the samples from the flow and compares the forward mdoel to the input.
         Parameters
@@ -905,46 +823,49 @@ class FaultFlowResults(FlowResults):
         np.random.seed(123)
         target = np.array(self.conditional[0])
         noise = np.random.normal(loc=0.0, scale=noise_scale, size=np.shape(target))
-        #target = target + noise
         np.random.seed(None)
 
         gzs = []
         for i in range(num):
-            parameters = dict.fromkeys(model_info_to_include)
-            for j, k in enumerate(model_info_to_include):
+            print(i)
+            parameters = dict.fromkeys(model_framework['varied_parameters'])
+            for j, k in enumerate(parameters.keys()):
                 parameters[k] = self.samples[i,j]
             if model_framework['default_parameters']:
                 parameters = parameters | model_framework['default_parameters']
             if priors:
                 if any([parameters[k] > priors.distributions[k][2] for k in priors.keys]):
-                    print(parameters)
-                    print('higher than prior')
                     continue
                 elif any([parameters[k] < priors.distributions[k][1] for k in priors.keys]):
-                    print(parameters[k])
-                    print('lower than prior')
                     continue
             fault = Fault(parameters=parameters)
+
             fault.make_fault(grid)
             fault.displacement_profile[fault.displacement_profile>fault.parameters['cz']] = fault.parameters['cz']
-            gz, _ , _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=100, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+
+            if window:
+                gz, _ , _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=100, zero_pad=True, pad_width=[pad, pad],  win=('tukey', window_width))
+            else:
+                gz, _ , _, _= fault.forward_model(survey_coordinates=coordinates.copy(), remove_min=True, num_components=100, zero_pad=True, pad_width=[pad, pad])
+
+
             if any(np.isnan(gz.flatten())):
                 print("Found NaN in simualted gravity from sample. Removing sample")
                 continue
             if any(np.isinf(gz.flatten())):
                 print("Found inf in simualted gravity from sample. Removing sample")
                 continue
-            gzs.append(gz.flatten())
+            gzs.append(gz.flatten()+noise)
+
         gzs = np.array(gzs)
-        mean = np.mean(gzs, axis=0)
-        noisy_mean = mean + noise
-        std = np.std(gzs, axis=0)
+
 
         plot_data = [target]
         titles = ['Target']
         for i in range(11):
             plot_data.append(gzs[i])
             titles.append(f"Sample {i+1}")
+
         fig, axes = plt.subplots(nrows=3, ncols=4, figsize=(10,7))
         vmin = np.array([target.min(), target.min()]).min()
         vmax = np.array([target.max(), target.max()]).max()
@@ -958,11 +879,13 @@ class FaultFlowResults(FlowResults):
             ax.set(xlim=(np.min(coordinates[:,:,0]), np.max(coordinates[:,:,0])), ylim=(np.min(coordinates[:,:,1]), np.max(coordinates[:,:,1])), aspect='equal')
             ax.set_title(titles[idx], fontsize=14)
             ax.set_xlabel('x [km]', fontsize=12)
+            if idx == 8:
+                ax_pos = ax.get_position()
             if idx == 0 or idx==4 or idx == 8:
                 ax.set_ylabel('y [km]', fontsize=12)
             else:
                 ax.get_yaxis().set_visible(False)
-        cax = ax.inset_axes([-3.6, -0.6, 4.6, 0.1])
+        cax = fig.add_axes([ax_pos.x0-ax_pos.width/4, ax_pos.y0-ax_pos.height*3, ax_pos.width*5, ax_pos.height/2])
         cbar = plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax,  orientation='horizontal')
         if units:
             cbar.set_label(label=r'$\Delta$g'+f" [{units}]", size =12)
