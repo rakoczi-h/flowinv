@@ -229,6 +229,7 @@ class FaultDataset(Dataset):
                     parameters[key] = self.model_framework['default_parameters'][key] # first the default values are loaded into the dict
             for key in self.model_framework['varied_parameters']:
                 parameters[key] = parameters_dict[key][i] # then the varied values are added
+
             fault = Fault(parameters=parameters)
 
 
@@ -240,10 +241,14 @@ class FaultDataset(Dataset):
             window_width = 0.1
             if augment:
                 if any([l=='density' for l in augment_dims]):
+                    if not any([l=='density' for l in parameters_dict.keys()]):
+                        raise ValueError('Density is a constant. Are you sure you want to augment it?')
                     densities = parameters_dict['density'][i*augment_num:(i*augment_num+augment_num)]
                 else:
                     densities = None
                 if any([l=='cz' for l in augment_dims]):
+                    if not any([l=='cz' for l in parameters_dict.keys()]):
+                        raise ValueError('cz is a constant. Are you sure you want to augment it?')
                     depths = parameters_dict['cz'][i*augment_num:(i*augment_num+augment_num)]
                 else:
                     depths = None
