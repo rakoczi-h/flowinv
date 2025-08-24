@@ -142,7 +142,8 @@ dt_train = FaultDataset(
     model_framework = model_framework
 )
 parameters_dict = {'cx': [0.25], 'cy': [0.5], 'l': [1.5], 'alpha': [np.pi/4], 'cz': [0.1]}
-dt_train.make_dataset(parameters_dict=parameters_dict, augment=False)
+dt_train.make_dataset(parameters_dict=parameters_dict, augment=False, augment_dims=['density'], augment_num=10, window=True, zero_pad=True, num_components=100)
+
 
 filename = os.path.join(save, f"testset_1.pkl")
 with open(filename, 'wb') as file:
