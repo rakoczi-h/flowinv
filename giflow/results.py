@@ -121,7 +121,7 @@ class FlowResults:
         return js
 
 
-    def corner_plot(self, filename='corner.png', prior_bounds=None):
+    def corner_plot(self, filename='corner.png', parameter_labels=None, prior_bounds=None, units=None):
         """Makes a simple corner plot with a single set of posterior samples.
         Parameter
         ---------
@@ -140,10 +140,15 @@ class FlowResults:
                 plot_range.append([min(dim), max(dim)])
         else:
             plot_range = prior_bounds
-        if self.parameter_labels is None:
-            labels = [f"q{x}" for x in range(self.nparameters)]
-        else:
-            labels = self.parameter_labels
+        if parameter_labels is None:
+            if self.parameter_labels is None:
+                labels = [f"q{x}" for x in range(self.nparameters)]
+            else:
+                if units:
+                    labels = [p+' '+units[i] for i, p in enumerate(self.parameter_labels)]
+                else:
+                    labels = self.parameter_labels
+
         CORNER_KWARGS = dict(smooth=0.9,
                             show_titles=True,
                             label_kwargs=dict(fontsize=20),
@@ -158,20 +163,20 @@ class FlowResults:
                             bins=20,
                             labels=labels)
 
-        figure = corner.corner(self.samples, **CORNER_KWARGS, color='#ff7f00')
+        figure = corner.corner(self.samples, **CORNER_KWARGS, color='sandybrown')
         if self.true_parameters is not None:
             values = self.true_parameters[0]
             corner.overplot_lines(figure, values, color="black")
             corner.overplot_points(figure, values[None], marker="s", color="black")
         if self.directory is not None:
-            plt.savefig(os.path.join(self.directory, filename), transparent=False)
+            plt.savefig(os.path.join(self.directory, filename), transparent=False, dpi=300)
         else:
-            plt.savefig(filename, transparent=False)
+            plt.savefig(filename, transparent=False, dpi=300)
         plt.close()
         print("Made corner plot...")
 
     # fix overlaid corners method !!
-    def overlaid_corner(self, other_samples, dataset_labels = None, parameter_labels = None, filename='corner_plot_compare.png',  prior_bounds=None):
+    def overlaid_corner(self, other_samples, dataset_labels = None, parameter_labels = None, filename='corner_plot_compare.png',  prior_bounds=None, units=None):
         """
         Plots multiple corners on top of each other
         Parameters
@@ -200,7 +205,7 @@ class FlowResults:
 
         n = len(other_samples)+1
         #colors = get_colors(n)
-        colors = ['#377eb8', '#ff7f00']
+        colors = ['cornflowerblue', 'sandybrown']
         samples_list = other_samples+[self.samples]
         max_len = max([len(s) for s in samples_list])
         plot_range = []
@@ -214,19 +219,25 @@ class FlowResults:
                 )
         else:
             plot_range = prior_bounds
+
         if parameter_labels is None:
             if self.parameter_labels is None:
                 labels = [f"q{x}" for x in range(self.nparameters)]
+                labels_units = labels
             else:
-                labels = self.parameter_labels
-        else:
-            labels = parameter_labels
+                if units:
+                    labels_units = [p+' '+units[i] for i, p in enumerate(self.parameter_labels)]
+                    labels = self.parameter_labels
+                else:
+                    labels = self.parameter_labels
+                    labels_units = self.parameter_labels
 
         CORNER_KWARGS = dict(
         smooth=0.9,
-        show_titles=True,
+        show_titles=False,
         label_kwargs=dict(fontsize=20),
         title_kwargs=dict(fontsize=20),
+        titles = labels,
         quantiles=[0.16, 0.5, 0.84],
         levels=(1 - np.exp(-0.5), 1 - np.exp(-2), 1 - np.exp(-9 / 2.)),
         plot_density=False,
@@ -234,7 +245,7 @@ class FlowResults:
         fill_contours=True,
         max_n_ticks=3,
         range=plot_range,
-        labels=labels,
+        labels=labels_units,
         bins=20)
 
         fig = corner.corner(
@@ -269,9 +280,9 @@ class FlowResults:
                 bbox_to_anchor=(1, ndim), loc="upper right"
             )
         if self.directory is not None:
-            plt.savefig(os.path.join(self.directory, filename), transparent=True)
+            plt.savefig(os.path.join(self.directory, filename), transparent=True, dpi=300)
         else:
-            plt.savefig(filename, transparent=True)
+            plt.savefig(filename, transparent=True, dpi=300)
         plt.close()
         print("Made corner plot...")
 
