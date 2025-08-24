@@ -47,7 +47,10 @@ with open(os.path.join(flow.data_location, "validationset_0.pkl"), 'rb') as file
 keys = dt_val.parameter_labels
 
 labels = [r'$c_x$', r'$c_y$', r'$c_z$', r'$l_x$', r'$l_y$', r'$l_z$', r'$\alpha$']
+units = ['[m]', '[m]', '[m]', '[m]', '[m]', '[m]', '']
 #labels = [r'$l_x$', r'$l_y$']
+#units = ['[m]', '[m]']
+#keys = ['lx', 'ly']
 #labels= keys
 priors = dt_val.priors
 
@@ -72,8 +75,8 @@ with open('/scratch/balta1/2263373r/4_paper/voxelised_noisy/testset_0.pkl', 'rb'
     dt_voxelised = pkl.load(file)
 voxelised_model = dt_voxelised.boxes[2].voxelised_model
 
-testsize = 4 # THIS needs to be edited to give the overall desired data set size
-test_data, test_conditional = read_files(data_location=data_location, filenames=['testset_to_present_0.pkl'], datasize=testsize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
+testsize = 10 # THIS needs to be edited to give the overall desired data set size
+test_data, test_conditional = read_files(data_location=data_location, filenames=['testset_0.pkl'], datasize=testsize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
 
 
 test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
@@ -89,10 +92,11 @@ pp_dataset = flow.make_tensor_dataset(pp_data, pp_conditional, device=device, sc
 # ------------------- Sampling ---------------------------------
 results = []
 for i in range(testsize):
-    samples, log_probabilities = flow.sample_and_logprob(test_dataset.tensors[1][i], num=5000)
+    samples, log_probabilities = flow.sample_and_logprob(test_dataset.tensors[1][i], num=100000)
+    print(np.shape(samples))
     result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][i] for j in range(len(test_conditional))], log_probabilities=log_probabilities, true_parameters=np.array([test_data[0][i]]), parameter_labels=labels, survey_coordinates=dt_test.surveys[0].survey_coordinates)
-    result.directory = os.path.join(flow_location, f"testcase_to_present_{i}/")
-    result.samples_to_csv()
+    result.directory = os.path.join(flow_location, f"testcase_{i}/")
+    #result.samples_to_csv()
     dt_test.surveys[i].plot_contours(filename=os.path.join(result.directory, "survey_v2.png"), include_noise=True, axis_limits=[-0.4375, 0.4375, -0.4375, 0.4375])
     results.append(result)
 
@@ -171,10 +175,7 @@ if bilby_location is not None:
 #
     # CORNER PLOT WITH BILBY (done with test data)
     for i, result in enumerate(results):
-        print(i)
-        if i == 0 or i == 1:
-            continue
-        with open(os.path.join(bilby_location, "testcases_to_present_v2", f"testcase_{i}", "inversion_result.json"), 'r') as file:
+        with open(os.path.join(bilby_location, "10_testcases", f"testcase_{i}", "inversion_result.json"), 'r') as file:
             bilby_results = json.load(file)
             bilby_posterior_dict = bilby_results['posterior']['content']
             bilby_samples = []
@@ -182,8 +183,8 @@ if bilby_location is not None:
                 bilby_samples.append(bilby_posterior_dict[key])
             bilby_samples = np.array(bilby_samples).T
             print(np.shape(bilby_samples))
-        result.overlaid_corner(bilby_samples, ['NS', 'NF'], filename="overlaid_corner_plot_full_v2.png")
-        result.overlaid_corner(bilby_samples, ['NS', 'NF'], filename="overlaid_corner_plot_prior_bounds_full_v2.png", prior_bounds=prior_bounds)
+        result.overlaid_corner(bilby_samples, ['NS', 'NF'], filename="overlaid_corner_plot_full_v2.png", units=units)
+        result.overlaid_corner(bilby_samples, ['NS', 'NF'], filename="overlaid_corner_plot_prior_bounds_full_v2.png", prior_bounds=prior_bounds, units=units)
         js = result.get_js_divergence(bilby_samples)
         #df = pd.DataFrame(data={'js': js})
         #df.to_csv(os.path.join(result.directory, 'js.csv'))
