@@ -242,7 +242,7 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
         coordinates.append(result.survey_coordinates.copy())
         coordinates.append(result.survey_coordinates.copy())
         target_array = np.array(result.conditional[0])
-        target = target_array - np.min(target_array)
+        target = target_array
         plot_data.append(target)
         mode = model_frameworks_list[idx]['type']
         gzs = []
@@ -253,30 +253,29 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
             elif mode == 'voxelised':
                 box = Box(voxelised_model=result.samples[i,:])
                 box.make_voxel_grid(ranges=model_frameworks_list[idx]['ranges'], grid_shape=model_frameworks_list[idx]['grid_shape'])
-            gz = box.forward_model(survey_coordinates=result.survey_coordinates.copy(), model_type=mode)-np.min(target_array)
+            gz = box.forward_model(survey_coordinates=result.survey_coordinates.copy(), model_type=mode)
+            gz = gz - np.min(gz)
             gzs.append(gz)
         gzs = np.array(gzs)
         mean = np.mean(gzs, axis=0)
-        plot_data.append(mean)
+        plot_data.append(mean-np.min(mean))
         std = np.std(gzs, axis=0)
         plot_data.append(std)
 
     titles = ['Target', 'Mean', 'SD']
-    ylabels = ['(a)', '(b)', '(c)']
     fig, axes = plt.subplots(nrows=num_cases, ncols=3)
     plt.subplots_adjust(wspace=0.15, hspace=0.15)
     axis_min = -0.4375
     axis_max = 0.4375
-    #vmin1 = np.array([target.min(), mean.min()]).min()
-    #vmin2 = std.min()
-    #vmax1 = np.array([target.max(), mean.max()]).max()
-    #vmax2 = std.max()
-    vmin1 = 0
-    vmin2 = 0
-    vmax1 = 5.5
-    vmax2 = 2.0
+    vmin1 = np.array([target.min(), mean.min()]).min()
+    vmin2 = std.min()
+    vmax1 = np.array([target.max(), mean.max()]).max()
+    vmax2 = std.max()
+
     levels1 = np.linspace(vmin1, vmax1, 256)
+    levels1_2 = np.linspace(vmin1, vmax1, 5)
     levels2 = np.linspace(vmin2, vmax2, 256)
+    levels2_2 = np.linspace(vmin2, vmax2, 5)
     cmap = 'plasma'
     norm1 = matplotlib.colors.Normalize(vmin=vmin1, vmax=vmax1)
     norm2 = matplotlib.colors.Normalize(vmin=vmin2, vmax=vmax2)
@@ -300,11 +299,11 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
             ax.yaxis.set_label_position("right")
         if idx==2 or idx==5 or idx==8:
             ax.tricontourf(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels2, cmap=cmap, norm=norm2)
-            ax.tricontour(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=4, colors='k', linewidths=0.2)
+            ax.tricontour(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels2_2, colors='k', linewidths=0.2)
             #ax.tricontour(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=10, colors='k', linewidths=0.2)
         else:
             ax.tricontourf(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels1, cmap=cmap, norm=norm1)
-            ax.tricontour(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=4, colors='k', linewidths=0.2)
+            ax.tricontour(coordinates[idx][:,0], coordinates[idx][:,1], plot_data[idx], levels=levels1_2, colors='k', linewidths=0.2)
         ax.set(xlim=(axis_min, axis_max), ylim=(axis_min, axis_max), aspect='equal')
 
         ax.set_xticks(np.array([-0.25, 0.0, 0.25]))
@@ -317,10 +316,10 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
     cbar.set_label(r'$\Delta$g [$\mu$Gal]', size=8)
     cbar.ax.tick_params(rotation=45, labelsize=8)
     cax2 = ax.inset_axes([0.0, -0.3, 1.0, 0.1])
-    cbar=fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', ticks=[0.0, 0.5, 1.0, 1.5, 2.0], boundaries=levels2, cax=cax2)
+    cbar=fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', ticks=[0.3, 0.6, 0.9, 1.2, 1.5, 1.8], boundaries=levels2, cax=cax2)
     #cbar=fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm2, cmap=cmap), orientation='horizontal', boundaries=levels2, cax=cax2)
     cbar.set_label(r'$\Delta$g [$\mu$Gal]', size=8)
     cbar.ax.tick_params(rotation=45, labelsize=8)
-    plt.savefig(filename, transparent=False, bbox_inches='tight')
+    plt.savefig(filename, transparent=False, bbox_inches='tight', dpi=300)
     plt.close()
 
