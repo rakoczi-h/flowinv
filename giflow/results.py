@@ -143,16 +143,19 @@ class FlowResults:
         if parameter_labels is None:
             if self.parameter_labels is None:
                 labels = [f"q{x}" for x in range(self.nparameters)]
+                labels_units = labels
             else:
                 if units:
-                    labels = [p+' '+units[i] for i, p in enumerate(self.parameter_labels)]
+                    labels_units = [p+' '+units[i] for i, p in enumerate(self.parameter_labels)]
+                    labels = self.parameter_labels
                 else:
                     labels = self.parameter_labels
+                    labels_units = self.parameter_labels
 
         CORNER_KWARGS = dict(smooth=0.9,
                             show_titles=True,
                             label_kwargs=dict(fontsize=20),
-                            title_kwargs=dict(fontsize=20),
+                            title_kwargs=dict(fontsize=18),
                             quantiles=[0.16, 0.5, 0.84],
                             levels=(1 - np.exp(-0.5), 1 - np.exp(-2), 1 - np.exp(-9 / 2.)),
                             plot_density=False,
@@ -161,7 +164,8 @@ class FlowResults:
                             max_n_ticks=3,
                             range=plot_range,
                             bins=20,
-                            labels=labels)
+                            titles=labels,
+                            labels=labels_units)
 
         figure = corner.corner(self.samples, **CORNER_KWARGS, color='sandybrown')
         if self.true_parameters is not None:
@@ -236,7 +240,7 @@ class FlowResults:
         smooth=0.9,
         show_titles=False,
         label_kwargs=dict(fontsize=20),
-        title_kwargs=dict(fontsize=20),
+        title_kwargs=dict(fontsize=18),
         titles = labels,
         quantiles=[0.16, 0.5, 0.84],
         levels=(1 - np.exp(-0.5), 1 - np.exp(-2), 1 - np.exp(-9 / 2.)),
