@@ -259,7 +259,7 @@ class GravitySurvey():
             plot_data = self.gravity
         gravity_range = self.gravity.max()-self.gravity.min()
         levels = np.linspace(self.gravity.min(), self.gravity.max()+gravity_range/20, 256)
-        levels_2 = np.linspace(self.gravity.min(), self.gravity.max()+gravity_range/20, 4)
+        levels_2 = np.linspace(self.gravity.min(), self.gravity.max()+gravity_range/20, 5)
         cmap = 'plasma'
         norm = matplotlib.colors.Normalize(vmin=self.gravity.min(), vmax=self.gravity.max()+gravity_range/20)
         fig, ax = plt.subplots()
