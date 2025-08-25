@@ -20,26 +20,17 @@ model_info_to_include= []
 mix_survey_order = False
 bilby_location = '/data/www.astro/2263373r/giflow/4_paper/bilby/'
 #bilby_location = None
-flow_location = f"/data/www.astro/2263373r/giflow/4_paper/combined/run_2025-01-17 13:59:21.543044/"
+flow_location = f"/data/www.astro/2263373r/giflow/4_paper/voxelised_noisy/run_2024-07-30 20:56:45.690508/"
 
-#directories = []
-#for roots, dirs, files in os.walk(flow_location):
-#    for dir in dirs:
-#        directories.append(dirs)
-#directories = directories[0]
-#print(directories)
-
-#flow_location = os.path.join(flow_location, directories[n])
 # -------------------- Reading the flow --------------------------
 device = torch.device('cuda')
 flow=FlowModel()
 flow.load(flow_location)
 flow.flowmodel.to(device)
 flow.save_location = flow_location
-print(flow.scalers)
 
+flow.data_location = '/scratch/balta1/2263373r/4_paper/voxelised_noisy/'
 
-flow.data_location = '/scratch/balta1/2263373r/4_paper/combined/'
 data_location = flow.data_location
 
 # -------------------- Validation data --------------
@@ -73,13 +64,13 @@ with open(os.path.join(flow.data_location, "testset_to_present_0.pkl"), 'rb') as
     dt_test = pkl.load(file)
 
 
+
 with open('/scratch/balta1/2263373r/4_paper/voxelised_noisy/testset_0.pkl', 'rb') as file:
     dt_voxelised = pkl.load(file)
 voxelised_model = dt_voxelised.boxes[2].voxelised_model
 
 testsize = 4 # THIS needs to be edited to give the overall desired data set size
 test_data, test_conditional = read_files(data_location=data_location, filenames=['testset_to_present_0.pkl'], datasize=testsize, survey_coordinates_to_include=survey_coordinates_to_include, model_info_to_include=model_info_to_include, mix_survey_order=mix_survey_order)
-
 
 test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
 
@@ -95,7 +86,6 @@ pp_dataset = flow.make_tensor_dataset(pp_data, pp_conditional, device=device, sc
 results = []
 for i in range(testsize):
     samples, log_probabilities = flow.sample_and_logprob(test_dataset.tensors[1][i], num=100000)
-    print(np.shape(samples))
     result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][i] for j in range(len(test_conditional))], log_probabilities=log_probabilities, true_parameters=np.array([test_data[0][i]]), parameter_labels=labels, survey_coordinates=dt_test.surveys[0].survey_coordinates)
     result.directory = os.path.join(flow_location, f"testcase_to_present_{i}/")
     #result.samples_to_csv()
@@ -109,16 +99,16 @@ flow.pp_test(validation_dataset=pp_dataset,
     #parameter_labels=[r'$q_1$', r'$q_2$', r'$q_3$', r'$q_4$', r'$q_5$', r'$q_6$', r'$q_7$', r'$q_8$', r'$q_9$', r'$q_10$']
 )
 
-# CORNER PLOTS                              
-for i, result in enumerate(results):
-    result.corner_plot(filename="corner_plot.png")
-    result.corner_plot(filename="corner_plot_with_prior_bounds.png", prior_bounds=prior_bounds)
-    print(f"Made {i+1}/{testsize} corner plots.")
-
-## SURVEY CONSISTENCY
+## CORNER PLOTS                              
 #for i, result in enumerate(results):
-#    result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
-#    print(f"Made {i+1}/{testsize} survey comparison plots.")
+#    result.corner_plot(filename="corner_plot.png", units=units)
+#    result.corner_plot(filename="corner_plot_with_prior_bounds.png", prior_bounds=prior_bounds, units=units)
+#    print(f"Made {i+1}/{testsize} corner plots.")
+
+# SURVEY CONSISTENCY
+for i, result in enumerate(results):
+    result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
+    print(f"Made {i+1}/{testsize} survey comparison plots.")
 #
 ## VOXELISED MODEL COMPARISON
 #for i, result in enumerate(results):
