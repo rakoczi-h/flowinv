@@ -31,18 +31,6 @@ for idx, flow_location in enumerate(flow_locations):
     flow.load(flow_location)
     flow.flowmodel.to(device)
     #flow.data_location = '/scratch/balta1/2263373r/4_paper/voxelised_noisy/'
-
-    #print('flow loaded')
-    #with open(os.path.join(flow.data_location, "trainset_0_v2.pkl"), 'rb') as file:
-    #    dt_train = pkl.load(file)
-    #train_data, train_conditional = dt_train.make_data_arrays(survey_coordinates_to_include=survey_coordinates_to_include_list[idx])
-    #sc_data = MinMaxScaler()
-    #sc_data.fit(train_data)
-    #sc_conditional = MinMaxScaler()
-    #sc_conditional.fit(train_conditional.reshape(-1, train_conditional.shape[-1]))
-    #scalers = {'conditional': sc_conditional, 'data': sc_data}
-    #flow.scalers = scalers
-
     print('train data read')
     with open(os.path.join(flow.data_location, "testset_to_present_0.pkl"), 'rb') as file:
         dt_test = pkl.load(file)
