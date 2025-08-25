@@ -11,6 +11,7 @@ from giflow.box import Box, BoxDataset
 from giflow.survey import GravitySurvey
 from giflow.flowmodel import FlowModel
 from giflow.results import BoxFlowResults
+from giflow.plot import compare_method_surveys
 
 # Function
 def rescale_bilby_samples(bilby_parameter_dict, parameters_to_rescale, scale_factor):
@@ -25,9 +26,6 @@ save_location = os.path.join(flow_location, 'qinetiq_data_gridordering_4_paper/'
 if not os.path.exists(save_location):
     os.mkdir(save_location)
 # -------------------- Reading in other results
-#li_result = pd.read_csv('/scratch/balta0/2263373r/giflow/4_paper/pygimli_result_3.csv')['result']
-#li_result = li_result*1000 # changing to kg/m^3
-
 with open("/scratch/balta1/2263373r/4_paper/real_bunker.pkl", 'rb') as file:
     dt_real = pkl.load(file)
 
@@ -36,7 +34,7 @@ truth = dt_real.boxes[0].voxelised_model # + np.random.normal(loc=0.0, scale=500
 #truth = dt_real.boxes[0].parameterised_model
 #truth[:6] = truth[:6]*70
 
-
+#units = ['[m]', '[m]', '[m]', '[m]', '[m]', '[m]', '' ]
 # -------------------- Reading the flow --------------------------
 device = torch.device('cuda')
 flow=FlowModel()
@@ -47,6 +45,7 @@ with open(os.path.join(flow.data_location, "validationset_0.pkl"), 'rb') as file
 priors = dt_val.priors
 labels = dt_val.parameter_labels
 model_framework = dt_val.model_framework
+survey_framework = dt_val.survey_framework
 keys = dt_val.parameter_labels
 prior_bounds = []
 for k in keys:
@@ -75,6 +74,7 @@ print("Priors:", priors.distributions)
 
 survey_coordinates = np.c_[x, y, z]
 
+
 survey = GravitySurvey(ranges=dt_val.survey_framework['ranges'], survey_shape=dt_val.survey_framework['survey_shape'])
 survey.make_survey()
 
@@ -85,7 +85,8 @@ for i, s in enumerate(survey.survey_coordinates):
     reordered_coordinates[i,:] = survey_coordinates[np.argmin(diff),:]
     reordered_grav[i] = grav[np.argmin(diff)]
 
-survey.gravity = reordered_grav
+survey.gravity = reordered_grav-noise_scale/2
+
 survey.noise_scale = noise_scale
 survey.survey_coordinates = reordered_coordinates
 
@@ -111,73 +112,23 @@ test_conditional_tensor = torch.from_numpy(test_conditional_tensor.astype(np.flo
 
 #test_dataset = flow.make_tensor_dataset(test_data, test_conditional, device=device, scale=True)
 # --------------------- Results --------------------------
-for i in range(20):
+for i in range(1):
     samples, log_probabilities = flow.sample_and_logprob(test_conditional_tensor, num=100000)
-
-# Translating into voxelised model 
-#samples_translated = []
-#for s in samples:
-#    parameters = dict.fromkeys(dt_val.parameter_labels)
-#    for k, key in enumerate(dt_val.parameter_labels):
-#        parameters[key] = s[k]
-#    box = Box(parameters=parameters)
-#    box.make_voxel_grid(grid_shape=model_framework['grid_shape'], ranges=model_framework['ranges'])
-#    box.translate_to_voxels(background_noise_scale=model_framework['noise_scale'], density=model_framework['density'])
-#    s_tr = box.voxelised_model
-#    samples_translated.append(s_tr)
-#samples_translated = np.array(samples_translated)
-#
-#result = BoxFlowResults(samples=samples_translated, conditional=test_conditional[0,:], log_probabilities=log_probabilities, survey_coordinates=dt_test.surveys[0].survey_coordinates)
-#result.directory = save_location
-#result.plot_compare_voxel_slices(filename='compare_voxel_slices.png', plot_truth=False)
-
     result = BoxFlowResults(samples=samples, conditional=[test_conditional[j][0] for j in range(len(test_conditional))],
         log_probabilities=log_probabilities,
         true_parameters=np.array([truth]),
         parameter_labels=[r'$c_x$', r'$c_y$', r'$c_z$', r'$l_x$', r'$l_y$', r'$l_z$', r'$\alpha$'],
         survey_coordinates=dt_test.surveys[0].survey_coordinates)
-
-#result = BoxFlowResults(samples=samples, conditional=test_conditional[0,:], log_probabilities=log_probabilities, parameter_labels=None, survey_coordinates=dt_test.surveys[0].survey_coordinates)
     result.directory = save_location
-#result.rescale(scaling_factor=scale_factor, parameters_to_rescale=['px', 'py', 'pz', 'lx', 'ly', 'lz'])
-
-    #samples[:,:6] = samples[:,:6]*70
-    result.samples = samples
-    result.plot_voxel_volumes(model_framework=dt_test.model_framework, filename=f"3d_voxel_plot_{i}_v3.png")
-    #result.corner_plot(filename="corner_plot_prior_bounds.png", prior_bounds=prior_bounds)
+    #result.samples[:-1] = samples[:-1]*70
+    #result.plot_voxel_volumes(model_framework=dt_test.model_framework, filename=f"3d_voxel_plot_{i}_v3.png")
+    #result.corner_plot(filename="corner_plot_prior_bounds.png", prior_bounds=prior_bounds, units=units)
     #js = result.get_js_divergence(prior_samples)
     #print(js)
     #result.plot_compare_surveys(model_framework=dt_test.model_framework, filename="compare_survey.png", include_examples=True)
 
     #result.plot_compare_voxel_slices_pygimli(li_result, filename=f"compare_voxel_slices_{i}.png", normalisation=[-1000.0, 0.0], slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=True, model_framework=dt_test.model_framework)
-    result.plot_compare_voxel_slices(filename=f"compare_voxel_slices_{i}_v3.png", slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=True, normalisation=[-1000.0, 500.0], model_framework=dt_test.model_framework, aspect=[1.0, 0.5, 0.5], filter_noise=True)
+    #result.plot_compare_voxel_slices(filename=f"compare_voxel_slices_{i}_v3.png", slice_coords=[[0,1,3], [7,8,9], [1,4,8]], plot_truth=True, normalisation=[-1000.0, 500.0], model_framework=dt_test.model_framework, aspect=[1.0, 0.5, 0.5], filter_noise=True)
 
     #result.plot_3D_statistics(model_framework=dt_test.model_framework, filename=f"3D_statistics_{i}.html")
-
-
-#result.plot_3D_samples(model_framework=dt_test.model_framework, num_to_plot=2000, mode='cumulativemean', filename='3D_cumulativemean.gif')
-#result.plot_3D_samples(model_framework=dt_test.model_framework, num_to_plot=50, mode='maxlikelihood', filename='3D_samples.gif')
-
-
-
-#rescale = False
-#parameters_to_rescale = ['px', 'py', 'pz', 'lx', 'ly', 'lz']
-#if rescale:
-#    result.rescale(scale_factor=scale_factor, parameters_to_rescale=parameters_to_rescale)
-## Comparing to bilby
-#keys = dt_val.parameter_labels
-#with open('/data/www.astro/2263373r/giflow/bilby/box/standrews_noise_realistic_v6/inversion_result.json', 'r') as file:
-#    bilby_results = json.load(file)
-#    bilby_posterior_dict = bilby_results['posterior']['content']
-#    if rescale:
-#        bilby_posterior_dict = rescale_bilby_samples(bilby_posterior_dict, parameters_to_rescale, scale_factor=scale_factor)
-#    bilby_samples = []
-#    for key in keys:
-#        bilby_samples.append(bilby_posterior_dict[key])
-#    bilby_samples = np.array(bilby_samples).T
-#
-#
-#if rescale:
-#    result.overlaid_corner(bilby_samples, ['Flow', 'Dynesty'], filename='overlaid_corner_bilby_rescaled.png')
-#else:
-#    result.overlaid_corner(bilby_samples, ['Flow', 'Dynesty'], filename='overlaid_corner_bilby.png')
+    compare_method_surveys([result], [model_framework], [survey_framework], num=100, filename='/data/www.astro/2263373r/giflow/4_paper/survey_comparison_plot_4_paper_real.png')
