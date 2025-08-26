@@ -258,7 +258,8 @@ def compare_method_surveys(results_list, model_frameworks_list, survey_framework
             gzs.append(gz)
         gzs = np.array(gzs)
         mean = np.mean(gzs, axis=0)
-        plot_data.append(mean-np.min(mean))
+        mean = mean-np.min(mean)
+        plot_data.append(mean)
         std = np.std(gzs, axis=0)
         plot_data.append(std)
 
