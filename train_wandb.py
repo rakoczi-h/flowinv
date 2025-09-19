@@ -14,6 +14,7 @@ from giflow.scaler import Scaler
 from giflow.flowmodel import FlowModel, save_flow
 from giflow.datareader import DataReader
 from giflow.latent import FlowLatent
+from giflow.prior import Prior
 # Define sweep config
 sweep_configuration = {
     'method': 'random',
@@ -23,16 +24,16 @@ sweep_configuration = {
     {
         'n_transforms': {'values': [2, 5, 12, 16]},
         'n_blocks_per_transform': {'values': [2, 5, 12, 16]},
-        'n_neurons': {'values': [8, 16, 32, 64, 128]},
+        'n_neurons': {'values': [4, 8, 16, 32, 64, 128]},
         'batch_size': {'values': [1000, 5000, 10000]}
      }
 }
 # Initialize sweep by passing in config. (Optional) Provide a name of the project.
-sweep_id = wandb.sweep(sweep=sweep_configuration, project='fault-python-5-parameter')
+sweep_id = wandb.sweep(sweep=sweep_configuration, project='fault-python-12-parameter')
 
 
 # ------------- Directories ---------------------------------
-data_location = '/scratch/balta0/2263373r/fault_python/synthetic_inversion_data/'   # THIS needs to be edited to give the data location
+data_location = '/scratch/balta0/2263373r/fault_python/inversion_dataset_12_dim_v2/'   # THIS needs to be edited to give the data location
 
 #with open(os.path.join(data_location, 'priors.pkl'), 'rb') as file:
 #    priors = pkl.load(file)
@@ -40,37 +41,41 @@ data_location = '/scratch/balta0/2263373r/fault_python/synthetic_inversion_data/
 #    survey_framework = json.load(file)
 
 # ------------- Defining scalers ---------------------------
-model_info_to_include = ['cx', 'cy', 'l', 'alpha', 'cz']
-survey_info_to_include = []
-noise_distribution = Prior(distributions={'noise_scale': [0.1]})
-
-
-datasize = 1000000
-
-#if noise_scale[0] == 'LogUniform':
-#    train_conditional[2] = np.log(train_conditional[2])
+model_info_to_include = ['cx', 'cy', 'l', 'alpha', 'cz', 'DL_ratio', 'dip', 'density', 'Displacement_order', 'Blend_order', 'sym_factor', 'Extent_ratio']
+survey_info_to_include = ['survey_width_ratio', 'noise_scale']
+noise_distribution = Prior(distributions={'noise_scale': ['LogUniform', 1e-5, 1.0]})
 
 # Reading in files
 trainsize = 500000
-dr_train = DataReader(filenames=[f"trainset_{n}.pkl" for n in range(1,50)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=trainsize)
+dr_train = DataReader(filenames=[f"trainset_{n}.pkl" for n in range(0,50)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=trainsize)
 train_data, train_conditional = dr_train.read_files(noise_distribution=noise_distribution)
 
+
+if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
+    train_conditional[2] = np.log(train_conditional[2])
+
 # Scaling the data
-sc_data = Scaler(scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler()]) # Need to define the scaler for each element in the train_data list.
+sc_data = Scaler(scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler(), MinMaxScaler()]) # Need to define the scaler for each element in the train_data list.
 sc_data.scale_data(train_data, fit = True) # Fit the scaler and store in the class
 
-sc_conditional = Scaler(scalers = [MinMaxScaler()])
+sc_conditional = Scaler(scalers = [MinMaxScaler(), MinMaxScaler(), MinMaxScaler()])
 sc_conditional.scale_data(train_conditional, fit = True)
 
 scalers = {'conditional': sc_conditional, 'data': sc_data}
 
 trainsize = 1500000
-dr_train = DataReader(filenames=[f"trainset_{n}.pkl" for n in range(1,150)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=trainsize)
+dr_train = DataReader(filenames=[f"trainset_{n}.pkl" for n in range(0,150)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=trainsize)
 train_data, train_conditional = dr_train.read_files(noise_distribution=noise_distribution)
 
+if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
+    train_conditional[2] = np.log(train_conditional[2])
+
 valsize = 150000
-dr_train = DataReader(filenames=[f"validationset_{n}.pkl" for n in range(1,150)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=valsize)
+dr_train = DataReader(filenames=[f"validationset_{n}.pkl" for n in range(0,150)], data_location=data_location, model_info_to_include=model_info_to_include, survey_info_to_include=survey_info_to_include, datasize=valsize)
 validation_data, validation_conditional = dr_train.read_files(noise_distribution=noise_distribution)
+
+if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
+    validation_conditional[2] = np.log(validation_conditional[2])
 
 flow = FlowModel(scalers=scalers)
 device = torch.device('cuda')
@@ -92,15 +97,15 @@ validation_dataset = flow.make_tensor_dataset(
 def main():
     wandb.init(project='combined-inversion')
 
-    hyperparameters={'n_inputs': 5,
-                 'n_conditional_inputs': 2500,
+    hyperparameters={'n_inputs': 12,
+                 'n_conditional_inputs': 2502,
                  'n_transforms': wandb.config.n_transforms,
                  'n_blocks_per_transform': wandb.config.n_blocks_per_transform,
                  'n_neurons': wandb.config.n_neurons,
                  'batch_norm': True,
                  'batch_size': wandb.config.batch_size,
                  'early_stopping': False,
-                 'lr': 0.001,
+                 'lr': 0.0001,
                  'epochs': 1500
     }
     flow = FlowModel(hyperparameters=hyperparameters, datasize=trainsize, scalers=scalers)
@@ -109,9 +114,9 @@ def main():
 
     flowmodel = flow.flowmodel
     optimiser = torch.optim.Adam(flow.flowmodel.parameters(), lr=flow.hyperparameters['lr'])
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimiser, mode='min', factor=0.1, patience=100, cooldown=10,
-                                                       min_lr=1e-6, verbose=True)
-
+    #scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimiser, mode='min', factor=0.1, patience=100, cooldown=10,
+    #                                                   min_lr=1e-6, verbose=True)
+    scheduler = None
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=hyperparameters['batch_size'], shuffle=True)
     validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=hyperparameters['batch_size'], shuffle=True)
 
@@ -175,5 +180,5 @@ def main():
             wandb.log({'kl_div': kl_divergence['mean']})
             #wandb.log({'kl_div': kl_divergence['mean'], 'js_div': js_mean})
 
-wandb.agent(sweep_id, function=main, count=20)
+wandb.agent(sweep_id, function=main, count=30)
 
