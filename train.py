@@ -13,7 +13,7 @@ from giflow.datareader import DataReader
 from giflow.prior import Prior
 
 # Defining directories
-data = '/scratch/balta0/2263373r/fault_python/inversion_dataset_12_dim/' # where our training and validation that are located
+data = '/scratch/balta0/2263373r/fault_python/inversion_dataset_12_dim_v2/' # where our training and validation that are located
 save = '/data/www.astro/2263373r/fault_python_version/real_inversion_12_param/' # where we want to save our outputs
 save = os.path.join(save, f"run_{datetime.now()}/")
 
@@ -33,6 +33,8 @@ train_data, train_conditional = dr_train.read_files(noise_distribution=noise_dis
 
 for i in range(len(model_info_to_include)):
     print(model_info_to_include[i], np.min(train_data[i]), np.max(train_data[i]))
+for i in range(len(survey_info_to_include)):
+    print(survey_info_to_include[i], np.min(train_conditional[i+1]), np.max(train_conditional[i+1]))
 
 if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
     train_conditional[2] = np.log(train_conditional[2])
@@ -65,15 +67,15 @@ if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
 hyperparameters = {
         'n_inputs': 12, # the total number of parameters in the source model, including any additional information we chose to include
         'n_conditional_inputs': 2502, # the total number of values in the conditional
-        'n_transforms': 16,
-        'n_blocks_per_transform': 8,
-        'n_neurons': 32,
+        'n_transforms': 3,
+        'n_blocks_per_transform': 12,
+        'n_neurons': 64,
         # The parameters below define some settings for the training
-        'batch_size': 5000,
+        'batch_size': 1000,
         'batch_norm': True,
         'lr': 0.0001,
-        'epochs': 3000,
-        'early_stopping': False # if set True, the training stops when the validation loss stops decreasing
+        'epochs': 5000,
+        'early_stopping': True # if set True, the training stops when the validation loss stops decreasing
 }
 
 # Construct the flow
