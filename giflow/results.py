@@ -176,7 +176,7 @@ class FlowResults:
         print("Made corner plot...")
 
     # fix overlaid corners method !!
-    def overlaid_corner(self, other_samples, dataset_labels, parameter_labels = None, filename='corner_plot_compare',  prior_bounds=None):
+    def overlaid_corner(self, other_samples, dataset_labels, parameter_labels = None, filename='corner_plot_compare',  prior_bounds=None, units=None):
         """
         Plots multiple corners on top of each other
         Parameters
@@ -197,7 +197,7 @@ class FlowResults:
                 The length of the list is the same as the dimensions, and each element in the list is [minimum, maximum] bounds.
         """
         _, ndim = other_samples.shape
-        colors = ['cornflowerblue', 'sandybrown']
+        colors = ['indianred', 'cornflowerblue']
 
         n = 2
         samples_list = [other_samples, self.samples]
@@ -213,19 +213,27 @@ class FlowResults:
                 )
         else:
             plot_range = prior_bounds
-        if parameter_labels is None:
-            if self.parameter_labels is None:
-                labels = [f"q{x}" for x in range(self.nparameters)]
-            else:
-                labels = self.parameter_labels
+        if self.parameter_labels is None:
+            labels = [f"q{x}" for x in range(self.nparameters)]
+            titles = self.parameter_labels
         else:
-            labels = parameter_labels
+            labels = self.parameter_labels
+            titles = self.parameter_labels
+
+        if units:
+            if len(units) == len(labels):
+                labels = [l+' '+units[i] for i, l in enumerate(labels)]
+            if len(units) == 1:
+                labels = [l+' '+units[0] for l in labels]
+            if isinstance(units, str):
+                labels = [l+' '+units for l in labels]
 
         CORNER_KWARGS = dict(
         smooth=0.9,
         show_titles=True,
+        titles = titles,
         label_kwargs=dict(fontsize=20),
-        title_kwargs=dict(fontsize=20),
+        title_kwargs=dict(fontsize=18),
         quantiles=[0.16, 0.5, 0.84],
         levels=(1 - np.exp(-0.5), 1 - np.exp(-2), 1 - np.exp(-9 / 2.)),
         plot_density=False,
@@ -233,13 +241,14 @@ class FlowResults:
         fill_contours=True,
         max_n_ticks=3,
         range=plot_range,
-        labels=labels)
+        labels=labels,
+        bins=30)
 
         fig = corner.corner(
             samples_list[0],
             color=colors[0],
             **CORNER_KWARGS,
-            hist_kwargs={'density' : True}
+            hist_kwargs={'density' : True} 
         )
 
         for idx in range(1, n):
@@ -715,6 +724,7 @@ class FaultFlowResults(FlowResults):
         pad = 50
         np.random.seed(123)
         target = np.array(self.conditional[0])
+        target = target - np.min(target)
         noise = np.random.normal(loc=0.0, scale=noise_scale, size=np.shape(target))
         np.random.seed(None)
 
@@ -746,6 +756,7 @@ class FaultFlowResults(FlowResults):
         gzs = np.array(gzs)
         mean = np.mean(gzs, axis=0)
         noisy_mean = mean + noise
+        noisy_mean = noisy_mean - np.min(noisy_mean)
         std = np.std(gzs, axis=0)
 
         plot_data = [target, noisy_mean, mean, std]
@@ -809,7 +820,7 @@ class FaultFlowResults(FlowResults):
             include_examples: bool
                 Whether to plot a few individual samples.
         """
-        num = 20
+        num = 100
         if num > np.shape(self.samples)[0]:
             num = np.shape(self.samples)[0]
             print("Not enough samples, using {num} samples only.")
@@ -827,7 +838,7 @@ class FaultFlowResults(FlowResults):
 
         gzs = []
         for i in range(num):
-            print(i)
+
             parameters = dict.fromkeys(model_framework['varied_parameters'])
             for j, k in enumerate(parameters.keys()):
                 parameters[k] = self.samples[i,j]
@@ -858,7 +869,7 @@ class FaultFlowResults(FlowResults):
             gzs.append(gz.flatten()+noise)
 
         gzs = np.array(gzs)
-
+        print(np.shape(gzs))
 
         plot_data = [target]
         titles = ['Target']
