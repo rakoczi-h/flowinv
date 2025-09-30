@@ -280,21 +280,25 @@ class GravitySurvey():
             plot_data = self.add_noise()
         else:
             plot_data = self.gravity
-        levels = np.linspace(plot_data.min(), plot_data.max(), 256)
+        levels = np.linspace(plot_data.min(), plot_data.max(), 15)
+        levels_2 = np.linspace(plot_data.min(), plot_data.max(), 5)
         cmap = 'plasma'
         norm = matplotlib.colors.Normalize(vmin=self.gravity.min(), vmax=self.gravity.max())
         fig, ax = plt.subplots()
         if plot_measurement_location:
             ax.plot(self.survey_coordinates[:,0], self.survey_coordinates[:,1], 'o', markersize=0.5, color='black')
         ax.tricontourf(self.survey_coordinates[:,0], self.survey_coordinates[:,1], plot_data, levels=levels, cmap=cmap, norm=norm)
+        ax.tricontour(self.survey_coordinates[:,0], self.survey_coordinates[:,1], plot_data, levels=levels_2, colors='black', norm=norm, linewidths=0.5)
         ax.set(xlim=(np.min(self.survey_coordinates[:,0]), np.max(self.survey_coordinates[:,0])), ylim=(np.min(self.survey_coordinates[:,1]), np.max(self.survey_coordinates[:,1])))
-        ax.set(ylabel='y')
-        ax.set(xlabel='x')
+        ax.set_ylabel('y [km]', fontsize=18)
+        ax.set_xlabel('x [km]', fontsize=18)
         ax.set_aspect(aspect='equal')
         if units:
-            plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=r'$\Delta$g'+f" [{units}]")
+            cb = plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax)
+            cb.set_label(label=r'$\Delta$g'+f" [{units}]", size=18)
         else:
-            plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=r'$\Delta$g')
+            cb = plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax)
+            cb.set_label(label=r'$\Delta$g', size=18)
         plt.savefig(filename)
         plt.close()
 
