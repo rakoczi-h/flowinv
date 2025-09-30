@@ -67,9 +67,9 @@ if noise_distribution.distributions['noise_scale'][0] == 'LogUniform':
 hyperparameters = {
         'n_inputs': 12, # the total number of parameters in the source model, including any additional information we chose to include
         'n_conditional_inputs': 2502, # the total number of values in the conditional
-        'n_transforms': 3,
-        'n_blocks_per_transform': 12,
-        'n_neurons': 64,
+        'n_transforms': 12,
+        'n_blocks_per_transform': 16,
+        'n_neurons': 32,
         # The parameters below define some settings for the training
         'batch_size': 1000,
         'batch_norm': True,
