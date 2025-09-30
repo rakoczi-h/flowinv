@@ -10,6 +10,7 @@ import os
 import matplotlib.gridspec as gridspec
 import torch
 import plotly.graph_objects as go
+import pickle as pkl
 
 from .box import Box
 from .fault import Fault
@@ -159,11 +160,11 @@ class FlowResults:
                             fill_contours=True,
                             max_n_ticks=3,
                             range=plot_range,
-                            colors='sandybrown',
+                            colors='cornflowerblue',
                             labels=labels)
 
 
-        figure = corner.corner(self.samples, **CORNER_KWARGS, color='sandybrown')
+        figure = corner.corner(self.samples, **CORNER_KWARGS, color='cornflowerblue')
         if self.true_parameters is not None:
             values = self.true_parameters
             corner.overplot_lines(figure, values, color="black")
@@ -709,7 +710,7 @@ class FaultFlowResults(FlowResults):
             include_examples: bool
                 Whether to plot a few individual samples.
         """
-        num = 100
+        num = 1000
         if num > np.shape(self.samples)[0]:
             num = np.shape(self.samples)[0]
             print("Not enough samples, using {num} samples only.")
@@ -754,10 +755,15 @@ class FaultFlowResults(FlowResults):
                 continue
             gzs.append(gz.flatten())
         gzs = np.array(gzs)
+        print(np.shape(gzs))
         mean = np.mean(gzs, axis=0)
         noisy_mean = mean + noise
         noisy_mean = noisy_mean - np.min(noisy_mean)
         std = np.std(gzs, axis=0)
+
+        output_dict = {'std': std, 'mean': mean}
+        with open('/data/www.astro/2263373r/statistics.pkl', 'wb') as file:
+            pkl.dump(output_dict, file)
 
         plot_data = [target, noisy_mean, mean, std]
         titles = ['Target', 'Noisy Mean', 'Mean', 'SD']
@@ -846,8 +852,10 @@ class FaultFlowResults(FlowResults):
                 parameters = parameters | model_framework['default_parameters']
             if priors:
                 if any([parameters[k] > priors.distributions[k][2] for k in priors.keys]):
+
                     continue
                 elif any([parameters[k] < priors.distributions[k][1] for k in priors.keys]):
+
                     continue
             fault = Fault(parameters=parameters)
 
@@ -869,7 +877,8 @@ class FaultFlowResults(FlowResults):
             gzs.append(gz.flatten()+noise)
 
         gzs = np.array(gzs)
-        print(np.shape(gzs))
+        
+
 
         plot_data = [target]
         titles = ['Target']
